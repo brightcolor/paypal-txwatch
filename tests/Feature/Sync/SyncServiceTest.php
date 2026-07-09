@@ -11,6 +11,7 @@ use App\Models\Transaction;
 use App\Services\Sync\EventAssigner;
 use App\Services\Sync\SyncService;
 use App\Services\Sync\TransactionNormalizer;
+use App\Services\Sync\TransactionUpserter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -82,7 +83,7 @@ class SyncServiceTest extends TestCase
             ], 200),
         ]);
 
-        $service = new SyncService(new TransactionNormalizer(), new EventAssigner());
+        $service = new SyncService(new TransactionNormalizer(), new TransactionUpserter(new EventAssigner()));
         $run = $service->run($account, Carbon::parse('2026-06-01'), Carbon::parse('2026-06-05'), SyncRun::TYPE_MANUAL);
 
         $this->assertSame(SyncRun::STATUS_SUCCESS, $run->status);
@@ -110,7 +111,7 @@ class SyncServiceTest extends TestCase
             ], 200);
         });
 
-        $service = new SyncService(new TransactionNormalizer(), new EventAssigner());
+        $service = new SyncService(new TransactionNormalizer(), new TransactionUpserter(new EventAssigner()));
         $service->run($account, Carbon::parse('2026-06-01'), Carbon::parse('2026-06-05'), SyncRun::TYPE_MANUAL);
 
         $this->assertSame(1, Transaction::count());
@@ -148,7 +149,7 @@ class SyncServiceTest extends TestCase
             ], 200),
         ]);
 
-        $service = new SyncService(new TransactionNormalizer(), new EventAssigner());
+        $service = new SyncService(new TransactionNormalizer(), new TransactionUpserter(new EventAssigner()));
         $service->run($account, Carbon::parse('2026-06-01'), Carbon::parse('2026-06-05'), SyncRun::TYPE_MANUAL);
 
         $transaction = Transaction::first();
@@ -186,7 +187,7 @@ class SyncServiceTest extends TestCase
             ], 200);
         });
 
-        $service = new SyncService(new TransactionNormalizer(), new EventAssigner());
+        $service = new SyncService(new TransactionNormalizer(), new TransactionUpserter(new EventAssigner()));
         $run = $service->run($account, Carbon::parse('2026-06-01'), Carbon::parse('2026-06-06'), SyncRun::TYPE_BACKFILL);
 
         // 5 daily slices, each contributing one transaction.
@@ -211,7 +212,7 @@ class SyncServiceTest extends TestCase
             return Http::response(['transaction_details' => [], 'total_items' => 0, 'total_pages' => 1], 200);
         });
 
-        $service = new SyncService(new TransactionNormalizer(), new EventAssigner());
+        $service = new SyncService(new TransactionNormalizer(), new TransactionUpserter(new EventAssigner()));
         $service->run($account, Carbon::parse('2026-01-01'), Carbon::parse('2026-12-31'), SyncRun::TYPE_BACKFILL);
 
         // 364 days / 31-day windows -> more than one API window requested.
@@ -226,7 +227,7 @@ class SyncServiceTest extends TestCase
             '*/v1/oauth2/token' => Http::response(['error' => 'invalid_client'], 401),
         ]);
 
-        $service = new SyncService(new TransactionNormalizer(), new EventAssigner());
+        $service = new SyncService(new TransactionNormalizer(), new TransactionUpserter(new EventAssigner()));
 
         try {
             $service->run($account, Carbon::parse('2026-06-01'), Carbon::parse('2026-06-02'), SyncRun::TYPE_MANUAL);

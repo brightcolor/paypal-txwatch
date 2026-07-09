@@ -125,6 +125,21 @@ Oder über die UI: **PayPal-Konten → Backfill starten**.
 Sync-Läufe (Start/Ende, Zeitraum, importiert/aktualisiert/übersprungen/Fehler, API-Requests, Dauer) und
 Importfehler sind unter **PayPal → Sync-Läufe** einsehbar.
 
+## CSV-Import (Fallback ohne API-Zugriff)
+
+Falls die Transaction-Search-Berechtigung (noch) nicht verfügbar ist, kann ein PayPal
+**"Activity Download"**-CSV importiert werden – unter **PayPal → CSV-Import**:
+
+1. PayPal-Konto wählen und CSV-Datei hochladen.
+2. Spaltenzuordnung prüfen: gängige englische und deutsche Spaltennamen (`Gross`/`Brutto`,
+   `Custom Number`/`Benutzerdefinierte Nummer`, `Transaction ID`/`Transaktionscode`, …) werden automatisch
+   erkannt und vorausgefüllt, bei Bedarf manuell anpassbar. Eine Vorschau der ersten Zeilen wird angezeigt.
+3. **"Import starten"** – der Import läuft über dieselbe Normalisierungs-/Zuordnungs-/Idempotenz-Pipeline
+   wie der API-Sync (gleicher Dedupe-Key-Mechanismus, gleiche Event-Zuordnungsregeln) und erzeugt einen
+   regulären Sync-Lauf vom Typ "CSV-Import" mit Fehlerbericht.
+
+Zahlen werden sowohl im deutschen (`1.234,56`) als auch im englischen Format (`1,234.56`) erkannt.
+
 ## Suche & Filter
 
 Unter **Transaktionen** steht ein Filter "Custom Field / Volltextsuche" zur Verfügung: Feld wählbar

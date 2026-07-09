@@ -5,7 +5,6 @@ namespace App\Services\Sync;
 use App\Models\ImportError;
 use App\Models\PaypalAccount;
 use App\Models\SyncRun;
-use App\Models\Transaction;
 use App\Models\User;
 use App\Services\PayPal\Exceptions\PayPalApiException;
 use App\Services\PayPal\Exceptions\PayPalAuthException;
@@ -26,7 +25,7 @@ class SyncService
 {
     public function __construct(
         private readonly TransactionNormalizer $normalizer,
-        private readonly EventAssigner $assigner,
+        private readonly TransactionUpserter $upserter,
     ) {
     }
 
@@ -140,7 +139,7 @@ class SyncService
                 throw new \RuntimeException('Datensatz ohne transaction_id übersprungen.');
             }
 
-            $status = $this->upsert($account, $normalized);
+            $status = $this->upserter->upsert($account, $normalized);
             $run->increment("{$status}_count");
         } catch (\Throwable $e) {
             $run->increment('error_count');
@@ -154,38 +153,6 @@ class SyncService
                 'context' => ['raw' => $raw],
             ]);
         }
-    }
-
-    /**
-     * Idempotent upsert keyed on dedupe_key. Because the dedupe key embeds
-     * transaction_updated_date + raw_hash, a genuinely changed PayPal
-     * transaction (status transition, fee correction, ...) creates a new
-     * revision row rather than overwriting history, while an exact repeat
-     * (e.g. re-fetched via the lookback window) is a no-op.
-     */
-    private function upsert(PaypalAccount $account, array $normalized): string
-    {
-        $existing = Transaction::query()->where('dedupe_key', $normalized['dedupe_key'])->first();
-
-        if ($existing) {
-            $existing->forceFill(['last_seen_at' => now()])->save();
-
-            return 'skipped';
-        }
-
-        $hasPriorRevision = Transaction::query()
-            ->where('paypal_account_id', $account->id)
-            ->where('transaction_id', $normalized['transaction_id'])
-            ->exists();
-
-        $assignment = $this->assigner->assign($normalized);
-
-        Transaction::create(array_merge($normalized, $assignment, [
-            'imported_at' => now(),
-            'last_seen_at' => now(),
-        ]));
-
-        return $hasPriorRevision ? 'updated' : 'imported';
     }
 
     private function recordWindowError(
