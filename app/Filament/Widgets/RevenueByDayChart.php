@@ -13,6 +13,8 @@ class RevenueByDayChart extends ChartWidget
 
     protected int|string|array $columnSpan = 'full';
 
+    protected static bool $isLazy = false;
+
     protected function getData(): array
     {
         $since = Carbon::now()->subDays(30)->startOfDay();

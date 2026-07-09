@@ -9,6 +9,8 @@ use Illuminate\Support\Carbon;
 
 class DashboardStatsOverview extends BaseWidget
 {
+    protected static bool $isLazy = false;
+
     protected function getStats(): array
     {
         $since = Carbon::now()->subDays(30);
