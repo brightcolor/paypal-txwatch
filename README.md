@@ -1,0 +1,188 @@
+# PayPal TxWatch
+
+Web-Anwendung zum regelmäßigen Abruf von PayPal-Business-Transaktionen über die
+**PayPal Transaction Search API**, lokaler Speicherung, Normalisierung, komfortabler Such-/Filterfunktion
+(insbesondere: Suche nach Zeichenketten im `custom_field`, was PayPal selbst nicht anbietet) und
+kundengeeignetem PDF-/CSV-/XLSX-Export.
+
+## Architektur
+
+| Baustein        | Wahl                                    | Begründung |
+|-----------------|------------------------------------------|------------|
+| Backend         | Laravel 13                                | Robustes, gut wartbares PHP-Framework mit ausgereiftem Queue-/Scheduler-System |
+| Admin-UI        | Filament 3                                | Liefert Tabellen mit Filtern, Formularen, Rollen und Export-Actions, ohne diese von Hand bauen zu müssen |
+| Datenbank       | PostgreSQL                                 | Wie gefordert; produktionsreif, gute JSON-/Index-Unterstützung |
+| Queue/Scheduler | Redis + Laravel Queue Worker + `schedule:run` | Sync-Läufe und PDF-Erzeugung laufen als Hintergrundjobs, retryfähig |
+| PDF-Erzeugung   | Spatie Browsershot (Chromium headless)     | Sauberer Mehrseiten-Umbruch über echtes CSS/`@page`, robuster als dompdf bei komplexen Tabellen |
+| Rollen/Rechte   | spatie/laravel-permission                  | Admin/Manager/Kunde/Auditor |
+| Audit-Log       | spatie/laravel-activitylog                 | Administrative Aktionen nachvollziehbar |
+| Deployment      | Docker Compose (Bind Mounts)                | App, Nginx, Postgres, Redis, Queue-Worker, Scheduler |
+
+Code-Struktur (Trennung wie in Aufgabenstellung gefordert):
+
+```
+app/Services/PayPal/     PayPal-API-Client (OAuth2, Transaction Search, Fehler-Mapping)
+app/Services/Sync/        Sync-Orchestrierung, Zeitraum-Splitting, Normalisierung, Event-Zuordnung
+app/Services/Export/      Export-Datenaufbereitung (Spalten, Gruppierung, Summen) + PDF-Renderer
+app/Models/                Repository-Layer (Eloquent)
+app/Filament/              UI (Resources, Actions, Widgets)
+app/Jobs/, app/Console/    Hintergrundjobs, Artisan-Commands, Scheduler
+```
+
+## Installation (lokal, ohne Docker)
+
+Voraussetzungen: PHP 8.3+, Composer, PostgreSQL, Redis, Node.js 18+ (nur für PDF-Export nötig).
+
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+# .env anpassen: DB_* auf eine lokale Postgres-Instanz zeigen lassen,
+# oder für schnellen Start DB_CONNECTION=sqlite setzen.
+php artisan migrate --seed
+php artisan serve
+```
+
+Der Seeder legt Rollen (`admin`, `manager`, `customer`, `auditor`) sowie einen Admin-Benutzer
+`admin@example.com` / `password` an. **Passwort nach dem ersten Login sofort ändern.**
+
+Für den PDF-Export lokal ohne Docker wird ein Node.js mit `puppeteer` sowie ein Chromium/Chrome-Binary
+benötigt; siehe `config/pdf.php` (`CHROMIUM_PATH`, `NODE_MODULE_PATH` in `.env`). Ohne Docker ist das optional –
+CSV-/XLSX-Export funktionieren unabhängig davon immer.
+
+## Installation mit Docker Compose (empfohlen)
+
+```bash
+cp .env.example .env
+php artisan key:generate --show   # generierten Wert in .env unter APP_KEY eintragen
+# .env: DB_PASSWORD setzen. Echte PayPal-Zugangsdaten NICHT in .env eintragen -
+# .env enthält nur App-/Infrastruktur-Konfiguration; PayPal-Zugangsdaten werden verschlüsselt in der DB gepflegt.
+docker compose up -d --build
+docker compose exec app php artisan migrate --seed
+```
+
+Die App läuft danach unter `http://localhost:8000/admin` (Port über `APP_PORT` in `.env` änderbar).
+
+Services:
+
+- `app` – PHP-FPM (Laravel)
+- `web` – Nginx (Reverse Proxy zu `app`)
+- `queue` – `php artisan queue:work` (Sync-Jobs, Hintergrundverarbeitung)
+- `scheduler` – führt `php artisan schedule:run` minütlich aus (steuert `paypal:schedule-sync`)
+- `db` – PostgreSQL (Bind Mount `./.docker/pgdata`)
+- `redis` – Redis (Bind Mount `./.docker/redisdata`)
+
+Alle Container binden das Projektverzeichnis per **Bind Mount** ein (`./:/var/www/html`), keine benannten
+Docker-Volumes für den Code. Node-Abhängigkeiten für Puppeteer liegen bewusst außerhalb des Bind-Mount-Pfads
+(`/opt/node`, siehe `docker/Dockerfile`), damit sie nicht vom Mount überdeckt werden.
+
+Migrationen laufen idempotent bei jedem Container-Start (`docker/entrypoint.sh`, `migrate --isolated`) – so
+bleibt die App nach jedem Deploy automatisch aktuell, auch wenn App-, Queue- und Scheduler-Container gleichzeitig
+hochfahren.
+
+## PayPal-App einrichten
+
+1. Im [PayPal Developer Dashboard](https://developer.paypal.com/dashboard/) eine REST-API-App anlegen
+   (Sandbox oder Live).
+2. Unter "Features" die Berechtigung **"Transaction Search"** aktivieren – ohne diese liefert die API
+   `PERMISSION_DENIED`/403.
+3. Client ID und Secret in PayPal TxWatch unter **PayPal → PayPal-Konten → Neu** hinterlegen (werden
+   verschlüsselt in der Datenbank gespeichert, `client_id`/`client_secret` sind `encrypted`-Casts).
+4. Mit **"Verbindung testen"** prüfen, ob Zugangsdaten und Berechtigung passen.
+5. Sync-Intervall und Rückblick-Puffer einstellen (Default: alle 15 Minuten, 4h Rückblick – PayPal kann
+   Transaktionen bis zu ~3h verzögert bereitstellen).
+
+## Scheduler/Worker starten (ohne Docker)
+
+```bash
+# Terminal 1: Queue-Worker (verarbeitet Sync-Jobs)
+php artisan queue:work --tries=5
+
+# Terminal 2: Scheduler (löst je nach Konto-Intervall Sync-Jobs aus)
+php artisan schedule:work
+```
+
+## Sync ausführen
+
+**Automatisch:** Sobald Scheduler + Worker laufen und ein Konto `sync_enabled=true` hat, wird es gemäß
+seinem Intervall automatisch synchronisiert.
+
+**Manuell / Backfill:**
+
+```bash
+# Einzelnes Konto, definierter Zeitraum (wird automatisch in 31-Tage-Blöcke gesplittet)
+php artisan paypal:sync --account=1 --from=2026-01-01 --to=2026-12-31
+
+# Alle aktiven Konten
+php artisan paypal:sync --account=all --from=2026-01-01 --to=2026-01-31
+
+# Synchron statt über die Queue (z. B. zum Debuggen)
+php artisan paypal:sync --account=1 --from=2026-01-01 --to=2026-01-31 --sync
+```
+
+Oder über die UI: **PayPal-Konten → Backfill starten**.
+
+Sync-Läufe (Start/Ende, Zeitraum, importiert/aktualisiert/übersprungen/Fehler, API-Requests, Dauer) und
+Importfehler sind unter **PayPal → Sync-Läufe** einsehbar.
+
+## Suche & Filter
+
+Unter **Transaktionen** steht ein Filter "Custom Field / Volltextsuche" zur Verfügung: Feld wählbar
+(Custom Field, Invoice ID, Transaktions-ID, Name, E-Mail, Betreff/Notiz oder alle zusammen), Suchart
+(enthält/beginnt mit/endet mit/exakt/Regex), Groß-/Kleinschreibung optional. Alle Filter sind kombinierbar,
+über **"Filter speichern"** persistierbar und über einen generierten Link teilbar (`/f/{token}`).
+
+## PDF-Export nutzen
+
+1. Auf der Transaktionsseite die gewünschten Filter setzen.
+2. **"Exportieren"** klicken, Format wählen (PDF/CSV/XLSX).
+3. Entweder eine gespeicherte **Export-Vorlage** wählen (siehe **Exporte → Export-Vorlagen**) oder ad-hoc
+   Spalten (per Drag & Drop sortierbar), Modus (Kunde/Intern), Gruppierung, PII-Maskierung sowie
+   Titel/Untertitel/Beschreibung festlegen.
+4. Der Export enthält **exakt** das aktuell gefilterte Ergebnis, inkl. Gruppensummen und Gesamtsumme.
+
+Export-Vorlagen können Logo, Event-Infoblock, Fußzeilen-Hinweis und rechtliche Hinweise pro Event
+berücksichtigen (siehe **Events & Kunden → Events**).
+
+## Troubleshooting
+
+| Problem | Ursache / Lösung |
+|---|---|
+| Verbindungstest schlägt mit "Authentifizierung fehlgeschlagen" fehl | Client ID/Secret falsch oder Sandbox/Live vertauscht |
+| Verbindungstest meldet fehlende Berechtigung | "Transaction Search" Feature im PayPal-Dashboard für die App aktivieren |
+| Sync-Lauf mit Fehler `RESULTSET_TOO_LARGE` in den Sync-Logs | Wird automatisch behandelt (Zeitraum wird intern weiter verkleinert); erscheint nur, wenn selbst die kleinste konfigurierte Stufe (1h) noch zu groß ist – in dem Fall Zeitraum manuell weiter eingrenzen |
+| PDF-Export schlägt fehl ("Node.js/Chromium…") | Läuft zuverlässig mit Docker Compose (Chromium/Puppeteer im Image enthalten); lokal ohne Docker `CHROMIUM_PATH`/`NODE_MODULE_PATH` in `.env` auf eine funktionierende Node/Chromium-Installation zeigen lassen. CSV/XLSX funktionieren immer, auch ohne Chromium |
+| Transaktionen tauchen doppelt mit leicht unterschiedlichen Daten auf | Kein Bug: PayPal kann dieselbe `transaction_id` mit späteren Aktualisierungen (Status, Updated Date) erneut liefern. PayPal TxWatch legt dafür bewusst eine neue Revision an (Änderungsverlauf), statt sie zu überschreiben – sichtbar über die geteilte `transaction_id` |
+| Automatischer Sync läuft nicht | Prüfen, ob `queue:work` und `schedule:work` (bzw. die Docker-Services `queue`/`scheduler`) laufen und das Konto `sync_enabled=true` hat |
+
+## Bekannte Grenzen der PayPal API
+
+- Maximal 31 Tage pro Suchzeitraum, maximal `page_size=500`, maximal ca. 10.000 Datensätze pro
+  Zeitraum/Request (`RESULTSET_TOO_LARGE` danach) – wird von PayPal TxWatch automatisch durch
+  Zeitraum-Splitting behandelt.
+- Transaktionen können bis zu ~3 Stunden verzögert erscheinen – daher der konfigurierbare
+  Rückblick-Puffer bei jedem automatischen Sync.
+- Die "balance-affecting only"-Filterung ist ein API-seitiger Suchparameter zum Abrufzeitpunkt, kein
+  gespeichertes Feld; in der aktuellen Version daher nur näherungsweise über Rückzahlungs-/Reversal-Codes
+  abbildbar (kein Vollständigkeitsanspruch für exotische Event-Codes).
+- `fields=all` liefert nicht für jeden Transaktionstyp alle theoretisch möglichen Unterfelder (z. B.
+  Auktions-/Store-Infos) – nicht vorhandene Felder werden als `null` normalisiert.
+
+## Tests
+
+```bash
+php artisan test
+```
+
+Deckt ab: Zeitraum-Splitting (31-Tage-Grenze, `RESULTSET_TOO_LARGE`-Verkleinerung), PayPal-Datennormalisierung,
+idempotenten Upsert/Änderungsverlauf, Event-Zuordnungsregeln, Sync-Fehlerbehandlung sowie Export-Konfiguration
+(Spaltenauswahl, Gruppierung/Summen, PII-Maskierung, Kunde-/Intern-Modus).
+
+## Sicherheit
+
+- PayPal-Zugangsdaten werden mit Laravels `encrypted`-Cast (AES-256, App-Key) in der Datenbank gespeichert,
+  niemals im Klartext geloggt.
+- `.env.example` enthält keine echten Zugangsdaten.
+- Rollenmodell: Admin (alles), Manager (Transaktionen/Events/Exporte), Kunde (nur eigene Events/Reports,
+  serverseitig über `customer_id` gescoped), Auditor (nur lesend, inkl. Sync-Logs).
+- Exporte besitzen ein Ablaufdatum (`export_history.expires_at`, Standard 7 Tage).
