@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.5.0] - 2026-07-10
+
+### Hinzugefügt
+
+- Produktions-Deployment über GHCR + Watchtower: `docker-compose.yml` zieht `ghcr.io/brightcolor/paypal-txwatch:latest`
+  statt lokal zu bauen; `.github/workflows/ci.yml` baut/pusht das Image bei jedem Push auf `main`/`v*` (Tests
+  als Gate davor). `docker/Dockerfile` kopiert Code+Assets jetzt ins Image (statt Bind-Mount-Code für lokale
+  Entwicklung); `docker/entrypoint.sh` exportiert Assets für den Nginx-Container, migriert idempotent,
+  seedet Rollen/Berechtigungen, cached Config/Routes. `docker/nginx.conf` mit Docker-DNS-Resolver (Watchtower-
+  sicher) und "Wird aktualisiert…"-Fallback-Seite während Deploys.
+- `PdfRenderer` nutzt jetzt `->noSandbox()` (Chromium-Sandbox braucht Container-Rechte, die nicht vorhanden sind).
+
 ## [0.4.0] - 2026-07-10
 
 ### Hinzugefügt

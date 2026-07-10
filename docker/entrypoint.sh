@@ -1,35 +1,33 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -e
 
-cd /var/www/html
+echo "[paypal-txwatch] Copying assets to nginx volume..."
+cp -a /var/www/html/public/. /public-export/
 
-if [ ! -d vendor ]; then
-    echo "[entrypoint] vendor/ missing, running composer install..."
-    composer install --no-interaction --prefer-dist --optimize-autoloader
-fi
-
-if [ ! -f .env ]; then
-    echo "[entrypoint] .env missing, copying from .env.example..."
-    cp .env.example .env
-fi
-
-if ! grep -q "^APP_KEY=base64" .env; then
-    echo "[entrypoint] Generating APP_KEY..."
-    php artisan key:generate --force
-fi
-
-echo "[entrypoint] Waiting for database..."
+echo "[paypal-txwatch] Waiting for database..."
 until php artisan db:show >/dev/null 2>&1; do
     sleep 2
 done
 
 # Migrations are idempotent (Laravel tracks applied migrations in its own
-# table), so running this on every container start is safe even when
-# app/queue/scheduler all boot at the same time - only one will do actual work.
-echo "[entrypoint] Running migrations..."
+# table) and --isolated takes a cache lock, so this is safe even though
+# app/queue/scheduler could in theory race on first boot.
+echo "[paypal-txwatch] Running migrations..."
 php artisan migrate --force --isolated
+
+echo "[paypal-txwatch] Seeding roles/permissions (non-fatal if already present)..."
+php artisan db:seed --class=RolesAndPermissionsSeeder --force || echo "[paypal-txwatch] Roles already seeded"
 
 php artisan storage:link >/dev/null 2>&1 || true
 
-echo "[entrypoint] Starting: $*"
-exec "$@"
+echo "[paypal-txwatch] Clearing stale caches (storage/ is a persistent volume and can still hold compiled config/routes/views from a previous image)..."
+php artisan view:clear
+php artisan config:clear
+php artisan route:clear
+
+echo "[paypal-txwatch] Warming caches..."
+php artisan config:cache
+php artisan route:cache
+
+echo "[paypal-txwatch] Handing off to PHP-FPM..."
+exec php-fpm

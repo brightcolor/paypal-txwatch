@@ -28,6 +28,7 @@ class PdfRenderer
                 ->showBrowserHeaderAndFooter()
                 ->hideHeader()
                 ->footerHtml($footerHtml)
+                ->noSandbox() // required: Chromium's sandbox needs privileges containers don't grant
                 ->waitUntilNetworkIdle();
 
             if ($chromePath = config('pdf.chrome_path')) {

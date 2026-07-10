@@ -10,3 +10,4 @@ storage/framework/views/*
 .env.*
 !.env.example
 .docker
+docker/data

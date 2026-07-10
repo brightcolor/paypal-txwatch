@@ -50,35 +50,59 @@ Für den PDF-Export lokal ohne Docker wird ein Node.js mit `puppeteer` sowie ein
 benötigt; siehe `config/pdf.php` (`CHROMIUM_PATH`, `NODE_MODULE_PATH` in `.env`). Ohne Docker ist das optional –
 CSV-/XLSX-Export funktionieren unabhängig davon immer.
 
-## Installation mit Docker Compose (empfohlen)
+## Deployment mit Docker Compose (Produktion)
+
+`docker-compose.yml` zieht ein fertig gebautes Image aus der GitHub Container Registry
+(`ghcr.io/brightcolor/paypal-txwatch:latest`) statt lokal zu bauen. Ein GitHub-Actions-Workflow
+(`.github/workflows/ci.yml`) baut und pusht das Image bei jedem Push auf `main` bzw. `v*`-Tags automatisch
+(Tests laufen davor als Gate).
+
+Auf dem Server wird **kein vollständiger Checkout** benötigt – nur ein schlankes Deploy-Verzeichnis:
 
 ```bash
+mkdir -p /opt/paypal-txwatch/docker/data/{public,postgres,redis}
+mkdir -p /opt/paypal-txwatch/storage/{app/public,app/private,framework/{cache/data,sessions,views},logs}
+cd /opt/paypal-txwatch
+# docker-compose.yml und docker/nginx.conf aus dem Repo hierher kopieren
 cp .env.example .env
-php artisan key:generate --show   # generierten Wert in .env unter APP_KEY eintragen
-# .env: DB_PASSWORD setzen. Echte PayPal-Zugangsdaten NICHT in .env eintragen -
-# .env enthält nur App-/Infrastruktur-Konfiguration; PayPal-Zugangsdaten werden verschlüsselt in der DB gepflegt.
-docker compose up -d --build
-docker compose exec app php artisan migrate --seed
+php artisan key:generate --show   # oder: openssl rand -base64 32, mit "base64:" Prefix in APP_KEY eintragen
+# .env: APP_URL, DB_PASSWORD, APP_PORT setzen. Echte PayPal-Zugangsdaten NICHT in .env -
+# die werden verschlüsselt in der DB gepflegt (siehe "PayPal-App einrichten" unten).
+docker compose up -d
 ```
 
-Die App läuft danach unter `http://localhost:8000/admin` (Port über `APP_PORT` in `.env` änderbar).
+Die App läuft danach unter `http://<server>:${APP_PORT}/admin` (Standard-Port `8090`, siehe `.env`).
+Beim allerersten Start einen Admin-Benutzer anlegen:
+
+```bash
+docker compose exec app php artisan tinker --execute="
+\$u = App\Models\User::create(['name'=>'Admin','email'=>'admin@example.com','password'=>Hash::make('CHANGE-ME'),'is_active'=>true]);
+\$u->assignRole('admin');
+"
+```
 
 Services:
 
-- `app` – PHP-FPM (Laravel)
-- `web` – Nginx (Reverse Proxy zu `app`)
+- `app` – PHP-FPM (Laravel); `docker/entrypoint.sh` kopiert die Assets nach `docker/data/public` (für `web`),
+  migriert (`--isolated`, sicher bei gleichzeitigem Start mehrerer Container), seedet Rollen/Berechtigungen
+  und cached Config/Routes bei jedem Start
+- `web` – Nginx, serviert `docker/data/public` und reicht `*.php` an `app:9000` weiter (mit Docker-DNS-Resolver,
+  damit Watchtower-Container-Ersetzungen nicht zu einer veralteten IP führen); zeigt während Deploys eine
+  automatisch neu ladende "Wird aktualisiert…"-Seite statt eines 502
 - `queue` – `php artisan queue:work` (Sync-Jobs, Hintergrundverarbeitung)
 - `scheduler` – führt `php artisan schedule:run` minütlich aus (steuert `paypal:schedule-sync`)
-- `db` – PostgreSQL (Bind Mount `./.docker/pgdata`)
-- `redis` – Redis (Bind Mount `./.docker/redisdata`)
+- `db` – PostgreSQL (Bind Mount `docker/data/postgres`)
+- `redis` – Redis (Bind Mount `docker/data/redis`)
 
-Alle Container binden das Projektverzeichnis per **Bind Mount** ein (`./:/var/www/html`), keine benannten
-Docker-Volumes für den Code. Node-Abhängigkeiten für Puppeteer liegen bewusst außerhalb des Bind-Mount-Pfads
-(`/opt/node`, siehe `docker/Dockerfile`), damit sie nicht vom Mount überdeckt werden.
+Persistente Daten (`storage/`, `docker/data/*`) liegen als **Bind Mounts** neben dem Compose-File, keine
+benannten Docker-Volumes. Läuft bereits [Watchtower](https://github.com/nicholas-fedor/watchtower) auf dem
+Host, aktualisiert es die Container automatisch, sobald CI ein neues `:latest`-Image gepusht hat.
 
-Migrationen laufen idempotent bei jedem Container-Start (`docker/entrypoint.sh`, `migrate --isolated`) – so
-bleibt die App nach jedem Deploy automatisch aktuell, auch wenn App-, Queue- und Scheduler-Container gleichzeitig
-hochfahren.
+### Lokale Docker-Entwicklung
+
+Für lokale Entwicklung ohne Docker reicht `php artisan serve` (siehe oben) – produktionsnahe Container mit
+Postgres/Redis/Chromium sind primär fürs Server-Deployment gedacht. Wer trotzdem lokal mit Docker bauen will,
+kann `image:` in `docker-compose.yml` durch `build: {context: ., dockerfile: docker/Dockerfile}` ersetzen.
 
 ## PayPal-App einrichten
 
