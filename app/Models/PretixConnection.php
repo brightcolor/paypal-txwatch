@@ -18,6 +18,8 @@ class PretixConnection extends Model
         'sync_enabled',
         'bank_transfer_fee_cents',
         'import_paypal_orders',
+        'last_import_summary',
+        'import_running',
     ];
 
     protected $hidden = [
@@ -31,6 +33,7 @@ class PretixConnection extends Model
             'is_active' => 'boolean',
             'sync_enabled' => 'boolean',
             'import_paypal_orders' => 'boolean',
+            'import_running' => 'boolean',
             'bank_transfer_fee_cents' => 'integer',
             'last_synced_at' => 'datetime',
             'last_successful_sync_at' => 'datetime',

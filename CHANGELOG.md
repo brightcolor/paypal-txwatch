@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.11.1] - 2026-07-11
+
+### Behoben
+
+- Der pretix-Import lief synchron im Web-Request und brach bei vielen Bestellungen mit einer **weißen Seite**
+  ab (PHP-FPM-/nginx-Timeout). Er läuft jetzt als **Hintergrund-Job in der Queue** (kein Web-Timeout,
+  Job-Timeout 30 min) und verarbeitet **Event für Event** (jede Bestellung wird beim Abruf gespeichert, sodass
+  Teil-Fortschritt erhalten bleibt). Die Aktion startet den Import nur noch und meldet „läuft im Hintergrund";
+  die Verbindungsliste zeigt den Status (**„läuft…"** / Ergebniszusammenfassung) und aktualisiert sich
+  automatisch (Polling). Ein zweiter Start derselben Verbindung wird verhindert, solange ein Import läuft.
+
 ## [0.11.0] - 2026-07-11
 
 ### Neu

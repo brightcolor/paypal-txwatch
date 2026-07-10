@@ -3,9 +3,9 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\PretixConnectionResource\Pages;
+use App\Jobs\ImportPretixOrdersJob;
 use App\Models\PretixConnection;
 use App\Services\Pretix\PretixClient;
-use App\Services\Pretix\PretixOrderImporter;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -114,6 +114,9 @@ class PretixConnectionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            // Refresh while a background import is running so its result appears
+            // without a manual reload.
+            ->poll('10s')
             ->columns([
                 Tables\Columns\TextColumn::make('name')->label('Name')->searchable(),
                 Tables\Columns\TextColumn::make('base_url')->label('Instanz'),
@@ -122,6 +125,13 @@ class PretixConnectionResource extends Resource
                 Tables\Columns\TextColumn::make('bank_transfer_fee_cents')
                     ->label('Überw.-Gebühr')
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 2, ',', '.') . ' €'),
+                Tables\Columns\TextColumn::make('import_status')
+                    ->label('Import')
+                    ->badge()
+                    ->state(fn (PretixConnection $record) => $record->import_running
+                        ? 'läuft…'
+                        : ($record->last_import_summary ?? '–'))
+                    ->color(fn (PretixConnection $record) => $record->import_running ? 'warning' : 'gray'),
                 Tables\Columns\TextColumn::make('last_successful_sync_at')->label('Letzter Import')->dateTime('d.m.Y H:i')->placeholder('–'),
                 Tables\Columns\TextColumn::make('last_error')->label('Fehler')->limit(40)->color('danger')->toggleable(),
             ])
@@ -141,24 +151,20 @@ class PretixConnectionResource extends Resource
                 Tables\Actions\Action::make('import')
                     ->label('Import & Abgleich')
                     ->icon('heroicon-o-arrow-path')
+                    ->disabled(fn (PretixConnection $record) => $record->import_running)
                     ->requiresConfirmation()
-                    ->modalDescription('Lädt alle pretix-Bestellungen und gleicht sie mit den PayPal-Transaktionen ab (PayPal bleibt führend).')
+                    ->modalDescription('Lädt alle pretix-Bestellungen und gleicht sie mit den PayPal-Transaktionen ab (PayPal bleibt führend). Läuft im Hintergrund; das Ergebnis erscheint bei der Verbindung.')
                     ->action(function (PretixConnection $record) {
-                        try {
-                            $r = app(PretixOrderImporter::class)->import($record);
+                        // Runs in the queue (not the web request) so large imports can't
+                        // hit the PHP-FPM/nginx timeout - see ImportPretixOrdersJob.
+                        $record->forceFill(['import_running' => true, 'last_error' => null])->save();
+                        ImportPretixOrdersJob::dispatch($record->id);
 
-                            Notification::make()
-                                ->title('pretix-Import abgeschlossen')
-                                ->body("{$r['orders']} Bestellungen aus {$r['events']} Event(s). Abgeglichen: {$r['matched']}, Abweichung: {$r['mismatch']}, nicht in pretix: {$r['unmatched']}.")
-                                ->success()
-                                ->send();
-                        } catch (\Throwable $e) {
-                            Notification::make()
-                                ->title('pretix-Import fehlgeschlagen')
-                                ->body($e->getMessage())
-                                ->danger()
-                                ->send();
-                        }
+                        Notification::make()
+                            ->title('pretix-Import gestartet')
+                            ->body('Der Import läuft im Hintergrund. Ergebnis und Zeitpunkt erscheinen gleich bei der Verbindung (Seite neu laden).')
+                            ->success()
+                            ->send();
                     }),
                 Tables\Actions\EditAction::make(),
             ]);
