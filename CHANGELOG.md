@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.5.4] - 2026-07-10
+
+### Behoben
+
+- "Verbindung testen" nutzte einen zwischengespeicherten OAuth2-Token (bis zu 9h gültig) und meldete
+  weiterhin "Berechtigung Transaction Search fehlt", selbst nachdem die Berechtigung in der PayPal Developer
+  Console freigeschaltet wurde – PayPal scheint Berechtigungen an den Ausstellungszeitpunkt des Tokens zu
+  binden, nicht live bei jeder Anfrage zu prüfen. `PayPalClient::getAccessToken()` akzeptiert jetzt einen
+  `forceFresh`-Parameter; der Verbindungstest nutzt ihn immer, damit das Ergebnis stets den aktuellen
+  PayPal-seitigen Stand widerspiegelt.
+
 ## [0.5.3] - 2026-07-10
 
 ### Behoben

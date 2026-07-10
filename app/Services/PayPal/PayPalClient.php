@@ -34,10 +34,18 @@ class PayPalClient
      * Returns a valid bearer token, reusing the cached one when possible.
      * PayPal client-credential tokens are valid for ~9h; we refresh a
      * minute early to avoid edge-of-expiry races.
+     *
+     * Pass $forceFresh when the result must reflect the app's *current*
+     * PayPal-side configuration (e.g. the "Verbindung testen" action) -
+     * a token issued before a permission (like Transaction Search) was
+     * enabled in the PayPal Developer Console keeps failing with
+     * PERMISSION_DENIED even after the feature is switched on, since the
+     * grant appears to be baked into the token at issuance time rather
+     * than checked live on every request.
      */
-    public function getAccessToken(): string
+    public function getAccessToken(bool $forceFresh = false): string
     {
-        if ($this->account->hasValidCachedToken()) {
+        if (! $forceFresh && $this->account->hasValidCachedToken()) {
             return $this->account->access_token;
         }
 

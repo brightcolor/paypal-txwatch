@@ -20,7 +20,12 @@ class ConnectionTester
     {
         try {
             $client = new PayPalClient($account);
-            $client->getAccessToken();
+            // Force a fresh token: a cached one issued before a permission
+            // (e.g. Transaction Search) was enabled in the PayPal Developer
+            // Console would otherwise keep failing even after the feature
+            // is switched on, since PayPal appears to bind granted scopes
+            // to the token at issuance rather than checking them live.
+            $client->getAccessToken(forceFresh: true);
 
             $search = new TransactionSearchClient($client);
             $end = CarbonImmutable::now();
