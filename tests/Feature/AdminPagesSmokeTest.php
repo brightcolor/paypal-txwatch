@@ -11,6 +11,7 @@ use App\Filament\Resources\EventResource;
 use App\Filament\Resources\ExportHistoryResource;
 use App\Filament\Resources\ExportTemplateResource;
 use App\Filament\Resources\PaypalAccountResource;
+use App\Filament\Resources\PretixConnectionResource;
 use App\Filament\Resources\SavedFilterResource;
 use App\Filament\Resources\SyncRunResource;
 use App\Filament\Resources\TransactionResource;
@@ -32,6 +33,7 @@ class AdminPagesSmokeTest extends TestCase
 
     private const RESOURCES = [
         PaypalAccountResource::class,
+        PretixConnectionResource::class,
         TransactionResource::class,
         SyncRunResource::class,
         EventResource::class,

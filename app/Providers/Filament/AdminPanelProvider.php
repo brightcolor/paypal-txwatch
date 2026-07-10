@@ -42,6 +42,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->navigationGroups([
                 'PayPal',
+                'pretix',
                 'Events & Kunden',
                 'Transaktionen',
                 'Berichte',

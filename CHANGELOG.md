@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.10.0] - 2026-07-10
+
+### Neu
+
+- **pretix-Verbindungen über die Oberfläche einrichten** (analog zu den PayPal-Konten): unter **pretix →
+  pretix-Verbindungen** lassen sich Basis-URL, Organizer-Slug und ein **verschlüsselt gespeicherter
+  API-Token** hinterlegen, inkl. Aktion **"Verbindung testen"** (prüft URL/Token/Organizer und zeigt die
+  Anzahl der Events). Berechtigung: `manage-pretix-connections` (Admin).
+- Pro Verbindung konfigurierbar: **Überweisungsgebühr in Cent/Transaktion** (Default 20) und ob
+  PayPal-Bestellungen mitimportiert werden sollen (Default aus – vermeidet Doppelzählung mit dem
+  PayPal-Sync).
+
+Dies ist der erste Baustein der pretix-Anbindung (Einrichtung/Verbindungstest). Der eigentliche
+Bestell-Import mit Event-Matching per Slug und Verbuchung der Überweisungsgebühr folgt als nächstes.
+
 ## [0.9.0] - 2026-07-10
 
 ### Neu

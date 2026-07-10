@@ -11,6 +11,7 @@ class RolesAndPermissionsSeeder extends Seeder
 {
     public const PERMISSIONS = [
         'manage-paypal-accounts',
+        'manage-pretix-connections',
         'manage-transactions',
         'manage-events',
         'manage-exports',
