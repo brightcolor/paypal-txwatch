@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.12.3] - 2026-07-11
+
+### Behoben
+
+- **Falsche "Betrag weicht ab"-Meldungen im pretix-Abgleich**: Zu einer Bestellung gehören neben der Zahlung
+  oft auch PayPal-interne Ledger-Buchungen mit derselben Bestellnummer – insbesondere ein Guthaben-Hold
+  (T2101, negativ) und dessen Freigabe (T2102, **positiv**). Die Freigabe wurde fälschlich zur "gezahlten
+  Summe" addiert und verfälschte den Abgleich. Der Abgleich zählt jetzt **nur echte Zahlungen** (Ledger-
+  Events ausgeschlossen) und dedupliziert PayPal-Revisionen mit gleicher Transaktions-ID. Ledger-Buchungen
+  werden weiterhin mit der Bestellung verknüpft (für den Deep-Link), erhalten aber keinen Abgleich-Status.
+- **`/admin/pretix-import-runs` warf HTTP 500**, sobald Import-Läufe vorhanden waren: Die "Aktuell"-Spalte
+  nutzte `end()` auf einer Modell-Property (Übergabe per Referenz nicht möglich). Jetzt `Arr::last()`. Der
+  Smoke-Test hatte das nicht erfasst, da er nur leere Tabellen prüft – ein Test mit befülltem Log wurde
+  ergänzt.
+
 ## [0.12.2] - 2026-07-11
 
 ### Behoben

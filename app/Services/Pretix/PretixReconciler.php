@@ -47,37 +47,52 @@ class PretixReconciler
                 continue;
             }
 
+            // Only real payments count towards the amount paid. Ledger events
+            // (holds/reserves T21xx, withdrawals T04xx/T20xx) share the same order
+            // code but are internal money movements - a hold RELEASE even has a
+            // positive gross that would otherwise inflate the sum and cause a
+            // false "amount_mismatch". PayPal can also list the same payment as
+            // several revision rows sharing a transaction_id, so dedupe by that.
+            $payments = $group->reject(fn (Transaction $t) => $t->isLedgerEvent());
+            $paymentCount = $payments->count();
+
             /** @var PretixOrder|null $order */
             $order = $ordersByKey->get($key);
 
             if (! $order) {
-                $this->setStatus($group, null, Transaction::RECONCILIATION_UNMATCHED);
-                $unmatched += $group->count();
+                $this->link($group, null, Transaction::RECONCILIATION_UNMATCHED);
+                $unmatched += $paymentCount;
 
                 continue;
             }
 
-            // Compare the pretix order total against the PayPal amount actually
-            // collected (positive gross; refunds are separate rows and handled
-            // by their own accounting, not by lowering the "was it paid" check).
-            $paid = (float) $group->where('gross_amount', '>', 0)->sum(fn (Transaction $t) => (float) $t->gross_amount);
+            $paid = (float) $payments
+                ->where('gross_amount', '>', 0)
+                ->unique('transaction_id')
+                ->sum(fn (Transaction $t) => (float) $t->gross_amount);
             $plausible = abs($paid - (float) $order->total) <= self::TOLERANCE;
 
             $status = $plausible ? Transaction::RECONCILIATION_MATCHED : Transaction::RECONCILIATION_MISMATCH;
-            $this->setStatus($group, $order->id, $status);
+            $this->link($group, $order->id, $status);
 
-            $plausible ? $matched += $group->count() : $mismatch += $group->count();
+            $plausible ? $matched += $paymentCount : $mismatch += $paymentCount;
         }
 
         return compact('matched', 'mismatch', 'unmatched');
     }
 
-    private function setStatus(Collection $transactions, ?int $orderId, string $status): void
+    /**
+     * Links every transaction of the order group to the pretix order, but sets a
+     * reconciliation status only on the payment rows - ledger events (holds/
+     * withdrawals) are linked for the deep-link but are not themselves "matched"
+     * or "unmatched" (status stays null).
+     */
+    private function link(Collection $transactions, ?int $orderId, string $status): void
     {
         foreach ($transactions as $transaction) {
             $transaction->forceFill([
                 'pretix_order_id' => $orderId,
-                'reconciliation_status' => $status,
+                'reconciliation_status' => $transaction->isLedgerEvent() ? null : $status,
             ])->save();
         }
     }

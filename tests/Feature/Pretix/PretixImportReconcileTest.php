@@ -121,6 +121,36 @@ class PretixImportReconcileTest extends TestCase
         $this->assertEqualsCanonicalizing(['PAGE1', 'PAGE2'], PretixOrder::pluck('order_code')->all());
     }
 
+    public function test_ledger_events_sharing_the_order_code_do_not_cause_a_false_mismatch(): void
+    {
+        // Real case (pretix order QCVSY): a payment plus a hold (T2101) and its
+        // release (T2102, positive!) all carry the same order code. Only the
+        // payment must count towards the amount paid.
+        Http::fake([
+            '*/events/sportfest/orders/*' => Http::response([
+                'results' => [['code' => 'ABCDE', 'status' => 'p', 'total' => '100.00', 'payments' => [['provider' => 'paypal']]]],
+                'next' => null,
+            ]),
+            '*/events/*' => Http::response(['results' => [['slug' => 'sportfest', 'name' => 'Sportfest']], 'next' => null]),
+        ]);
+
+        $payment = $this->tx('Order SPORTFEST-ABCDE', 100.00); // T0006 by default
+        $hold = $this->tx('Order SPORTFEST-ABCDE', -30.00);
+        $hold->update(['transaction_event_code' => 'T2101']);
+        $release = $this->tx('Order SPORTFEST-ABCDE', 30.00);
+        $release->update(['transaction_event_code' => 'T2102']);
+
+        $summary = app(PretixOrderImporter::class)->import($this->connection());
+
+        $this->assertSame(1, $summary['matched']);   // the single payment
+        $this->assertSame(0, $summary['mismatch']);
+        $this->assertSame(Transaction::RECONCILIATION_MATCHED, $payment->fresh()->reconciliation_status);
+        // Ledger rows are linked (deep-link) but carry no reconciliation status.
+        $this->assertNull($hold->fresh()->reconciliation_status);
+        $this->assertNull($release->fresh()->reconciliation_status);
+        $this->assertNotNull($hold->fresh()->pretix_order_id);
+    }
+
     public function test_reimport_is_idempotent(): void
     {
         $this->fakePretix();

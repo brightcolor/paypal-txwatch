@@ -60,7 +60,9 @@ class PretixImportRunResource extends Resource
                     ->state(fn (PretixImportRun $r) => 'Events ' . $r->events_done . '/' . ($r->events_total ?? '?') . ' · ' . $r->orders_imported . ' Bestellungen'),
                 Tables\Columns\TextColumn::make('current')
                     ->label('Aktuell')
-                    ->state(fn (PretixImportRun $r) => filled($r->log) ? end($r->log)['m'] : '–')
+                    // Arr::last (not end()) - end() needs a real variable by reference;
+                    // passing the model accessor's array directly is an error under rows.
+                    ->state(fn (PretixImportRun $r) => \Illuminate\Support\Arr::last($r->log ?? [])['m'] ?? '–')
                     ->wrap()
                     ->limit(70),
                 Tables\Columns\TextColumn::make('matched')->label('abgeglichen')->color('success'),
