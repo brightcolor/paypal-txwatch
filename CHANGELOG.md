@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.5.6] - 2026-07-10
+
+### Behoben
+
+- Transaktionsdetailseite warf HTTP 500 ("Array to string conversion") für Transaktionen mit
+  Warenkorb-/Item-Details im Raw-JSON (z. B. Ticket-Bestellungen mit mehreren Positionen). Ursache: Der
+  Raw-JSON-Infolist-Eintrag nutzte `formatStateUsing()`, das nur die Anzeige transformiert – Filament liest
+  aber zusätzlich den unformatierten `getState()`-Rohwert (bei `raw_payload` ein verschachteltes Array durch
+  den `array`-Cast), um zu entscheiden, ob der Wert als Liste dargestellt werden soll, und stürzt dabei bei
+  verschachtelten Arrays ab. Jetzt `->state()` statt `->formatStateUsing()`, wodurch der Rohwert nie als
+  Array durchscheint.
+
 ## [0.5.5] - 2026-07-10
 
 ### Behoben

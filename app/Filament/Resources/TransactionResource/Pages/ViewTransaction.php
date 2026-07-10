@@ -68,8 +68,18 @@ class ViewTransaction extends ViewRecord
                 ->schema([
                     TextEntry::make('raw_payload')
                         ->label('')
-                        ->formatStateUsing(fn ($state) => '<pre style="white-space: pre-wrap; font-size: 12px;">' . e(json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)) . '</pre>')
-                        ->html(),
+                        // ->state() (not ->formatStateUsing()) is required here: formatStateUsing
+                        // only transforms the value for *display*, but Filament's text-entry blade
+                        // reads the entry's raw getState() first to decide whether to render it as
+                        // a list - which for an array-cast column like raw_payload returns the raw
+                        // array (with PayPal's nested cart/item structures), crashing with "Array to
+                        // string conversion" when it tries to implode() nested arrays. ->state()
+                        // replaces getState() itself, so the raw array is never seen by that check.
+                        ->state(fn ($record) => new \Illuminate\Support\HtmlString(
+                            '<pre style="white-space: pre-wrap; font-size: 12px;">'
+                            . e(json_encode($record->raw_payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE))
+                            . '</pre>'
+                        )),
                 ]),
         ]);
     }
