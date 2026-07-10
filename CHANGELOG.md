@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.7.1] - 2026-07-10
+
+### Behoben
+
+- Aufruf eines geteilten Filter-Links (`/f/{token}`) durch nicht eingeloggte Besucher warf HTTP 500
+  ("Route [login] not defined"). Die Anwendung hat keine generische `login`-Route – die Anmeldung läuft
+  vollständig über das Filament-Panel. Nicht authentifizierte Besucher werden jetzt korrekt zur
+  Filament-Anmeldung geleitet (und nach dem Login dank gespeicherter Ziel-URL zurück zum Filter-Link); der
+  eingeloggte Pfad war bereits korrekt (der Session-Key des Controllers stimmt exakt mit Filaments
+  `getTableFiltersSessionKey()` überein).
+
+### Tests
+
+- Neuer Smoke-Test, der als Admin **alle** Ressourcen-Seiten (Index/Create), das Dashboard sowie die
+  Custom-Pages (Berichte, CSV-Import, 2FA-Einstellungen) aufruft und sicherstellt, dass keine davon einen
+  500 rendert – als Absicherung gegen die wiederkehrende 500er-Klasse.
+
 ## [0.7.0] - 2026-07-10
 
 ### Neu
