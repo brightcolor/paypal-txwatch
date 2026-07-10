@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.12.2] - 2026-07-11
+
+### Behoben
+
+- **Kritischer Pagination-Fehler** im pretix-Client: Beim Blättern wurde die absolute `next`-URL mit einem
+  (leeren) Query-Array aufgerufen, wodurch Guzzle deren `page`-Parameter entfernte – der Import lief endlos
+  auf Seite 1 (im Test bereits „3700 geladen", aber nur 50 in der DB, und die pretix-API wurde in einer
+  Schleife bombardiert). Die Folgeseiten werden jetzt ohne Query-Argument über die absolute `next`-URL
+  geladen; page_size geht nur bei der ersten Anfrage mit. Zusätzlich ein hartes Seitenlimit (5000) als
+  Schutz gegen künftige Endlosschleifen. Regressionstest mit zwei Seiten ergänzt.
+
 ## [0.12.1] - 2026-07-11
 
 ### Behoben

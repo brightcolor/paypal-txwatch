@@ -91,6 +91,36 @@ class PretixImportReconcileTest extends TestCase
         $this->assertSame(1, $summary['unmatched']);
     }
 
+    public function test_pagination_follows_next_across_pages_without_looping(): void
+    {
+        // Regression: previously the client re-sent page_size on the "next" URL,
+        // which clobbered its page parameter and looped on page 1 forever.
+        Http::fake(function ($request) {
+            $url = $request->url();
+
+            if (str_contains($url, '/orders/')) {
+                if (str_contains($url, 'page=2')) {
+                    return Http::response([
+                        'results' => [['code' => 'PAGE2', 'status' => 'p', 'total' => '10.00', 'payments' => [['provider' => 'banktransfer']]]],
+                        'next' => null,
+                    ]);
+                }
+
+                return Http::response([
+                    'results' => [['code' => 'PAGE1', 'status' => 'p', 'total' => '20.00', 'payments' => [['provider' => 'paypal']]]],
+                    'next' => 'https://pretix.eu/api/v1/organizers/verein/events/sportfest/orders/?page=2&page_size=50',
+                ]);
+            }
+
+            return Http::response(['results' => [['slug' => 'sportfest', 'name' => 'Sportfest']], 'next' => null]);
+        });
+
+        $summary = app(PretixOrderImporter::class)->import($this->connection());
+
+        $this->assertSame(2, $summary['orders']);
+        $this->assertEqualsCanonicalizing(['PAGE1', 'PAGE2'], PretixOrder::pluck('order_code')->all());
+    }
+
     public function test_reimport_is_idempotent(): void
     {
         $this->fakePretix();

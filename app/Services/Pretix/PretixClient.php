@@ -72,13 +72,9 @@ class PretixClient
     {
         $organizer = $this->connection->organizer_slug;
         $events = [];
-        $url = "/organizers/{$organizer}/events/";
 
-        while ($url) {
-            $response = $this->http()->get($url, ['page_size' => 50]);
-            $response->throw();
-
-            foreach ($response->json('results', []) as $event) {
+        $this->paginate("/organizers/{$organizer}/events/", function (array $results) use (&$events) {
+            foreach ($results as $event) {
                 $events[] = [
                     'slug' => $event['slug'] ?? '',
                     'name' => is_array($event['name'] ?? null)
@@ -86,13 +82,41 @@ class PretixClient
                         : ($event['name'] ?? ($event['slug'] ?? '')),
                 ];
             }
-
-            $next = $response->json('next');
-            // pretix returns absolute "next" URLs; strip the base so baseUrl() still applies.
-            $url = $next ? str_replace($this->connection->apiBaseUrl(), '', $next) : null;
-        }
+        });
 
         return $events;
+    }
+
+    /**
+     * Follows pretix' cursor pagination. page_size is sent only on the first
+     * request; subsequent pages use the absolute "next" URL as-is (Guzzle treats
+     * it as absolute, overriding the base URL). Crucially, the "next" request is
+     * made WITHOUT a query argument at all - passing even an empty array clears
+     * the URL's own query string (dropping its page=… parameter) and loops
+     * forever on page 1, which is exactly the bug this replaced.
+     *
+     * @param  callable(array<int, array<string, mixed>>): void  $handlePage
+     */
+    private function paginate(string $path, callable $handlePage): void
+    {
+        $response = $this->http()->get($path, ['page_size' => 50]);
+
+        // Hard safety cap (250k rows at 50/page) so a misbehaving "next" can never
+        // hammer the pretix API in an unbounded loop again.
+        for ($page = 0; $page < 5000; $page++) {
+            $response->throw();
+            $handlePage($response->json('results', []));
+
+            $next = $response->json('next');
+
+            if (! $next) {
+                return;
+            }
+
+            $response = $this->http()->get($next);
+        }
+
+        throw new \RuntimeException('pretix-Pagination hat das Seitenlimit überschritten – Abbruch.');
     }
 
     /**
@@ -106,22 +130,14 @@ class PretixClient
     {
         $organizer = $this->connection->organizer_slug;
         $orders = [];
-        $url = "/organizers/{$organizer}/events/{$eventSlug}/orders/";
 
-        while ($url) {
-            $response = $this->http()->get($url, ['page_size' => 50]);
-            $response->throw();
-
-            $page = $response->json('results', []);
+        $this->paginate("/organizers/{$organizer}/events/{$eventSlug}/orders/", function (array $page) use (&$orders, $onPage) {
             $orders = array_merge($orders, $page);
 
             if ($onPage) {
                 $onPage($page);
             }
-
-            $next = $response->json('next');
-            $url = $next ? str_replace($this->connection->apiBaseUrl(), '', $next) : null;
-        }
+        });
 
         return $orders;
     }
