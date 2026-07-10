@@ -118,6 +118,24 @@ class ExportDataBuilderTest extends TestCase
         $this->assertStringContainsString('*', $row['email']);
     }
 
+    public function test_bestellnummer_and_event_columns_are_parsed_from_custom_field(): void
+    {
+        $this->makeTransaction(['custom_field' => 'Order GAG-WISMAR-2026-SC3HR']);
+
+        $result = (new ExportDataBuilder())->build(
+            Transaction::query(),
+            null,
+            ['columns' => ['event_ref', 'custom_field']],
+        );
+
+        $row = $result['groups'][0]['rows'][0];
+        $this->assertSame('GAG-WISMAR-2026', $row['event_ref']);
+        $this->assertSame('SC3HR', $row['custom_field']);
+
+        $this->assertSame('Event', $result['column_labels'][0]);
+        $this->assertSame('Bestellnummer', $result['column_labels'][1]);
+    }
+
     public function test_vat_is_computed_per_row_from_the_gross_inclusive_amount(): void
     {
         // Gross is VAT-inclusive: at 19%, a gross of 119.00 contains 19.00 VAT

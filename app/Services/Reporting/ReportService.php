@@ -94,27 +94,8 @@ class ReportService
 
     public static function extractPrefix(string $customField): string
     {
-        $value = trim($customField);
-
-        // Real-world custom_field values follow PayPal's "Order <prefix>-<order-id>"
-        // scheme, e.g. "Order GAG-WISMAR-2026-SC3HR" -> prefix "GAG-WISMAR-2026".
-        // The trailing order-id segment is alphanumeric (not necessarily digits-only,
-        // e.g. "SC3HR"), so it can only be identified by position (last dash-separated
-        // segment), not by character class.
-        $value = preg_replace('/^order[:\s]+/i', '', $value);
-
-        $segments = explode('-', $value);
-
-        if (count($segments) > 1) {
-            array_pop($segments);
-            $prefix = trim(implode('-', $segments));
-
-            if ($prefix !== '') {
-                return $prefix;
-            }
-        }
-
-        return $value !== '' ? $value : $customField;
+        // Single source of truth for the "Order <event>-<nr>" parsing.
+        return \App\Services\CustomFieldParser::eventReference($customField) ?? $customField;
     }
 
     /**

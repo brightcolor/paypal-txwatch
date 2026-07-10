@@ -36,7 +36,14 @@ class ViewTransaction extends ViewRecord
                     TextEntry::make('transaction_initiation_date')->label('Initiiert')->dateTime('d.m.Y H:i:s'),
                     TextEntry::make('transaction_updated_date')->label('Aktualisiert')->dateTime('d.m.Y H:i:s'),
                     TextEntry::make('invoice_id')->label('Invoice ID'),
-                    TextEntry::make('custom_field')->label('Custom Field'),
+                    TextEntry::make('event_ref')
+                        ->label('Event')
+                        ->state(fn (Transaction $record) => \App\Services\CustomFieldParser::eventReference($record->custom_field) ?? '–'),
+                    TextEntry::make('order_number')
+                        ->label('Bestellnummer')
+                        ->state(fn (Transaction $record) => \App\Services\CustomFieldParser::orderNumber($record->custom_field) ?? '–')
+                        ->copyable(),
+                    TextEntry::make('custom_field')->label('Verwendungszweck (roh)')->default('–'),
                 ]),
 
             Section::make('Beträge')

@@ -170,10 +170,15 @@ Zahlen werden sowohl im deutschen (`1.234,56`) als auch im englischen Format (`1
 
 ## Suche & Filter
 
-Unter **Transaktionen** steht ein Filter "Custom Field / Volltextsuche" zur Verfügung: Feld wählbar
-(Custom Field, Invoice ID, Transaktions-ID, Name, E-Mail, Betreff/Notiz oder alle zusammen), Suchart
+Unter **Transaktionen** steht ein Filter "Bestellnummer / Volltextsuche" zur Verfügung: Feld wählbar
+(Bestellnummer, Invoice ID, Transaktions-ID, Name, E-Mail, Betreff/Notiz oder alle zusammen), Suchart
 (enthält/beginnt mit/endet mit/exakt/Regex), Groß-/Kleinschreibung optional. Alle Filter sind kombinierbar,
 über **"Filter speichern"** persistierbar und über einen generierten Link teilbar (`/f/{token}`).
+
+Der Wert des Felds folgt dem pretix-Schema `Order <Event>-<Bestellnummer>` (z. B.
+`Order GAG-WISMAR-2026-SC3HR`). Tabelle und Export zeigen das aufgeteilt an: **Bestellnummer** = reine
+pretix-Bestellnummer (`SC3HR`), **Event** = Eventkurzform/Verwendungszweck (`GAG-WISMAR-2026`). Der Rohwert
+bleibt auf der Detailseite als "Verwendungszweck (roh)" sichtbar.
 
 ## Transaktionen als "nicht relevant" markieren
 
@@ -215,7 +220,7 @@ verfügbar.
 Unter **Berichte** (mit optionalem Zeitraumfilter):
 
 - Gebührenanalyse nach Event, nach Monat und im Konten-Vergleich (Brutto/Gebühr/Netto/Gebührenquote)
-- Custom-Field-Präfix-Analyse (z. B. fasst `SOMMERFEST-001` … `SOMMERFEST-042` automatisch zu `SOMMERFEST`
+- Event-Kürzel-Analyse aus der Bestellnummer (z. B. fasst `Order SOMMERFEST-2026-A1B2` … `-C3D4` automatisch zu `SOMMERFEST-2026`
   zusammen, um wiederkehrende Muster sichtbar zu machen)
 - Event-Zuordnungsquote und Rückzahlungs-/Reversal-Summe
 

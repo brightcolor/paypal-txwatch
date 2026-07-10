@@ -14,8 +14,8 @@ class ExportTemplate extends Model
     public const MODE_INTERNAL = 'internal';
 
     public const DEFAULT_COLUMNS = [
-        'date', 'transaction_id', 'name', 'email', 'custom_field',
-        'invoice_id', 'status', 'gross', 'vat', 'fee', 'net', 'currency', 'event',
+        'date', 'transaction_id', 'name', 'email', 'event_ref', 'custom_field',
+        'invoice_id', 'status', 'gross', 'vat', 'fee', 'net', 'currency',
     ];
 
     protected $fillable = [

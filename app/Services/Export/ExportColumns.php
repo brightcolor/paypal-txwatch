@@ -3,6 +3,7 @@
 namespace App\Services\Export;
 
 use App\Models\Transaction;
+use App\Services\CustomFieldParser;
 
 /**
  * Single source of truth for exportable columns: label (shown when picking
@@ -17,7 +18,8 @@ class ExportColumns
         'transaction_id' => 'Transaktions-ID',
         'name' => 'Name',
         'email' => 'E-Mail',
-        'custom_field' => 'Custom Field',
+        'event_ref' => 'Event',
+        'custom_field' => 'Bestellnummer',
         'invoice_id' => 'Invoice ID',
         'status' => 'Status',
         'gross' => 'Brutto',
@@ -26,7 +28,7 @@ class ExportColumns
         'fee' => 'Gebühr',
         'net' => 'Netto',
         'currency' => 'Währung',
-        'event' => 'Event',
+        'event' => 'Event (zugeordnet)',
         'payment_method' => 'Zahlungsart',
         'country' => 'Land',
         'reference_id' => 'Reference ID',
@@ -52,7 +54,10 @@ class ExportColumns
             'transaction_id' => $transaction->transaction_id,
             'name' => $maskPii ? self::mask($transaction->payer_name) : $transaction->payer_name,
             'email' => $maskPii ? self::mask($transaction->payer_email) : $transaction->payer_email,
-            'custom_field' => $transaction->custom_field,
+            // custom_field holds pretix' "Order <event>-<nr>"; the export shows the two
+            // parts separately: "Bestellnummer" = the order number, "Event" = the event ref.
+            'custom_field' => CustomFieldParser::orderNumber($transaction->custom_field),
+            'event_ref' => CustomFieldParser::eventReference($transaction->custom_field),
             'invoice_id' => $transaction->invoice_id,
             'status' => $transaction->transaction_status,
             'gross' => $transaction->gross_amount,

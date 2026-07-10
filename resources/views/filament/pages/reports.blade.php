@@ -34,12 +34,12 @@
         @include('filament.pages.partials.report-table', ['rows' => $this->accountComparison, 'labelHeading' => 'Konto'])
     </x-filament::section>
 
-    <x-filament::section heading="Custom-Field-Präfix-Analyse">
+    <x-filament::section heading="Event-Kürzel-Analyse (aus Bestellnummer)">
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead>
                     <tr class="text-left text-gray-500">
-                        <th class="py-1.5 pr-4">Präfix</th>
+                        <th class="py-1.5 pr-4">Event-Kürzel</th>
                         <th class="py-1.5 pr-4 text-right">Anzahl</th>
                         <th class="py-1.5 pr-4 text-right">Brutto</th>
                     </tr>

@@ -4,6 +4,26 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.8.0] - 2026-07-10
+
+### Geändert
+
+- Das Feld **"Custom Field" heißt jetzt "Bestellnummer"** – in der Suchfeld-Auswahl, im Filter, in der
+  Transaktionstabelle, auf der Detailseite und im Export.
+- Der Wert des `custom_field` (pretix-Schema `Order <Event>-<Bestellnummer>`, z. B.
+  `Order GAG-WISMAR-2026-SC3HR`) wird jetzt aufgeteilt dargestellt:
+  - **Bestellnummer** zeigt nur noch die reine pretix-Bestellnummer (letztes Segment, z. B. `SC3HR`) –
+    ohne "Order" und ohne Verwendungszweck.
+  - Neue Spalte **"Event"** zeigt die Eventkurzform / den Verwendungszweck (der Teil zwischen "Order" und der
+    Bestellnummer, z. B. `GAG-WISMAR-2026`).
+- Beides gilt für Tabelle **und** Export (PDF/CSV/XLSX). Die neuen Spalten "Event" und "Bestellnummer" sind
+  in der Standard-Spaltenauswahl des Exports enthalten. Der Rohwert bleibt auf der Transaktions-Detailseite
+  als "Verwendungszweck (roh)" vollständig sichtbar.
+- Die zuvor "Event" genannte Spalte (zugeordnetes Event aus der Event-Verwaltung) heißt zur Abgrenzung jetzt
+  **"Event (zugeordnet)"** und ist weiterhin als Export-Spalte wählbar.
+- Die Parsing-Logik ist in `App\Services\CustomFieldParser` zentralisiert (auch von der
+  Event-Kürzel-Analyse auf der Berichte-Seite genutzt).
+
 ## [0.7.1] - 2026-07-10
 
 ### Behoben

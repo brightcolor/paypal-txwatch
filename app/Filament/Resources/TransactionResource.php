@@ -101,11 +101,18 @@ class TransactionResource extends Resource
                     ->copyable(),
                 Tables\Columns\TextColumn::make('payer_name')->label('Name')->searchable(),
                 Tables\Columns\TextColumn::make('payer_email')->label('E-Mail')->searchable()->toggleable(),
-                Tables\Columns\TextColumn::make('custom_field')
-                    ->label('Custom Field')
-                    ->searchable()
+                Tables\Columns\TextColumn::make('event_ref')
+                    ->label('Event')
+                    ->state(fn (Transaction $record) => \App\Services\CustomFieldParser::eventReference($record->custom_field))
                     ->toggleable()
                     ->color('primary'),
+                Tables\Columns\TextColumn::make('custom_field')
+                    ->label('Bestellnummer')
+                    ->formatStateUsing(fn (?string $state) => \App\Services\CustomFieldParser::orderNumber($state))
+                    ->searchable()
+                    ->toggleable()
+                    ->copyable()
+                    ->copyableState(fn (?string $state) => \App\Services\CustomFieldParser::orderNumber($state)),
                 Tables\Columns\TextColumn::make('invoice_id')->label('Invoice ID')->searchable()->toggleable(),
                 Tables\Columns\BadgeColumn::make('transaction_status')->label('Status'),
                 Tables\Columns\TextColumn::make('transaction_event_code')->label('T-Code')->toggleable(isToggledHiddenByDefault: true),
@@ -241,13 +248,13 @@ class TransactionResource extends Resource
     {
         return [
             Tables\Filters\Filter::make('custom_field_search')
-                ->label('Custom Field / Volltextsuche')
+                ->label('Bestellnummer / Volltextsuche')
                 ->form([
                     Forms\Components\TextInput::make('value')->label('Suchbegriff'),
                     Forms\Components\Select::make('field')
                         ->label('Feld')
                         ->options([
-                            'custom_field' => 'Custom Field',
+                            'custom_field' => 'Bestellnummer',
                             'invoice_id' => 'Invoice ID',
                             'transaction_id' => 'Transaktions-ID',
                             'payer_name' => 'Name',
@@ -365,10 +372,10 @@ class TransactionResource extends Resource
                 ->query(fn (Builder $q) => $q->whereIn('transaction_event_code', Transaction::REFUND_EVENT_CODES)),
 
             Tables\Filters\TernaryFilter::make('has_custom_field')
-                ->label('Custom Field')
+                ->label('Bestellnummer')
                 ->placeholder('Alle')
-                ->trueLabel('mit Custom Field')
-                ->falseLabel('ohne Custom Field')
+                ->trueLabel('mit Bestellnummer')
+                ->falseLabel('ohne Bestellnummer')
                 ->queries(
                     true: fn (Builder $q) => $q->whereNotNull('custom_field')->where('custom_field', '<>', ''),
                     false: fn (Builder $q) => $q->where(fn ($q) => $q->whereNull('custom_field')->orWhere('custom_field', '')),
