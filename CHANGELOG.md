@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.5.5] - 2026-07-10
+
+### Behoben
+
+- "Verbindung testen" fragte die letzte Stunde ab und erhielt dafür von PayPal die Fehlermeldung "Data for
+  the given start date is not available" – unabhängig von der bekannten ~3h-Verzögerung bei echten
+  Transaktionsdaten lehnt PayPal offenbar zu frische Suchfenster grundsätzlich ab. Der Testzeitraum liegt
+  jetzt einen Tag in der Vergangenheit (der Test prüft ohnehin nur, ob PayPal antwortet, nicht ob Daten
+  vorhanden sind).
+
 ## [0.5.4] - 2026-07-10
 
 ### Behoben

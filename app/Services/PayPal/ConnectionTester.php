@@ -8,11 +8,22 @@ use Carbon\CarbonImmutable;
 
 /**
  * Verifies that an account's credentials are valid AND that the app has
- * the Transaction Search permission, by requesting a tiny (1 hour, 1
- * record) window. Used by the "Verbindung testen" action in the UI.
+ * the Transaction Search permission, by requesting a tiny 1-hour window.
+ * Used by the "Verbindung testen" action in the UI.
  */
 class ConnectionTester
 {
+    /**
+     * How far back the test window starts. PayPal's Transaction Search
+     * rejects windows that are "too recent" with a generic "Data for the
+     * given start date is not available" error (observed even for a
+     * window ending at "now") - independent of the documented ~3h
+     * reporting delay for actual transaction data. A day-old window
+     * avoids that edge case entirely; the test doesn't care whether any
+     * transactions actually exist in it, only that PayPal answers.
+     */
+    private const TEST_WINDOW_OFFSET_HOURS = 25;
+
     /**
      * @return array{success: bool, message: string}
      */
@@ -28,7 +39,7 @@ class ConnectionTester
             $client->getAccessToken(forceFresh: true);
 
             $search = new TransactionSearchClient($client);
-            $end = CarbonImmutable::now();
+            $end = CarbonImmutable::now()->subHours(self::TEST_WINDOW_OFFSET_HOURS - 1);
             $start = $end->subHour();
 
             $search->searchPage($start, $end, page: 1);
