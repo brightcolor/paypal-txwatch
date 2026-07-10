@@ -41,7 +41,11 @@ class TransactionResource extends Resource
      */
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()
+            // Eager-load every relationship the table columns touch, otherwise each of
+            // the 25 rows/page lazily loads event + paypalAccount + irrelevantMarkedBy
+            // (N+1: dozens of extra queries per page render).
+            ->with(['event', 'paypalAccount', 'irrelevantMarkedBy']);
         $user = auth()->user();
 
         if ($user && $user->hasRole('customer')) {
@@ -315,27 +319,27 @@ class TransactionResource extends Resource
             Tables\Filters\SelectFilter::make('currency')
                 ->label('Währung')
                 ->multiple()
-                ->options(fn () => Transaction::query()->distinct()->pluck('currency', 'currency')->filter()->all()),
+                ->options(fn () => static::distinctColumnOptions('currency')),
 
             Tables\Filters\SelectFilter::make('payment_method_type')
                 ->label('Zahlungsart')
                 ->multiple()
-                ->options(fn () => Transaction::query()->distinct()->pluck('payment_method_type', 'payment_method_type')->filter()->all()),
+                ->options(fn () => static::distinctColumnOptions('payment_method_type')),
 
             Tables\Filters\SelectFilter::make('payer_country_code')
                 ->label('Land')
                 ->multiple()
-                ->options(fn () => Transaction::query()->distinct()->pluck('payer_country_code', 'payer_country_code')->filter()->all()),
+                ->options(fn () => static::distinctColumnOptions('payer_country_code')),
 
             Tables\Filters\SelectFilter::make('transaction_status')
                 ->label('Status')
                 ->multiple()
-                ->options(fn () => Transaction::query()->distinct()->pluck('transaction_status', 'transaction_status')->filter()->all()),
+                ->options(fn () => static::distinctColumnOptions('transaction_status')),
 
             Tables\Filters\SelectFilter::make('transaction_event_code')
                 ->label('T-Code')
                 ->multiple()
-                ->options(fn () => Transaction::query()->distinct()->pluck('transaction_event_code', 'transaction_event_code')->filter()->all()),
+                ->options(fn () => static::distinctColumnOptions('transaction_event_code')),
 
             Tables\Filters\SelectFilter::make('paypal_account_id')
                 ->label('PayPal-Konto')
@@ -410,6 +414,24 @@ class TransactionResource extends Resource
                         ->havingRaw('count(*) > 1');
                 })),
         ];
+    }
+
+    /**
+     * Distinct non-null values of a column for a SelectFilter, cached briefly.
+     * Without the cache every table render re-runs a DISTINCT scan per filter
+     * (five of them), which is a noticeable share of the page's DB time. A new
+     * value only needs to appear in the filter after the next sync, so a short
+     * TTL is fine.
+     *
+     * @return array<string, string>
+     */
+    private static function distinctColumnOptions(string $column): array
+    {
+        return \Illuminate\Support\Facades\Cache::remember(
+            "tx_filter_options_{$column}",
+            now()->addMinutes(10),
+            fn () => Transaction::query()->distinct()->pluck($column, $column)->filter()->all(),
+        );
     }
 
     private static function applyStringSearch(Builder $q, string $field, string $value, string $mode, bool $caseSensitive): void

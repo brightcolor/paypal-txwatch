@@ -11,6 +11,7 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Enums\MaxWidth;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -29,6 +30,10 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->brandName('PayPal TxWatch')
+            // Use the full viewport width for content (the default is a narrow centered
+            // column that leaves large unused margins on wide screens, which matters here
+            // because the transactions table has many columns).
+            ->maxContentWidth(MaxWidth::Full)
             ->login()
             ->passwordReset()
             ->profile()

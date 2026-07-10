@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.8.1] - 2026-07-10
+
+### Geändert / Performance
+
+- Das Panel nutzt jetzt die **volle Viewport-Breite** (`maxContentWidth: Full`) statt der schmalen
+  zentrierten Standardspalte – die breite Transaktionstabelle hat damit deutlich mehr Platz.
+- **N+1 in der Transaktionstabelle behoben**: `event`, `paypalAccount` und `irrelevantMarkedBy` werden jetzt
+  eager-geladen (vorher pro Zeile einzeln nachgeladen → dutzende Extra-Queries je Seitenaufruf).
+- Die `DISTINCT`-Optionslisten der Tabellen-Filter (Währung, Zahlungsart, Land, Status, T-Code) werden 10 min
+  gecacht, statt bei jedem Render fünf DISTINCT-Scans auszuführen.
+
 ## [0.8.0] - 2026-07-10
 
 ### Geändert
