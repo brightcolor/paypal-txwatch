@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.5.1] - 2026-07-10
+
+### Behoben
+
+- Docker-Image-Build schlug fehl: `docker/Dockerfile` installierte nicht alle von den Composer-Abhängigkeiten
+  benötigten PHP-Extensions (`intl` für Filament, `gd` für phpoffice/phpspreadsheet, außerdem `curl`, `gmp`,
+  `mbstring`, `bcmath`, `pcntl` fürs Queue-Signal-Handling).
+
 ## [0.5.0] - 2026-07-10
 
 ### Hinzugefügt

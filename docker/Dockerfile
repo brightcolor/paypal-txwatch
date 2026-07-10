@@ -4,12 +4,14 @@ ARG NODE_MAJOR=20
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git unzip zip curl \
-        libpq-dev libzip-dev libonig-dev libpng-dev \
+        libpq-dev libzip-dev libonig-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
+        libicu-dev libcurl4-openssl-dev libgmp-dev \
         chromium fonts-liberation fonts-noto-color-emoji \
         netcat-openbsd \
     && curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
-    && docker-php-ext-install pdo pdo_pgsql pgsql zip \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo pdo_pgsql pgsql zip gd intl curl gmp mbstring bcmath pcntl \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
