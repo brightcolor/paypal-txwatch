@@ -4,6 +4,13 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.5.3] - 2026-07-10
+
+### Behoben
+
+- Aufruf der Wurzel-URL (`/`) zeigte die generische Laravel-Skelett-Seite statt zur Anwendung zu führen –
+  leitet jetzt direkt auf `/admin` weiter. Ungenutzte `resources/views/welcome.blade.php` entfernt.
+
 ## [0.5.2] - 2026-07-10
 
 ### Behoben

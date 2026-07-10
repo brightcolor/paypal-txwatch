@@ -4,9 +4,7 @@ use App\Http\Controllers\SharedFilterController;
 use App\Http\Controllers\TwoFactorChallengeController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', fn () => redirect('/admin'));
 
 Route::middleware('auth')
     ->get('/f/{token}', SharedFilterController::class)
