@@ -43,9 +43,9 @@ class TransactionResource extends Resource
     {
         $query = parent::getEloquentQuery()
             // Eager-load every relationship the table columns touch, otherwise each of
-            // the 25 rows/page lazily loads event + paypalAccount + irrelevantMarkedBy
-            // (N+1: dozens of extra queries per page render).
-            ->with(['event', 'paypalAccount', 'irrelevantMarkedBy']);
+            // the 25 rows/page lazily loads event + paypalAccount + irrelevantMarkedBy +
+            // pretixOrder (N+1: dozens of extra queries per page render).
+            ->with(['event', 'paypalAccount', 'irrelevantMarkedBy', 'pretixOrder']);
         $user = auth()->user();
 
         if ($user && $user->hasRole('customer')) {
@@ -113,10 +113,32 @@ class TransactionResource extends Resource
                 Tables\Columns\TextColumn::make('custom_field')
                     ->label('Bestellnummer')
                     ->formatStateUsing(fn (?string $state) => \App\Services\CustomFieldParser::orderNumber($state))
+                    ->url(fn (Transaction $record) => $record->pretixOrderUrl(), shouldOpenInNewTab: true)
+                    ->color(fn (Transaction $record) => $record->pretixOrderUrl() ? 'primary' : null)
+                    ->tooltip(fn (Transaction $record) => $record->pretixOrderUrl() ? 'In pretix öffnen' : null)
                     ->searchable()
                     ->toggleable()
                     ->copyable()
                     ->copyableState(fn (?string $state) => \App\Services\CustomFieldParser::orderNumber($state)),
+                Tables\Columns\TextColumn::make('reconciliation_status')
+                    ->label('pretix-Abgleich')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state) => match ($state) {
+                        Transaction::RECONCILIATION_MATCHED => 'abgeglichen',
+                        Transaction::RECONCILIATION_MISMATCH => 'Betrag weicht ab',
+                        Transaction::RECONCILIATION_UNMATCHED => 'nicht in pretix',
+                        default => '–',
+                    })
+                    ->color(fn (?string $state) => match ($state) {
+                        Transaction::RECONCILIATION_MATCHED => 'success',
+                        Transaction::RECONCILIATION_MISMATCH => 'danger',
+                        Transaction::RECONCILIATION_UNMATCHED => 'warning',
+                        default => 'gray',
+                    })
+                    ->tooltip(fn (Transaction $record) => $record->pretixOrder
+                        ? 'pretix-Summe: ' . number_format((float) $record->pretixOrder->total, 2, ',', '.') . ' ' . ($record->pretixOrder->currency ?? '')
+                        : null)
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('invoice_id')->label('Invoice ID')->searchable()->toggleable(),
                 Tables\Columns\TextColumn::make('type')
                     ->label('Art')
@@ -397,6 +419,14 @@ class TransactionResource extends Resource
             Tables\Filters\Filter::make('real_turnover_only')
                 ->label('Nur echte Umsätze (ohne Auszahlungen/Reserven)')
                 ->query(fn (Builder $q) => $q->excludingLedgerEvents()),
+
+            Tables\Filters\SelectFilter::make('reconciliation_status')
+                ->label('pretix-Abgleich')
+                ->options([
+                    Transaction::RECONCILIATION_MATCHED => 'abgeglichen',
+                    Transaction::RECONCILIATION_MISMATCH => 'Betrag weicht ab',
+                    Transaction::RECONCILIATION_UNMATCHED => 'nicht in pretix',
+                ]),
 
             Tables\Filters\Filter::make('refunds_only')
                 ->label('Nur Rückzahlungen/Reversals')

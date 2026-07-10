@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\PretixConnectionResource\Pages;
 use App\Models\PretixConnection;
 use App\Services\Pretix\PretixClient;
+use App\Services\Pretix\PretixOrderImporter;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -136,6 +137,28 @@ class PretixConnectionResource extends Resource
                             ->body($result['message'])
                             ->status($result['success'] ? 'success' : 'danger')
                             ->send();
+                    }),
+                Tables\Actions\Action::make('import')
+                    ->label('Import & Abgleich')
+                    ->icon('heroicon-o-arrow-path')
+                    ->requiresConfirmation()
+                    ->modalDescription('Lädt alle pretix-Bestellungen und gleicht sie mit den PayPal-Transaktionen ab (PayPal bleibt führend).')
+                    ->action(function (PretixConnection $record) {
+                        try {
+                            $r = app(PretixOrderImporter::class)->import($record);
+
+                            Notification::make()
+                                ->title('pretix-Import abgeschlossen')
+                                ->body("{$r['orders']} Bestellungen aus {$r['events']} Event(s). Abgeglichen: {$r['matched']}, Abweichung: {$r['mismatch']}, nicht in pretix: {$r['unmatched']}.")
+                                ->success()
+                                ->send();
+                        } catch (\Throwable $e) {
+                            Notification::make()
+                                ->title('pretix-Import fehlgeschlagen')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
                     }),
                 Tables\Actions\EditAction::make(),
             ]);

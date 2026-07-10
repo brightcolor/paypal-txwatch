@@ -94,7 +94,13 @@ class Transaction extends Model
         'marked_irrelevant_at',
         'irrelevant_reason',
         'irrelevant_marked_by_user_id',
+        'pretix_order_id',
+        'reconciliation_status',
     ];
+
+    public const RECONCILIATION_MATCHED = 'matched';
+    public const RECONCILIATION_MISMATCH = 'amount_mismatch';
+    public const RECONCILIATION_UNMATCHED = 'unmatched';
 
     protected function casts(): array
     {
@@ -152,6 +158,32 @@ class Transaction extends Model
     public function irrelevantMarkedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'irrelevant_marked_by_user_id');
+    }
+
+    public function pretixOrder(): BelongsTo
+    {
+        return $this->belongsTo(PretixOrder::class);
+    }
+
+    /**
+     * Match key derived from the parsed custom_field ("eventslug/ordercode",
+     * lower-cased), used to link this PayPal transaction to a pretix order.
+     */
+    public function pretixMatchKey(): ?string
+    {
+        return PretixOrder::matchKey(
+            \App\Services\CustomFieldParser::eventReference($this->custom_field),
+            \App\Services\CustomFieldParser::orderNumber($this->custom_field),
+        );
+    }
+
+    /**
+     * Deep link to the matched order in pretix' control panel, or null when
+     * this transaction isn't linked to a pretix order.
+     */
+    public function pretixOrderUrl(): ?string
+    {
+        return $this->pretixOrder?->url;
     }
 
     public function isRefundOrReversal(): bool

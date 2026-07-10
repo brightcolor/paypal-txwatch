@@ -4,6 +4,25 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.11.0] - 2026-07-11
+
+### Neu
+
+- **pretix-Bestell-Import & Abgleich**: Über **pretix-Verbindungen → "Import & Abgleich"** werden alle
+  pretix-Bestellungen geladen und mit den PayPal-Transaktionen verknüpft. **PayPal bleibt führend**; pretix
+  dient als Gegenprobe. Pro Transaktion wird ein **Abgleich-Status** gesetzt:
+  - **abgeglichen** – pretix-Bestellung gefunden, Summe stimmt plausibel mit dem PayPal-Betrag überein,
+  - **Betrag weicht ab** – Bestellung gefunden, aber die Beträge differieren,
+  - **nicht in pretix** – Bestellnummer vorhanden, aber keine passende pretix-Bestellung.
+  Die Zuordnung erfolgt über Event-Slug + Bestellnummer (aus der Bestellnummer geparst, case-insensitiv).
+- **Klickbare Bestellnummern**: In der Transaktionstabelle und auf der Detailseite verlinkt die
+  Bestellnummer direkt auf die zugehörige Bestellung im pretix-Control-Panel (sofern zugeordnet).
+- Neue Spalte und Filter **"pretix-Abgleich"** in der Transaktionsliste.
+
+Der Import ist idempotent (erneutes Ausführen aktualisiert bestehende Bestellungen, statt zu duplizieren).
+Die Zahlungsart der pretix-Bestellung wird erkannt (PayPal/Überweisung/…), was die spätere Verbuchung der
+Nicht-PayPal-Zahlungen inkl. Überweisungsgebühr vorbereitet.
+
 ## [0.10.0] - 2026-07-10
 
 ### Neu

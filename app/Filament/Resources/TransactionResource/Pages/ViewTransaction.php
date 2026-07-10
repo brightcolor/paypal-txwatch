@@ -42,7 +42,25 @@ class ViewTransaction extends ViewRecord
                     TextEntry::make('order_number')
                         ->label('Bestellnummer')
                         ->state(fn (Transaction $record) => \App\Services\CustomFieldParser::orderNumber($record->custom_field) ?? '–')
+                        ->url(fn (Transaction $record) => $record->pretixOrderUrl(), shouldOpenInNewTab: true)
+                        ->color(fn (Transaction $record) => $record->pretixOrderUrl() ? 'primary' : null)
+                        ->helperText(fn (Transaction $record) => $record->pretixOrderUrl() ? 'In pretix öffnen' : null)
                         ->copyable(),
+                    TextEntry::make('reconciliation_status')
+                        ->label('pretix-Abgleich')
+                        ->badge()
+                        ->state(fn (Transaction $record) => match ($record->reconciliation_status) {
+                            Transaction::RECONCILIATION_MATCHED => 'abgeglichen',
+                            Transaction::RECONCILIATION_MISMATCH => 'Betrag weicht ab',
+                            Transaction::RECONCILIATION_UNMATCHED => 'nicht in pretix',
+                            default => '–',
+                        })
+                        ->color(fn (Transaction $record) => match ($record->reconciliation_status) {
+                            Transaction::RECONCILIATION_MATCHED => 'success',
+                            Transaction::RECONCILIATION_MISMATCH => 'danger',
+                            Transaction::RECONCILIATION_UNMATCHED => 'warning',
+                            default => 'gray',
+                        }),
                     TextEntry::make('custom_field')->label('Verwendungszweck (roh)')->default('–'),
                 ]),
 

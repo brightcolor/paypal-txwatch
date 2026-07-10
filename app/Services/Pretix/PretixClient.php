@@ -94,4 +94,40 @@ class PretixClient
 
         return $events;
     }
+
+    /**
+     * All orders of one event (paged).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function ordersForEvent(string $eventSlug): array
+    {
+        $organizer = $this->connection->organizer_slug;
+        $orders = [];
+        $url = "/organizers/{$organizer}/events/{$eventSlug}/orders/";
+
+        while ($url) {
+            $response = $this->http()->get($url, ['page_size' => 50]);
+            $response->throw();
+
+            foreach ($response->json('results', []) as $order) {
+                $orders[] = $order;
+            }
+
+            $next = $response->json('next');
+            $url = $next ? str_replace($this->connection->apiBaseUrl(), '', $next) : null;
+        }
+
+        return $orders;
+    }
+
+    /**
+     * Control-panel deep link for an order, e.g.
+     * https://pretix.eu/control/event/{organizer}/{event}/orders/{code}/
+     */
+    public function orderControlUrl(string $eventSlug, string $orderCode): string
+    {
+        return rtrim($this->connection->base_url, '/')
+            . "/control/event/{$this->connection->organizer_slug}/{$eventSlug}/orders/{$orderCode}/";
+    }
 }
