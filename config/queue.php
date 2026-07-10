@@ -68,7 +68,11 @@ return [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
+            // MUST be greater than the longest job's timeout, otherwise the queue
+            // considers a still-running long job (e.g. ImportPretixOrdersJob, up to
+            // 1800s) abandoned and re-dispatches it -> "has been attempted too many
+            // times". 1920 > that job's 1800s timeout, with margin.
+            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 1920),
             'block_for' => null,
             'after_commit' => false,
         ],

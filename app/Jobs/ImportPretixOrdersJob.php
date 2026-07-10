@@ -29,6 +29,10 @@ class ImportPretixOrdersJob implements ShouldBeUnique, ShouldQueue
 
     public int $timeout = 1800;
 
+    // Don't let a crashed/killed run hold the unique lock forever (it would block
+    // all future imports for this connection). Expires with the job timeout.
+    public int $uniqueFor = 1800;
+
     public function __construct(public readonly int $pretixConnectionId)
     {
     }

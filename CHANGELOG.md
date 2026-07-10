@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.12.1] - 2026-07-11
+
+### Behoben
+
+- pretix-Import brach mit **"ImportPretixOrdersJob has been attempted too many times"** ab. Ursache: Das
+  `retry_after` der Redis-Queue (90s) war kleiner als das Job-Timeout (1800s) – die Queue hielt den noch
+  laufenden Langläufer für abgebrochen und stellte ihn erneut zu, bis die Versuche erschöpft waren.
+  `retry_after` ist jetzt **1920s** (> Job-Timeout). Zusätzlich hält ein abgestürzter Lauf den Unique-Lock
+  nicht mehr unbegrenzt (`uniqueFor = 1800`), damit er künftige Importe derselben Verbindung nicht blockiert.
+
 ## [0.12.0] - 2026-07-11
 
 ### Neu
