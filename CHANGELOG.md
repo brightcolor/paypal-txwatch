@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.5.8] - 2026-07-10
+
+### Behoben
+
+- Die Custom-Field-Präfix-Analyse (Berichte-Seite) gruppierte reale Bestell-Custom-Fields nicht sinnvoll,
+  da die alte Heuristik nur einen trailing Lauf aus Ziffern/Trennzeichen abschnitt. Echte Werte folgen dem
+  Schema `Order <Präfix>-<Bestell-ID>` (z. B. `Order GAG-WISMAR-2026-SC3HR`), wobei die Bestell-ID
+  alphanumerisch ist (nicht rein numerisch, z. B. `SC3HR`). `ReportService::extractPrefix()` entfernt jetzt
+  das führende `Order`-Label und das letzte Bindestrich-Segment gezielt, sodass z. B. `Order
+  GAG-WISMAR-2026-SC3HR` korrekt zu `GAG-WISMAR-2026` gruppiert wird.
+- `Transaction::REFUND_EVENT_CODES` um `T0400`/`T1107` hinaus ergänzt: Anhand von 813 echten
+  Produktions-Transaktionen wurde verifiziert, dass auch `T0403` (1/1) und `T2101` (48/48) zu 100 % mit
+  negativem Bruttobetrag korrelieren, während `T2102`/`T2108` zu 0 % korrelieren und daher weiterhin
+  ausgeschlossen bleiben. Ändert das aktuelle Dashboard-/Berichts-Ergebnis nicht (die Fälle sind bereits über
+  die Negativbetrag-Prüfung erfasst), macht aber `Transaction::isRefundOrReversal()` korrekt für Aufrufer,
+  die sich allein auf den Event-Code verlassen.
+
 ## [0.5.7] - 2026-07-10
 
 ### Behoben

@@ -67,9 +67,9 @@ class ReportService
     }
 
     /**
-     * Groups by a heuristically-extracted "prefix" of the custom field
-     * (everything before the trailing run of digits/separators), e.g.
-     * "SOMMERFEST-042" and "SOMMERFEST-007" both roll up under "SOMMERFEST".
+     * Groups by a heuristically-extracted "prefix" of the custom field, e.g.
+     * "Order GAG-WISMAR-2026-SC3HR" and "Order GAG-WISMAR-2026-A1B2C" both
+     * roll up under "GAG-WISMAR-2026".
      *
      * @return Collection<int, array{prefix: string, count: int, gross: float}>
      */
@@ -92,9 +92,27 @@ class ReportService
 
     public static function extractPrefix(string $customField): string
     {
-        $prefix = preg_replace('/[\d\-_\s]+$/', '', trim($customField));
+        $value = trim($customField);
 
-        return $prefix !== '' ? $prefix : $customField;
+        // Real-world custom_field values follow PayPal's "Order <prefix>-<order-id>"
+        // scheme, e.g. "Order GAG-WISMAR-2026-SC3HR" -> prefix "GAG-WISMAR-2026".
+        // The trailing order-id segment is alphanumeric (not necessarily digits-only,
+        // e.g. "SC3HR"), so it can only be identified by position (last dash-separated
+        // segment), not by character class.
+        $value = preg_replace('/^order[:\s]+/i', '', $value);
+
+        $segments = explode('-', $value);
+
+        if (count($segments) > 1) {
+            array_pop($segments);
+            $prefix = trim(implode('-', $segments));
+
+            if ($prefix !== '') {
+                return $prefix;
+            }
+        }
+
+        return $value !== '' ? $value : $customField;
     }
 
     /**

@@ -18,9 +18,11 @@ class Transaction extends Model
      * matched ~99% of a real account's ordinary transactions, making the
      * refund filter/report/dashboard stat effectively meaningless. Verify
      * any additions against real negative-gross_amount rows before adding
-     * a code here again.
+     * a code here again. T0400/T1107/T0403/T2101 are all confirmed 100%
+     * negative-gross_amount in production data (813 real transactions
+     * checked); T2102/T2108, by contrast, are 0% negative and excluded.
      */
-    public const REFUND_EVENT_CODES = ['T0400', 'T1107'];
+    public const REFUND_EVENT_CODES = ['T0400', 'T1107', 'T0403', 'T2101'];
 
     protected $fillable = [
         'paypal_account_id',

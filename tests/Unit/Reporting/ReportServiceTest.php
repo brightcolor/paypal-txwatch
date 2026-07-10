@@ -64,26 +64,28 @@ class ReportServiceTest extends TestCase
 
     public function test_custom_field_prefix_extraction(): void
     {
-        $this->assertSame('SOMMERFEST', ReportService::extractPrefix('SOMMERFEST-042'));
-        $this->assertSame('SOMMERFEST', ReportService::extractPrefix('SOMMERFEST_7'));
-        $this->assertSame('EVT', ReportService::extractPrefix('EVT007'));
+        // Real custom_field values follow PayPal's "Order <prefix>-<order-id>"
+        // scheme, and the order-id is alphanumeric (not digits-only).
+        $this->assertSame('GAG-WISMAR-2026', ReportService::extractPrefix('Order GAG-WISMAR-2026-SC3HR'));
+        $this->assertSame('SOMMERFEST-2026', ReportService::extractPrefix('Order SOMMERFEST-2026-A1B2'));
+        $this->assertSame('FOO', ReportService::extractPrefix('Order FOO-XYZ'));
         $this->assertSame('FOO', ReportService::extractPrefix('FOO'));
     }
 
     public function test_custom_field_prefixes_report_groups_by_prefix(): void
     {
-        $this->transaction(['custom_field' => 'SOMMERFEST-001', 'gross_amount' => 100]);
-        $this->transaction(['custom_field' => 'SOMMERFEST-002', 'gross_amount' => 50]);
-        $this->transaction(['custom_field' => 'STADTFEST-001', 'gross_amount' => 30]);
+        $this->transaction(['custom_field' => 'Order SOMMERFEST-2026-A1B2', 'gross_amount' => 100]);
+        $this->transaction(['custom_field' => 'Order SOMMERFEST-2026-C3D4', 'gross_amount' => 50]);
+        $this->transaction(['custom_field' => 'Order STADTFEST-2026-E5F6', 'gross_amount' => 30]);
         $this->transaction(['custom_field' => null]);
 
         $result = (new ReportService())->customFieldPrefixes();
 
-        $sommerfest = $result->firstWhere('prefix', 'SOMMERFEST');
+        $sommerfest = $result->firstWhere('prefix', 'SOMMERFEST-2026');
         $this->assertSame(2, $sommerfest['count']);
         $this->assertSame(150.0, $sommerfest['gross']);
 
-        $stadtfest = $result->firstWhere('prefix', 'STADTFEST');
+        $stadtfest = $result->firstWhere('prefix', 'STADTFEST-2026');
         $this->assertSame(1, $stadtfest['count']);
     }
 
