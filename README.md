@@ -62,6 +62,10 @@ Auf dem Server wird **kein vollständiger Checkout** benötigt – nur ein schla
 ```bash
 mkdir -p /opt/paypal-txwatch/docker/data/{public,postgres,redis}
 mkdir -p /opt/paypal-txwatch/storage/{app/public,app/private,framework/{cache/data,sessions,views},logs}
+# app/queue/scheduler laufen im Image als www-data (UID 33) - die Bind-Mounts, in die
+# der Container schreibt, müssen dem gehören, sonst schlägt der Start mit "Permission
+# denied" beim Asset-Export bzw. bei storage/ fehl:
+chown -R 33:33 /opt/paypal-txwatch/docker/data/public /opt/paypal-txwatch/storage
 cd /opt/paypal-txwatch
 # docker-compose.yml und docker/nginx.conf aus dem Repo hierher kopieren
 cp .env.example .env

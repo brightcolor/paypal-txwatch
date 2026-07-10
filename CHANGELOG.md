@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.5.2] - 2026-07-10
+
+### Behoben
+
+- Migrationsreihenfolge: `create_export_history_table` und `create_export_templates_table` hatten denselben
+  Zeitstempel und liefen alphabetisch (`export_history` vor `export_templates`), obwohl `export_history` einen
+  Fremdschlüssel auf `export_templates` hat. Auf SQLite (lokale Tests) unauffällig, da dort Fremdschlüssel
+  standardmäßig nicht erzwungen werden – auf PostgreSQL (Produktion) schlug die Migration fehl. Zeitstempel
+  von `export_templates` korrigiert.
+- `docker/entrypoint.sh` scheiterte beim ersten Produktions-Deploy an `Permission denied` beim Kopieren der
+  Assets in den mit `nginx` geteilten Bind-Mount (`docker/data/public` gehörte auf dem Host `root`, der
+  Container schreibt als `www-data`). README ergänzt: Bind-Mount-Verzeichnisse müssen vor dem ersten Start
+  `chown 33:33` (bzw. die im Image verwendete `www-data`-UID) erhalten.
+
 ## [0.5.1] - 2026-07-10
 
 ### Behoben
