@@ -216,3 +216,8 @@ idempotenten Upsert/Änderungsverlauf, Event-Zuordnungsregeln, Sync-Fehlerbehand
 - Rollenmodell: Admin (alles), Manager (Transaktionen/Events/Exporte), Kunde (nur eigene Events/Reports,
   serverseitig über `customer_id` gescoped), Auditor (nur lesend, inkl. Sync-Logs).
 - Exporte besitzen ein Ablaufdatum (`export_history.expires_at`, Standard 7 Tage).
+- Optionale Zwei-Faktor-Authentifizierung (TOTP, kompatibel mit Google Authenticator/Authy) unter
+  **Einstellungen → Zwei-Faktor-Authentifizierung** – jeder Nutzer aktiviert sie für sich selbst. Nach
+  Login wird bei aktiviertem 2FA jede Panel-Anfrage bis zur bestätigten Challenge umgeleitet
+  (`EnsureTwoFactorChallengeIsPassed`); zusätzlich 10 einmalige Wiederherstellungscodes als Fallback.
+  Der Verify-Endpunkt ist auf 6 Versuche/Minute rate-limitiert.

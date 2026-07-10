@@ -4,6 +4,27 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.4.0] - 2026-07-10
+
+### Hinzugefügt
+
+- Optionale Zwei-Faktor-Authentifizierung (TOTP, RFC 6238, kompatibel mit Google Authenticator/Authy):
+  Selbstverwaltung unter **Einstellungen → Zwei-Faktor-Authentifizierung** (QR-Code, manueller Schlüssel,
+  10 einmalige Wiederherstellungscodes). Panel-Zugriff wird nach Login bis zur bestätigten Challenge
+  gesperrt (`EnsureTwoFactorChallengeIsPassed`); Verify-Endpunkt rate-limitiert (6/Minute).
+  Basiert auf den framework-agnostischen Bibliotheken `pragmarx/google2fa` + `bacon/bacon-qr-code`
+  statt eines Filament-Plugins, da verfügbare Filament-Auth-Plugins noch nicht mit Laravel 13 kompatibel sind.
+
+### Behoben
+
+- `UserFactory` setzte `is_active` nicht explizit, wodurch frisch per Factory erzeugte (nicht aus der DB
+  neu geladene) User-Instanzen `is_active = null` statt `true` hatten und `canAccessPanel()` mit einem
+  `TypeError` abbrach – betraf u. a. Tests mit `actingAs()`.
+
+### Getestet
+
+- Neue Tests für TOTP-Verifikation, Recovery-Code-Verbrauch und den kompletten Challenge-Redirect-Flow.
+
 ## [0.3.0] - 2026-07-10
 
 ### Hinzugefügt
