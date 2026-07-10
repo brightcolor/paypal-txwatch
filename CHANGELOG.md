@@ -4,6 +4,35 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.6.0] - 2026-07-10
+
+### Neu
+
+- Transaktionen können jetzt als **"nicht relevant"** markiert werden (Einzelaktion in der Transaktionstabelle,
+  auf der Detailseite und als Massenaktion). Eine markierte Transaktion wird aus Dashboard-Kennzahlen,
+  Berichten und kundenseitigen Exporten (PDF/CSV/XLSX) ausgeschlossen, bleibt aber vollständig erhalten und
+  kann jederzeit wieder als relevant markiert werden. Beim Markieren ist ein **Grund verpflichtend**.
+- Jede (De-)Markierung wird **revisionssicher im Audit-Log** festgehalten: **wer**, **wann**, **warum** und
+  welche Transaktion. Das Audit-Log ist unter **System → Audit-Log** einsehbar (Berechtigung
+  `view-audit-log`, standardmäßig für Admin und Auditor).
+- Neue Berechtigungslogik: Markieren erfordert `manage-transactions`.
+
+### Sicherheit / Datenintegrität
+
+- Transaktionen und Audit-Log-Einträge können **niemals gelöscht werden** - weder über die Oberfläche noch
+  programmatisch. `Transaction::delete()`/`forceDelete()` und `AuditLogEntry::delete()`/`forceDelete()`
+  werfen eine Ausnahme; das Löschen von Transaktionen ist in Filament nicht verfügbar. Das Audit-Log nutzt
+  ein eigenes, append-only Modell (`App\Models\AuditLogEntry`), sodass selbst Spaties
+  `activitylog:clean`-Kommando keine Einträge entfernen kann (es wird zudem nicht geplant/geschedult).
+
+### Behoben
+
+- `/admin/saved-filters/create` warf beim Absenden einen HTTP 500 ("null value in column 'filters' violates
+  not-null constraint"). Die generische Filament-Erstellseite konnte weder den aktuellen Filterzustand noch
+  `user_id` erfassen und erzeugte dadurch ungültige Datensätze. Gespeicherte Filter werden ausschließlich
+  über die Aktion **"Filter speichern"** in der Transaktionstabelle erzeugt (dort werden Filterzustand und
+  Benutzer korrekt gesetzt); die überflüssige Erstellseite wurde entfernt.
+
 ## [0.5.10] - 2026-07-10
 
 ### Behoben

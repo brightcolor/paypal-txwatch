@@ -23,6 +23,19 @@ class SavedFilterResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Gespeicherte Filter';
 
+    /**
+     * Saved filters are only ever created through the Transactions table's
+     * "Filter speichern" action (App\Filament\Actions\SaveFilterAction), which
+     * captures the live filter state and the current user_id. A standalone
+     * create form can't capture either - it would insert a NULL `filters`
+     * (violating the NOT NULL column) and a meaningless empty filter - so
+     * creation is disabled here on purpose.
+     */
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
@@ -76,7 +89,6 @@ class SavedFilterResource extends Resource
     {
         return [
             'index' => Pages\ListSavedFilters::route('/'),
-            'create' => Pages\CreateSavedFilter::route('/create'),
             'edit' => Pages\EditSavedFilter::route('/{record}/edit'),
         ];
     }

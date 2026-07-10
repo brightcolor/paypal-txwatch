@@ -19,6 +19,7 @@ class ReportService
     {
         return Transaction::query()
             ->excludingLedgerEvents()
+            ->excludingIrrelevant()
             ->when($from, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '>=', $from))
             ->when($to, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '<=', $to));
     }

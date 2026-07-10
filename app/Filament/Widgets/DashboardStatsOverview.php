@@ -15,7 +15,7 @@ class DashboardStatsOverview extends BaseWidget
     {
         $since = Carbon::now()->subDays(30);
 
-        $base = Transaction::query()->excludingLedgerEvents()->where('transaction_initiation_date', '>=', $since);
+        $base = Transaction::query()->excludingLedgerEvents()->excludingIrrelevant()->where('transaction_initiation_date', '>=', $since);
 
         $count = (clone $base)->count();
         $gross = (clone $base)->sum('gross_amount');

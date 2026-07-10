@@ -75,6 +75,9 @@ class Transaction extends Model
         'dedupe_key',
         'imported_at',
         'last_seen_at',
+        'marked_irrelevant_at',
+        'irrelevant_reason',
+        'irrelevant_marked_by_user_id',
     ];
 
     protected function casts(): array
@@ -85,12 +88,34 @@ class Transaction extends Model
             'assigned_at' => 'datetime',
             'imported_at' => 'datetime',
             'last_seen_at' => 'datetime',
+            'marked_irrelevant_at' => 'datetime',
             'gross_amount' => 'decimal:2',
             'fee_amount' => 'decimal:2',
             'net_amount' => 'decimal:2',
             'item_info' => 'array',
             'raw_payload' => 'array',
         ];
+    }
+
+    /**
+     * Transactions are never deletable, under any circumstances - "marking as
+     * irrelevant" (see markIrrelevant()) is the only supported way to exclude
+     * one from revenue figures, and it is fully audit-logged and reversible.
+     * This blocks $transaction->delete()/forceDelete()/deleteOrFail()/
+     * deleteQuietly() (all of which route through delete() in Eloquent) and
+     * Transaction::destroy($ids). It does NOT block a raw
+     * Transaction::query()->delete() bulk query, which bypasses model
+     * instantiation entirely - no code in this app does that, and it must
+     * stay that way.
+     */
+    public function delete(): bool
+    {
+        throw new \RuntimeException('Transaktionen dürfen nicht gelöscht werden - nur als nicht relevant markiert.');
+    }
+
+    public function forceDelete(): bool
+    {
+        throw new \RuntimeException('Transaktionen dürfen nicht gelöscht werden - nur als nicht relevant markiert.');
     }
 
     public function paypalAccount(): BelongsTo
@@ -106,6 +131,11 @@ class Transaction extends Model
     public function assignmentRule(): BelongsTo
     {
         return $this->belongsTo(EventAssignmentRule::class, 'assignment_rule_id');
+    }
+
+    public function irrelevantMarkedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'irrelevant_marked_by_user_id');
     }
 
     public function isRefundOrReversal(): bool
@@ -132,5 +162,50 @@ class Transaction extends Model
     public function isAssigned(): bool
     {
         return $this->event_id !== null;
+    }
+
+    public function isIrrelevant(): bool
+    {
+        return $this->marked_irrelevant_at !== null;
+    }
+
+    /**
+     * Excludes a transaction from revenue/report figures without ever deleting
+     * it. Always audit-logged (who, when, why) via Spatie Activitylog -
+     * see App\Models\AuditLogEntry for why that log is itself undeletable.
+     */
+    public function markIrrelevant(User $user, string $reason): void
+    {
+        $this->forceFill([
+            'marked_irrelevant_at' => now(),
+            'irrelevant_reason' => $reason,
+            'irrelevant_marked_by_user_id' => $user->id,
+        ])->save();
+
+        activity()
+            ->causedBy($user)
+            ->performedOn($this)
+            ->withProperties(['reason' => $reason, 'transaction_id' => $this->transaction_id])
+            ->log('Transaktion als nicht relevant markiert');
+    }
+
+    public function markRelevant(User $user, string $reason): void
+    {
+        $this->forceFill([
+            'marked_irrelevant_at' => null,
+            'irrelevant_reason' => null,
+            'irrelevant_marked_by_user_id' => null,
+        ])->save();
+
+        activity()
+            ->causedBy($user)
+            ->performedOn($this)
+            ->withProperties(['reason' => $reason, 'transaction_id' => $this->transaction_id])
+            ->log('Transaktion wieder als relevant markiert');
+    }
+
+    public function scopeExcludingIrrelevant(Builder $query): Builder
+    {
+        return $query->whereNull('marked_irrelevant_at');
     }
 }

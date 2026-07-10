@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\TransactionResource\Pages;
 
 use App\Filament\Resources\TransactionResource;
+use App\Models\Transaction;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
@@ -15,6 +16,15 @@ class ViewTransaction extends ViewRecord
     public function infolist(Infolist $infolist): Infolist
     {
         return $infolist->schema([
+            Section::make('Als nicht relevant markiert')
+                ->columns(3)
+                ->visible(fn (Transaction $record) => $record->isIrrelevant())
+                ->schema([
+                    TextEntry::make('irrelevant_reason')->label('Grund')->columnSpanFull(),
+                    TextEntry::make('irrelevantMarkedBy.name')->label('Markiert von')->default('–'),
+                    TextEntry::make('marked_irrelevant_at')->label('Markiert am')->dateTime('d.m.Y H:i:s'),
+                ]),
+
             Section::make('Transaktion')
                 ->columns(3)
                 ->schema([

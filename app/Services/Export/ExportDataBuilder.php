@@ -23,7 +23,9 @@ class ExportDataBuilder
     public function build(Builder $query, ?ExportTemplate $template, array $overrides = []): array
     {
         $config = $this->resolveConfig($template, $overrides);
-        $transactions = $query->get();
+        // Exports are customer-facing reports, so transactions marked "not relevant"
+        // must never appear in them - regardless of the table's current filter state.
+        $transactions = $query->excludingIrrelevant()->get();
 
         $columns = $this->visibleColumns($config['columns'], $config['mode']);
 

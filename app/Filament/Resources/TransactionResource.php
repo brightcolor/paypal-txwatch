@@ -115,6 +115,14 @@ class TransactionResource extends Resource
                 Tables\Columns\TextColumn::make('currency')->label('Währung')->toggleable(),
                 Tables\Columns\TextColumn::make('event.name')->label('Event')->badge()->color(fn ($record) => $record->event_id ? 'success' : 'gray')->default('– nicht zugeordnet –'),
                 Tables\Columns\TextColumn::make('paypalAccount.name')->label('PayPal-Konto')->toggleable(),
+                Tables\Columns\TextColumn::make('marked_irrelevant_at')
+                    ->label('Relevanz')
+                    ->badge()
+                    ->state(fn (Transaction $record) => $record->isIrrelevant() ? 'Nicht relevant' : 'Relevant')
+                    ->color(fn (Transaction $record) => $record->isIrrelevant() ? 'danger' : 'success')
+                    ->tooltip(fn (Transaction $record) => $record->isIrrelevant()
+                        ? "Grund: {$record->irrelevant_reason}\nVon: {$record->irrelevantMarkedBy?->name} am {$record->marked_irrelevant_at?->format('d.m.Y H:i')}"
+                        : null),
             ])
             ->filters(static::filters(), layout: Tables\Enums\FiltersLayout::AboveContentCollapsible)
             ->filtersFormColumns(3)
@@ -141,6 +149,46 @@ class TransactionResource extends Resource
 
                         Notification::make()->title('Event zugewiesen')->success()->send();
                     }),
+
+                Tables\Actions\Action::make('markIrrelevant')
+                    ->label('Als nicht relevant markieren')
+                    ->icon('heroicon-o-eye-slash')
+                    ->color('danger')
+                    ->visible(fn (Transaction $record) => ! $record->isIrrelevant() && (auth()->user()?->can('manage-transactions') ?? false))
+                    ->requiresConfirmation()
+                    ->form([
+                        Forms\Components\Textarea::make('reason')
+                            ->label('Grund')
+                            ->required()
+                            ->helperText('Wird unveränderlich im Audit-Log festgehalten.'),
+                    ])
+                    ->action(function (Transaction $record, array $data) {
+                        $record->markIrrelevant(auth()->user(), $data['reason']);
+
+                        Notification::make()
+                            ->title('Transaktion als nicht relevant markiert')
+                            ->body('Wird ab sofort aus Dashboard/Berichten ausgeschlossen. Die Transaktion selbst bleibt vollständig erhalten.')
+                            ->success()
+                            ->send();
+                    }),
+
+                Tables\Actions\Action::make('markRelevant')
+                    ->label('Als relevant markieren')
+                    ->icon('heroicon-o-eye')
+                    ->color('success')
+                    ->visible(fn (Transaction $record) => $record->isIrrelevant() && (auth()->user()?->can('manage-transactions') ?? false))
+                    ->requiresConfirmation()
+                    ->form([
+                        Forms\Components\Textarea::make('reason')
+                            ->label('Grund für die Wiederherstellung')
+                            ->required()
+                            ->helperText('Wird unveränderlich im Audit-Log festgehalten.'),
+                    ])
+                    ->action(function (Transaction $record, array $data) {
+                        $record->markRelevant(auth()->user(), $data['reason']);
+
+                        Notification::make()->title('Transaktion wieder als relevant markiert')->success()->send();
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -161,6 +209,24 @@ class TransactionResource extends Resource
                                 'assignment_rule_id' => null,
                                 'assigned_at' => now(),
                             ]);
+                        }),
+
+                    Tables\Actions\BulkAction::make('markIrrelevantBulk')
+                        ->label('Als nicht relevant markieren')
+                        ->icon('heroicon-o-eye-slash')
+                        ->color('danger')
+                        ->visible(fn () => auth()->user()?->can('manage-transactions') ?? false)
+                        ->requiresConfirmation()
+                        ->form([
+                            Forms\Components\Textarea::make('reason')
+                                ->label('Grund')
+                                ->required()
+                                ->helperText('Wird für jede ausgewählte Transaktion einzeln, unveränderlich im Audit-Log festgehalten.'),
+                        ])
+                        ->action(function (\Illuminate\Support\Collection $records, array $data) {
+                            $records->each(fn (Transaction $record) => $record->isIrrelevant()
+                                ? null
+                                : $record->markIrrelevant(auth()->user(), $data['reason']));
                         }),
                 ]),
             ]);
@@ -306,6 +372,16 @@ class TransactionResource extends Resource
                 ->queries(
                     true: fn (Builder $q) => $q->whereNotNull('custom_field')->where('custom_field', '<>', ''),
                     false: fn (Builder $q) => $q->where(fn ($q) => $q->whereNull('custom_field')->orWhere('custom_field', '')),
+                ),
+
+            Tables\Filters\TernaryFilter::make('is_relevant')
+                ->label('Relevanz')
+                ->placeholder('Alle')
+                ->trueLabel('nur relevante')
+                ->falseLabel('nur nicht relevante')
+                ->queries(
+                    true: fn (Builder $q) => $q->excludingIrrelevant(),
+                    false: fn (Builder $q) => $q->whereNotNull('marked_irrelevant_at'),
                 ),
 
             Tables\Filters\TernaryFilter::make('is_assigned')

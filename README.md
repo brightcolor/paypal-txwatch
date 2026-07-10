@@ -175,6 +175,22 @@ Unter **Transaktionen** steht ein Filter "Custom Field / Volltextsuche" zur Verf
 (enthält/beginnt mit/endet mit/exakt/Regex), Groß-/Kleinschreibung optional. Alle Filter sind kombinierbar,
 über **"Filter speichern"** persistierbar und über einen generierten Link teilbar (`/f/{token}`).
 
+## Transaktionen als "nicht relevant" markieren
+
+Einzelne (oder per Massenaktion mehrere) Transaktionen lassen sich als **"nicht relevant"** markieren –
+z. B. Testbuchungen, interne Umbuchungen oder Ausreißer, die die Auswertung verfälschen. Dazu ist ein
+**Grund verpflichtend**.
+
+- Markierte Transaktionen werden aus **Dashboard-Kennzahlen, Berichten und Exporten** ausgeschlossen,
+  bleiben aber vollständig erhalten und lassen sich jederzeit wieder als relevant markieren.
+- Jede (De-)Markierung wird **revisionssicher** protokolliert: **wer**, **wann**, **warum**. Einsehbar unter
+  **System → Audit-Log** (Berechtigung `view-audit-log`).
+- Das Markieren erfordert die Berechtigung `manage-transactions`.
+
+> **Transaktionen und Audit-Log-Einträge können niemals gelöscht werden** – weder über die Oberfläche noch
+> programmatisch. Das ist bewusst so und darf nicht aufgeweicht werden. "Nicht relevant" markieren ist der
+> einzige unterstützte Weg, eine Transaktion aus den Zahlen zu nehmen.
+
 ## PDF-Export nutzen
 
 1. Auf der Transaktionsseite die gewünschten Filter setzen.
