@@ -119,7 +119,7 @@ class ReportService
     public function refundsSummary(?Carbon $from = null, ?Carbon $to = null): array
     {
         $refunds = $this->baseQuery($from, $to)->where(function (Builder $q) {
-            $q->where('gross_amount', '<', 0)->orWhereIn('transaction_event_code', ['T1107', 'T1108', 'T0006']);
+            $q->where('gross_amount', '<', 0)->orWhereIn('transaction_event_code', Transaction::REFUND_EVENT_CODES);
         })->get();
 
         return [

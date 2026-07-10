@@ -296,7 +296,7 @@ class TransactionResource extends Resource
                 ->label('Nur Rückzahlungen/Reversals')
                 ->query(fn (Builder $q) => $q->where(function (Builder $q) {
                     $q->where('gross_amount', '<', 0)
-                        ->orWhereIn('transaction_event_code', ['T1107', 'T1108', 'T0006']);
+                        ->orWhereIn('transaction_event_code', Transaction::REFUND_EVENT_CODES);
                 })),
 
             Tables\Filters\TernaryFilter::make('has_custom_field')

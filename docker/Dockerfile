@@ -36,7 +36,7 @@ COPY . .
 COPY docker/entrypoint.sh /entrypoint.sh
 
 RUN composer dump-autoload --optimize \
-    && chown -R www-data:www-data storage bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache public \
     && chmod +x /entrypoint.sh
 
 # Chromium (via Browsershot/Puppeteer, spawned from PHP as a subprocess of

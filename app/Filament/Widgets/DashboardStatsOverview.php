@@ -22,7 +22,7 @@ class DashboardStatsOverview extends BaseWidget
         $fees = (clone $base)->sum('fee_amount');
         $net = (clone $base)->sum('net_amount');
         $refunds = (clone $base)->where(function ($q) {
-            $q->where('gross_amount', '<', 0)->orWhereIn('transaction_event_code', ['T1107', 'T1108', 'T0006']);
+            $q->where('gross_amount', '<', 0)->orWhereIn('transaction_event_code', Transaction::REFUND_EVENT_CODES);
         })->count();
         $avgBasket = $count > 0 ? $gross / $count : 0;
         $feeRatio = $gross != 0 ? abs($fees / $gross) * 100 : 0;

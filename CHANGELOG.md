@@ -4,6 +4,27 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.5.7] - 2026-07-10
+
+### Behoben
+
+- Dashboard und Berichte zeigten fast jede Transaktion als "Rückzahlung/Reversal" an (z. B. 447 von 447
+  Transaktionen). Ursache: Der Event-Code `T0006` wurde fälschlich als Rückzahlungsindikator behandelt –
+  tatsächlich ist er PayPals generischer Code für eine normale Zahlung und deckte in echten Kontodaten
+  ~99 % aller gewöhnlichen Transaktionen ab. Anhand echter Produktionsdaten wurde empirisch verifiziert,
+  dass ausschließlich `T0400` und `T1107` mit tatsächlich negativen Bruttobeträgen korrelieren. Die Codes
+  sind jetzt an einer Stelle als `Transaction::REFUND_EVENT_CODES` gepflegt (statt an vier Stellen dupliziert)
+  und werden von Dashboard, Berichten, Transaktionsfilter und Modell einheitlich verwendet.
+- PDF-Export schlug mit HTTP 500 fehl ("Failed to launch the browser process! chrome_crashpad_handler:
+  --database is required"). Das im Container installierte Distributions-Chromium versucht beim Start seinen
+  Crash-Reporter zu initialisieren, für den kein beschreibbarer Datenbankpfad bereitgestellt ist. Behoben
+  durch `--disable-crash-reporter` (zusammen mit `--disable-dev-shm-usage` gegen bekannte Container-Probleme
+  mit begrenztem `/dev/shm`) als zusätzliche Chromium-Startparameter in `PdfRenderer`.
+- `storage:link` schlug beim Containerstart mit "Permission denied" fehl (harmlos, da bereits durch
+  `|| true` abgefangen, aber unnötiges Rauschen im Log) – `public/` gehörte im Image weiterhin `root`, obwohl
+  der Container als `www-data` läuft. Jetzt wird `public/` beim Image-Build ebenfalls auf `www-data`
+  übertragen.
+
 ## [0.5.6] - 2026-07-10
 
 ### Behoben

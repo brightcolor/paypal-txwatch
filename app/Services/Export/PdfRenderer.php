@@ -29,6 +29,10 @@ class PdfRenderer
                 ->hideHeader()
                 ->footerHtml($footerHtml)
                 ->noSandbox() // required: Chromium's sandbox needs privileges containers don't grant
+                // Without this, the distro Chromium package fails to launch entirely in this
+                // container with "chrome_crashpad_handler: --database is required" (its crash
+                // reporter expects a writable database path we don't provide and don't need).
+                ->addChromiumArguments(['disable-crash-reporter', 'disable-dev-shm-usage'])
                 ->waitUntilNetworkIdle();
 
             if ($chromePath = config('pdf.chrome_path')) {

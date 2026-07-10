@@ -10,6 +10,18 @@ class Transaction extends Model
 {
     use HasFactory;
 
+    /**
+     * PayPal transaction event codes observed to correlate with a
+     * refund/reversal (negative gross_amount) in real account data. NOTE:
+     * T0006 was previously included here on the (wrong) assumption that it
+     * meant "refund" - it is in fact PayPal's generic "Payment" code and
+     * matched ~99% of a real account's ordinary transactions, making the
+     * refund filter/report/dashboard stat effectively meaningless. Verify
+     * any additions against real negative-gross_amount rows before adding
+     * a code here again.
+     */
+    public const REFUND_EVENT_CODES = ['T0400', 'T1107'];
+
     protected $fillable = [
         'paypal_account_id',
         'event_id',
@@ -79,7 +91,7 @@ class Transaction extends Model
     public function isRefundOrReversal(): bool
     {
         return (float) $this->gross_amount < 0
-            || in_array($this->transaction_event_code, ['T1107', 'T1108', 'T0006'], true);
+            || in_array($this->transaction_event_code, self::REFUND_EVENT_CODES, true);
     }
 
     public function isAssigned(): bool
