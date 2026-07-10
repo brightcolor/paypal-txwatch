@@ -157,7 +157,22 @@ Unter **Transaktionen** steht ein Filter "Custom Field / Volltextsuche" zur Verf
 4. Der Export enthält **exakt** das aktuell gefilterte Ergebnis, inkl. Gruppensummen und Gesamtsumme.
 
 Export-Vorlagen können Logo, Event-Infoblock, Fußzeilen-Hinweis und rechtliche Hinweise pro Event
-berücksichtigen (siehe **Events & Kunden → Events**).
+berücksichtigen (siehe **Events & Kunden → Events**). Jeder Export wird unter **Exporte → Exporthistorie**
+protokolliert (Ersteller, Format, Zeilenzahl, Ablaufdatum); nach Ablauf ist der Download-Link nicht mehr
+verfügbar.
+
+## Berichte & Sync-Gesundheit
+
+Unter **Berichte** (mit optionalem Zeitraumfilter):
+
+- Gebührenanalyse nach Event, nach Monat und im Konten-Vergleich (Brutto/Gebühr/Netto/Gebührenquote)
+- Custom-Field-Präfix-Analyse (z. B. fasst `SOMMERFEST-001` … `SOMMERFEST-042` automatisch zu `SOMMERFEST`
+  zusammen, um wiederkehrende Muster sichtbar zu machen)
+- Event-Zuordnungsquote und Rückzahlungs-/Reversal-Summe
+
+Auf dem **Dashboard** zeigt der Block "Sync-Gesundheit" jedes aktive Konto mit Status **OK**/**Warnung**
+(Warnung, wenn seit mehr als `PAYPAL_SYNC_WARNING_THRESHOLD_HOURS` Stunden – Standard 2h, skaliert mit dem
+eigenen Sync-Intervall – kein erfolgreicher Sync lief) sowie einem direkten "Verbindung testen"-Button je Konto.
 
 ## Troubleshooting
 

@@ -34,6 +34,13 @@ return [
     ],
 
     /*
+     * A sync-enabled account is flagged as "overdue" in the UI when no
+     * successful sync happened within this many hours (floor - scales up
+     * with the account's own interval, see PaypalAccount::isSyncOverdue()).
+     */
+    'sync_warning_threshold_hours' => (int) env('PAYPAL_SYNC_WARNING_THRESHOLD_HOURS', 2),
+
+    /*
      * HTTP client behaviour.
      */
     'http' => [

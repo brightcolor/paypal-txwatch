@@ -241,7 +241,18 @@ class TransactionResource extends Resource
 
             Tables\Filters\SelectFilter::make('currency')
                 ->label('Währung')
+                ->multiple()
                 ->options(fn () => Transaction::query()->distinct()->pluck('currency', 'currency')->filter()->all()),
+
+            Tables\Filters\SelectFilter::make('payment_method_type')
+                ->label('Zahlungsart')
+                ->multiple()
+                ->options(fn () => Transaction::query()->distinct()->pluck('payment_method_type', 'payment_method_type')->filter()->all()),
+
+            Tables\Filters\SelectFilter::make('payer_country_code')
+                ->label('Land')
+                ->multiple()
+                ->options(fn () => Transaction::query()->distinct()->pluck('payer_country_code', 'payer_country_code')->filter()->all()),
 
             Tables\Filters\SelectFilter::make('transaction_status')
                 ->label('Status')
@@ -287,6 +298,16 @@ class TransactionResource extends Resource
                     $q->where('gross_amount', '<', 0)
                         ->orWhereIn('transaction_event_code', ['T1107', 'T1108', 'T0006']);
                 })),
+
+            Tables\Filters\TernaryFilter::make('has_custom_field')
+                ->label('Custom Field')
+                ->placeholder('Alle')
+                ->trueLabel('mit Custom Field')
+                ->falseLabel('ohne Custom Field')
+                ->queries(
+                    true: fn (Builder $q) => $q->whereNotNull('custom_field')->where('custom_field', '<>', ''),
+                    false: fn (Builder $q) => $q->where(fn ($q) => $q->whereNull('custom_field')->orWhere('custom_field', '')),
+                ),
 
             Tables\Filters\TernaryFilter::make('is_assigned')
                 ->label('Event-Zuordnung')

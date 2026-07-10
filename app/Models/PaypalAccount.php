@@ -78,4 +78,28 @@ class PaypalAccount extends Model
             && $this->access_token_expires_at
             && $this->access_token_expires_at->isFuture();
     }
+
+    /**
+     * True when this account is due for a sync (per its own interval) but
+     * has had no *successful* sync for longer than the warning threshold -
+     * surfaced as a "Sync-Warnung" on the Dashboard.
+     */
+    public function isSyncOverdue(): bool
+    {
+        if (! $this->sync_enabled) {
+            return false;
+        }
+
+        $thresholdMinutes = max(
+            (int) config('paypal.sync_warning_threshold_hours') * 60,
+            $this->sync_interval_minutes * 4,
+        );
+
+        if (! $this->last_successful_sync_at) {
+            // Never synced yet: only a warning once it's had time to run at least once.
+            return $this->created_at->addMinutes($thresholdMinutes)->isPast();
+        }
+
+        return $this->last_successful_sync_at->addMinutes($thresholdMinutes)->isPast();
+    }
 }
