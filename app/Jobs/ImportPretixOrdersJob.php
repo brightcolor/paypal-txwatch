@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\PretixConnection;
+use App\Models\PretixImportRun;
 use App\Services\Pretix\PretixOrderImporter;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -47,14 +48,36 @@ class ImportPretixOrdersJob implements ShouldBeUnique, ShouldQueue
 
         $connection->forceFill(['import_running' => true])->save();
 
+        $run = PretixImportRun::create([
+            'pretix_connection_id' => $connection->id,
+            'status' => PretixImportRun::STATUS_RUNNING,
+            'started_at' => now(),
+            'log' => [],
+        ]);
+
         try {
-            $r = $importer->import($connection);
+            $r = $importer->import(
+                $connection,
+                fn (string $message, array $patch = []) => $run->pushLog($message, $patch),
+            );
+
+            $run->forceFill([
+                'status' => PretixImportRun::STATUS_SUCCESS,
+                'finished_at' => now(),
+            ])->save();
 
             $connection->forceFill([
                 'import_running' => false,
                 'last_import_summary' => "{$r['orders']} Bestellungen / {$r['events']} Event(s) · abgeglichen {$r['matched']}, Abweichung {$r['mismatch']}, nicht in pretix {$r['unmatched']}",
             ])->save();
         } catch (Throwable $e) {
+            $run->pushLog('Fehler: ' . $e->getMessage());
+            $run->forceFill([
+                'status' => PretixImportRun::STATUS_FAILED,
+                'error' => $e->getMessage(),
+                'finished_at' => now(),
+            ])->save();
+
             $connection->forceFill(['import_running' => false])->save();
 
             throw $e;

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PretixConnection extends Model
 {
@@ -38,6 +39,11 @@ class PretixConnection extends Model
             'last_synced_at' => 'datetime',
             'last_successful_sync_at' => 'datetime',
         ];
+    }
+
+    public function importRuns(): HasMany
+    {
+        return $this->hasMany(PretixImportRun::class);
     }
 
     /**

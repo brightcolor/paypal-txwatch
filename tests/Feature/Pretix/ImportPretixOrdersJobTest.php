@@ -5,6 +5,7 @@ namespace Tests\Feature\Pretix;
 use App\Jobs\ImportPretixOrdersJob;
 use App\Models\PaypalAccount;
 use App\Models\PretixConnection;
+use App\Models\PretixImportRun;
 use App\Models\PretixOrder;
 use App\Models\Transaction;
 use App\Services\Pretix\PretixOrderImporter;
@@ -46,6 +47,16 @@ class ImportPretixOrdersJobTest extends TestCase
         $this->assertNotNull($connection->last_successful_sync_at);
         $this->assertSame(1, PretixOrder::count());
         $this->assertSame(Transaction::RECONCILIATION_MATCHED, $tx->fresh()->reconciliation_status);
+
+        // A run with a progress log was recorded.
+        $run = PretixImportRun::latest('id')->first();
+        $this->assertSame(PretixImportRun::STATUS_SUCCESS, $run->status);
+        $this->assertNotNull($run->finished_at);
+        $this->assertSame(1, $run->events_total);
+        $this->assertSame(1, $run->orders_imported);
+        $this->assertNotEmpty($run->log);
+        $messages = collect($run->log)->pluck('m')->implode(' | ');
+        $this->assertStringContainsString('Abgleich fertig', $messages);
     }
 
     public function test_failed_import_clears_running_flag_and_records_error(): void

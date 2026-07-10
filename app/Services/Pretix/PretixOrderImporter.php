@@ -21,26 +21,47 @@ class PretixOrderImporter
     }
 
     /**
+     * @param  callable(string, array<string, int|string>): void|null  $onProgress
+     *         invoked with a human message + optional counter patch, for live logging
      * @return array{events: int, orders: int, matched: int, mismatch: int, unmatched: int}
      */
-    public function import(PretixConnection $connection): array
+    public function import(PretixConnection $connection, ?callable $onProgress = null): array
     {
         $client = new PretixClient($connection);
         $orderCount = 0;
+        $progress = $onProgress ?? fn (string $m, array $p = []) => null;
 
         try {
+            $progress('Lade Events aus pretix …');
             $events = $client->events();
+            $total = count($events);
+            $progress("{$total} Event(s) gefunden.", ['events_total' => $total]);
 
-            foreach ($events as $event) {
+            foreach ($events as $i => $event) {
                 $slug = $event['slug'];
+                $index = $i + 1;
+                $progress("Event {$index}/{$total}: {$slug} – lade Bestellungen …", ['events_done' => $i]);
 
-                foreach ($client->ordersForEvent($slug) as $raw) {
-                    $this->upsertOrder($connection, $client, $slug, $raw);
-                    $orderCount++;
-                }
+                $eventOrders = 0;
+                $client->ordersForEvent($slug, function (array $page) use ($connection, $client, $slug, &$orderCount, &$eventOrders, $progress) {
+                    foreach ($page as $raw) {
+                        $this->upsertOrder($connection, $client, $slug, $raw);
+                        $orderCount++;
+                        $eventOrders++;
+                    }
+                    $progress("… {$slug}: {$eventOrders} Bestellungen geladen", ['orders_imported' => $orderCount]);
+                });
+
+                $progress("Event {$index}/{$total}: {$slug} – {$eventOrders} Bestellungen.", ['events_done' => $index, 'orders_imported' => $orderCount]);
             }
 
+            $progress('Gleiche mit PayPal-Transaktionen ab …');
             $reconciliation = $this->reconciler->reconcile($connection);
+            $progress("Abgleich fertig: {$reconciliation['matched']} abgeglichen, {$reconciliation['mismatch']} Abweichung, {$reconciliation['unmatched']} nicht in pretix.", [
+                'matched' => $reconciliation['matched'],
+                'mismatch' => $reconciliation['mismatch'],
+                'unmatched' => $reconciliation['unmatched'],
+            ]);
 
             $connection->forceFill([
                 'last_synced_at' => now(),

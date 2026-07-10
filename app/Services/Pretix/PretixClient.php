@@ -96,11 +96,13 @@ class PretixClient
     }
 
     /**
-     * All orders of one event (paged).
+     * All orders of one event (paged). When $onPage is given it is invoked with
+     * each page's orders as they arrive, so callers can report live progress.
      *
+     * @param  callable(array<int, array<string, mixed>>): void|null  $onPage
      * @return array<int, array<string, mixed>>
      */
-    public function ordersForEvent(string $eventSlug): array
+    public function ordersForEvent(string $eventSlug, ?callable $onPage = null): array
     {
         $organizer = $this->connection->organizer_slug;
         $orders = [];
@@ -110,8 +112,11 @@ class PretixClient
             $response = $this->http()->get($url, ['page_size' => 50]);
             $response->throw();
 
-            foreach ($response->json('results', []) as $order) {
-                $orders[] = $order;
+            $page = $response->json('results', []);
+            $orders = array_merge($orders, $page);
+
+            if ($onPage) {
+                $onPage($page);
             }
 
             $next = $response->json('next');

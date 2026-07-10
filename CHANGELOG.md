@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.12.0] - 2026-07-11
+
+### Neu
+
+- **Live-Importlog** für den pretix-Import: Unter **pretix → pretix-Importe** wird jeder Importlauf mit
+  Status (**läuft… / fertig / fehlgeschlagen**), Fortschritt (**Events x/y**, Anzahl Bestellungen), der
+  **aktuellen Aktion** ("was macht er gerade") sowie den Abgleichzahlen angezeigt. Die Liste aktualisiert
+  sich automatisch (Polling), sodass man dem Import live zusehen kann.
+- Detailseite je Lauf mit dem **vollständigen zeitgestempelten Verlauf** (jedes Event, geladene Bestellungen,
+  Abgleich, ggf. Fehler).
+
+Der Hintergrund-Job schreibt den Fortschritt fortlaufend in die Datenbank (pro Event und pro geladener
+Bestellseite), daher ist der Log auch während eines langen Laufs live sichtbar.
+
 ## [0.11.1] - 2026-07-11
 
 ### Behoben
