@@ -16,6 +16,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
+COPY docker/php.ini /usr/local/etc/php/conf.d/zz-app.ini
+COPY docker/php-fpm-pool.conf /usr/local/etc/php-fpm.d/zz-app.conf
+
 # puppeteer is installed outside of /var/www/html on purpose: storage/ gets
 # bind-mounted over at runtime, and we don't want node_modules to depend on
 # that. PUPPETEER_SKIP_DOWNLOAD avoids pulling puppeteer's bundled ~200MB

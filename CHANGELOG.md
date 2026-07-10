@@ -4,6 +4,27 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.5.10] - 2026-07-10
+
+### Behoben
+
+- PDF-Export schlug bei echten Klicks in der Oberfläche weiterhin mit "chrome_crashpad_handler: --database is
+  required" fehl, obwohl derselbe Code über die Kommandozeile im selben Container fehlerfrei lief. Ursache:
+  PHP-FPMs Standardverhalten `clear_env=yes` entfernt Umgebungsvariablen für Worker-Prozesse, die ein
+  `docker compose exec`-Shell-Aufruf dagegen normal erbt – dadurch kam das per Dockerfile gesetzte `HOME=/tmp`
+  (das Chromium für sein beschreibbares Profil-/Crash-Datenbank-Verzeichnis braucht) nie bei echten,
+  über PHP-FPM bedienten Web-Requests an, sondern nur bei manuellen Testaufrufen. Durch gezieltes Entfernen von
+  `HOME` beim CLI-Testaufruf ließ sich der exakte Fehler reproduzieren und durch erneutes Setzen bestätigt
+  beheben. Ein PHP-FPM-Pool-Override (`env[HOME] = /tmp`) sorgt jetzt dafür, dass auch echte Worker-Prozesse
+  diesen Wert erhalten. DB-/Redis-Konfiguration war davon nie betroffen, da diese bereits beim Deploy per
+  `config:cache` einmalig aufgelöst und danach aus einer kompilierten Datei gelesen wird – nur zur Laufzeit
+  per Subprozess (Node/Chromium) ausgelesene Variablen wie `HOME` waren betroffen.
+- PHP-Memory-Limit im Container war mit den Docker-Image-Standardwerten (128M) knapp bemessen für ein
+  Filament-Adminpanel mit wachsender Transaktionsanzahl (aktuell 800+, inkl. teils großer JSON-Rohdaten pro
+  Zeile) und führte zu einem "Allowed memory size exhausted"-Fehler beim Aufruf von `/admin/transactions`.
+  Konnte nicht deterministisch isoliert reproduziert werden (ein synthetischer Testaufruf blieb bei nur
+  ~48 MB), das Limit wurde defensiv auf 256M angehoben, um mehr Sicherheitsspielraum zu haben.
+
 ## [0.5.9] - 2026-07-10
 
 ### Behoben
