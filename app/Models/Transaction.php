@@ -13,7 +13,7 @@ class Transaction extends Model
 
     /**
      * PayPal transaction event codes for genuine refunds/reversals of a
-     * sale, per PayPal's official T-code reference (see LEDGER_ONLY_EVENT_CODES
+     * sale, per PayPal's official T-code reference (see LEDGER_ONLY_PREFIXES
      * for why sign-correlation ("negative gross_amount") is NOT a reliable way
      * to detect these - two earlier passes at this constant used exactly that
      * heuristic and both were wrong: T0006 (~99% of all transactions) was once
@@ -27,20 +27,36 @@ class Transaction extends Model
     public const REFUND_EVENT_CODES = ['T1107'];
 
     /**
-     * PayPal event codes for pure account-ledger events (bank withdrawals,
-     * fund holds/releases) that the Transaction Search API reports as
-     * "transactions" but that do not represent a distinct customer sale or
-     * refund: a hold is placed/released against an existing sale that was
-     * already counted once, and a withdrawal just moves already-earned
-     * balance to a bank account. Summing these into gross/fee/net revenue
-     * corrupts the fee ratio and average-basket figures, since they carry a
-     * (sometimes large) amount but no processing fee of their own.
-     *
-     * T0400/T0401/T0403 - general/AutoSweep/user-initiated bank withdrawal
-     * T2101             - general hold placed on funds
-     * T2102/T2108       - general/payment hold release
+     * Human-readable "Art" per PayPal T-code group (first 3 chars, e.g. "T04").
+     * Groups are stable in PayPal's reference; classifying by group avoids
+     * having to enumerate every individual code.
      */
-    public const LEDGER_ONLY_EVENT_CODES = ['T0400', 'T0401', 'T0403', 'T2101', 'T2102', 'T2108'];
+    public const TYPE_PREFIX_LABELS = [
+        'T00' => 'Zahlung',
+        'T01' => 'Gebühr',
+        'T02' => 'Währungsumrechnung',
+        'T03' => 'Einzahlung',
+        'T04' => 'Auszahlung',
+        'T05' => 'Kartenzahlung',
+        'T11' => 'Rückzahlung/Storno',
+        'T12' => 'Korrektur',
+        'T20' => 'Auszahlung',
+        'T21' => 'Reserve/Hold',
+    ];
+
+    /**
+     * T-code groups that are pure account-ledger movements (bank withdrawals
+     * T04xx, payouts T20xx, fund holds/reserves/releases T21xx), NOT distinct
+     * customer sales or refunds: a hold is placed/released against a sale that
+     * was already counted, and a withdrawal just moves already-earned balance
+     * to a bank account. They carry a (sometimes large) amount but no fee of
+     * their own, so summing them into gross/fee/net revenue corrupts the fee
+     * ratio and average-basket figures. Excluded from all revenue/report
+     * figures via scopeExcludingLedgerEvents(). Classifying by group (rather
+     * than a hand-maintained code list) also caught codes like T2107 that an
+     * explicit list had missed.
+     */
+    public const LEDGER_ONLY_PREFIXES = ['T04', 'T20', 'T21'];
 
     protected $fillable = [
         'paypal_account_id',
@@ -143,19 +159,73 @@ class Transaction extends Model
         return in_array($this->transaction_event_code, self::REFUND_EVENT_CODES, true);
     }
 
+    /**
+     * The 3-char PayPal T-code group (e.g. "T04"), or null when there is no
+     * event code (e.g. some CSV-imported rows).
+     */
+    public function eventCodeGroup(): ?string
+    {
+        return $this->transaction_event_code
+            ? substr($this->transaction_event_code, 0, 3)
+            : null;
+    }
+
+    /**
+     * Human-readable "Art" of the transaction: Zahlung / Rückzahlung /
+     * Auszahlung / Reserve / … derived from the T-code group. This is what the
+     * transactions table shows so that e.g. a large negative bank withdrawal
+     * (T0400) is clearly an "Auszahlung", not mistaken for a refund.
+     */
+    public function typeLabel(): string
+    {
+        $group = $this->eventCodeGroup();
+
+        if ($group === null) {
+            return '–';
+        }
+
+        return self::TYPE_PREFIX_LABELS[$group] ?? 'Sonstige';
+    }
+
     public function isLedgerEvent(): bool
     {
-        return in_array($this->transaction_event_code, self::LEDGER_ONLY_EVENT_CODES, true);
+        return in_array($this->eventCodeGroup(), self::LEDGER_ONLY_PREFIXES, true);
     }
 
     public function scopeExcludingLedgerEvents(Builder $query): Builder
     {
-        // whereNotIn alone would also drop rows with a NULL transaction_event_code
-        // (e.g. CSV-imported transactions without one) due to SQL's NULL semantics -
-        // those can't be identified as ledger-only, so they must be kept.
+        // Keep rows whose code is NULL (e.g. CSV imports - can't be classified,
+        // so must not be dropped) OR whose code is in no ledger-only group.
         return $query->where(function (Builder $q) {
             $q->whereNull('transaction_event_code')
-                ->orWhereNotIn('transaction_event_code', self::LEDGER_ONLY_EVENT_CODES);
+                ->orWhere(function (Builder $q2) {
+                    foreach (self::LEDGER_ONLY_PREFIXES as $prefix) {
+                        $q2->where('transaction_event_code', 'not like', $prefix.'%');
+                    }
+                });
+        });
+    }
+
+    /**
+     * Filters to a single "Art" (see typeLabel()) by its T-code group(s).
+     */
+    public function scopeOfType(Builder $query, string $label): Builder
+    {
+        $prefixes = array_keys(self::TYPE_PREFIX_LABELS, $label, true);
+
+        return $query->where(function (Builder $q) use ($prefixes, $label) {
+            foreach ($prefixes as $prefix) {
+                $q->orWhere('transaction_event_code', 'like', $prefix.'%');
+            }
+
+            if ($label === 'Sonstige') {
+                $q->orWhere(function (Builder $q2) {
+                    $q2->whereNotNull('transaction_event_code');
+                    foreach (array_keys(self::TYPE_PREFIX_LABELS) as $known) {
+                        $q2->where('transaction_event_code', 'not like', $known.'%');
+                    }
+                });
+            }
         });
     }
 

@@ -4,6 +4,28 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.9.0] - 2026-07-10
+
+### Neu
+
+- Neue Spalte **"Art"** in der Transaktionstabelle (Zahlung / Rückzahlung / Auszahlung / Reserve/Hold / …),
+  abgeleitet aus der PayPal-T-Code-Gruppe. Damit ist sofort erkennbar, dass z. B. eine große negative
+  Buchung eine **Auszahlung** (T04xx) oder **Reserve/Hold** (T21xx) ist – und **keine Erstattung**. Dazu ein
+  neuer **"Art"-Filter** und ein Schnellfilter **"Nur echte Umsätze (ohne Auszahlungen/Reserven)"**.
+
+### Behoben
+
+- Die Erkennung von Nicht-Umsatz-Buchungen (Auszahlungen/Reserven) erfolgt jetzt über die **T-Code-Gruppen**
+  (T04xx, T20xx, T21xx) statt einer handgepflegten Einzelcode-Liste. Dadurch werden auch bisher übersehene
+  Codes wie **T2107** (eine Reserve) korrekt aus Dashboard, Berichten und Exporten ausgeschlossen.
+- Der **Umsatz-nach-Tag-Chart** summierte fälschlich auch Auszahlungen/Reserven mit – jetzt werden diese
+  (und als "nicht relevant" markierte) Transaktionen ausgeschlossen.
+
+### Geändert
+
+- **Kompakteres UI**: deutlich reduzierte Abstände/Weißraum (Seitenränder, Sektionen, Tabellenzeilen,
+  Widgets) über kompakte Style-Overrides.
+
 ## [0.8.1] - 2026-07-10
 
 ### Geändert / Performance

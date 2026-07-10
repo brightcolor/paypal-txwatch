@@ -118,7 +118,19 @@ class TransactionResource extends Resource
                     ->copyable()
                     ->copyableState(fn (?string $state) => \App\Services\CustomFieldParser::orderNumber($state)),
                 Tables\Columns\TextColumn::make('invoice_id')->label('Invoice ID')->searchable()->toggleable(),
-                Tables\Columns\BadgeColumn::make('transaction_status')->label('Status'),
+                Tables\Columns\TextColumn::make('type')
+                    ->label('Art')
+                    ->badge()
+                    ->state(fn (Transaction $record) => $record->typeLabel())
+                    ->color(fn (string $state) => match ($state) {
+                        'Zahlung' => 'success',
+                        'Rückzahlung/Storno' => 'danger',
+                        'Auszahlung' => 'info',
+                        'Reserve/Hold' => 'warning',
+                        default => 'gray',
+                    })
+                    ->tooltip(fn (Transaction $record) => $record->transaction_event_code),
+                Tables\Columns\BadgeColumn::make('transaction_status')->label('Status')->toggleable(),
                 Tables\Columns\TextColumn::make('transaction_event_code')->label('T-Code')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('gross_amount')->label('Brutto')->money(fn ($record) => $record->currency ?? 'EUR')->sortable(),
                 Tables\Columns\TextColumn::make('fee_amount')->label('Gebühr')->money(fn ($record) => $record->currency ?? 'EUR')->sortable()->toggleable(),
@@ -364,12 +376,27 @@ class TransactionResource extends Resource
                 ->placeholder('Alle')
                 ->trueLabel('positiv (Einnahmen)')
                 // Negative amounts also cover bank withdrawals (T0400/T0403) and fund
-                // holds (T2101), not just refunds - see Transaction::LEDGER_ONLY_EVENT_CODES.
+                // holds (T2101), not just refunds - see Transaction::LEDGER_ONLY_PREFIXES.
                 ->falseLabel('negativ (Rückzahlungen, Auszahlungen, Reserven)')
                 ->queries(
                     true: fn (Builder $q) => $q->where('gross_amount', '>=', 0),
                     false: fn (Builder $q) => $q->where('gross_amount', '<', 0),
                 ),
+
+            Tables\Filters\SelectFilter::make('art')
+                ->label('Art')
+                ->options(function () {
+                    $labels = array_values(array_unique(array_values(Transaction::TYPE_PREFIX_LABELS)));
+
+                    return array_combine($labels, $labels) + ['Sonstige' => 'Sonstige'];
+                })
+                ->query(fn (Builder $q, array $data) => filled($data['value'] ?? null)
+                    ? $q->ofType($data['value'])
+                    : $q),
+
+            Tables\Filters\Filter::make('real_turnover_only')
+                ->label('Nur echte Umsätze (ohne Auszahlungen/Reserven)')
+                ->query(fn (Builder $q) => $q->excludingLedgerEvents()),
 
             Tables\Filters\Filter::make('refunds_only')
                 ->label('Nur Rückzahlungen/Reversals')

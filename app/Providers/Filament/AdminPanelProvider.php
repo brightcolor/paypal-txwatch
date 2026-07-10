@@ -76,6 +76,10 @@ class AdminPanelProvider extends PanelProvider
                 EnsureTwoFactorChallengeIsPassed::class,
             ])
             ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn () => view('filament.compact-styles'),
+            )
+            ->renderHook(
                 PanelsRenderHook::FOOTER,
                 fn () => view('filament.version-footer'),
             );
