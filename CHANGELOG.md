@@ -4,6 +4,26 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.5.9] - 2026-07-10
+
+### Behoben
+
+- Gebührenquote in Dashboard und Berichten war stark verfälscht (z. B. 27 % statt der tatsächlichen ~3,6 %
+  auf echte Zahlungen). Ursache: Bank-Auszahlungen (T0400/T0401/T0403) und Guthaben-Reserven/-Freigaben
+  (T2101/T2102/T2108) sind reine PayPal-Kontobuchungen ohne eigene Gebühr, aber teils mit hohem Betrag –
+  ihre Summierung in den Bruttoumsatz verzerrte den Nenner der Gebührenquote erheblich, ohne dass eine
+  echte Verkaufstransaktion dahintersteht. Anhand der offiziellen PayPal-T-Code-Referenz
+  (developer.paypal.com/docs/transaction-search/transaction-event-codes/) wurde verifiziert: T0400/T0401/
+  T0403 sind Auszahlungen, T2101 ist ein allgemeines Halten von Guthaben, T2102/T2108 sind Freigaben davon –
+  keines davon ist ein Verkauf oder eine Rückzahlung. Diese Codes werden jetzt über
+  `Transaction::LEDGER_ONLY_EVENT_CODES` konsequent aus Dashboard-Kennzahlen und Berichten ausgeschlossen.
+- Korrigiert außerdem einen Folgefehler aus v0.5.7/v0.5.8: T0400/T0403/T2101 wurden dort fälschlich als
+  "Rückzahlungscodes" eingestuft, weil sie (wie oben beschrieben) rein zufällig zu 100 % negative Beträge
+  hatten – tatsächlich sind es Auszahlungen bzw. eine Guthabenreserve, keine Rückzahlungen. Die Erkennung von
+  Rückzahlungen verlässt sich jetzt ausschließlich auf den dokumentierten PayPal-Code `T1107`
+  ("Merchant-Initiated Refund"), nicht mehr zusätzlich auf das Vorzeichen des Betrags – Letzteres hatte sich
+  bereits zweimal als unzuverlässig erwiesen (siehe oben).
+
 ## [0.5.8] - 2026-07-10
 
 ### Behoben

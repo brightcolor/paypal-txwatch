@@ -15,15 +15,13 @@ class DashboardStatsOverview extends BaseWidget
     {
         $since = Carbon::now()->subDays(30);
 
-        $base = Transaction::query()->where('transaction_initiation_date', '>=', $since);
+        $base = Transaction::query()->excludingLedgerEvents()->where('transaction_initiation_date', '>=', $since);
 
         $count = (clone $base)->count();
         $gross = (clone $base)->sum('gross_amount');
         $fees = (clone $base)->sum('fee_amount');
         $net = (clone $base)->sum('net_amount');
-        $refunds = (clone $base)->where(function ($q) {
-            $q->where('gross_amount', '<', 0)->orWhereIn('transaction_event_code', Transaction::REFUND_EVENT_CODES);
-        })->count();
+        $refunds = (clone $base)->whereIn('transaction_event_code', Transaction::REFUND_EVENT_CODES)->count();
         $avgBasket = $count > 0 ? $gross / $count : 0;
         $feeRatio = $gross != 0 ? abs($fees / $gross) * 100 : 0;
         $unassigned = (clone $base)->whereNull('event_id')->count();

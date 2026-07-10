@@ -18,6 +18,7 @@ class ReportService
     private function baseQuery(?Carbon $from, ?Carbon $to): Builder
     {
         return Transaction::query()
+            ->excludingLedgerEvents()
             ->when($from, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '>=', $from))
             ->when($to, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '<=', $to));
     }
@@ -136,9 +137,9 @@ class ReportService
      */
     public function refundsSummary(?Carbon $from = null, ?Carbon $to = null): array
     {
-        $refunds = $this->baseQuery($from, $to)->where(function (Builder $q) {
-            $q->where('gross_amount', '<', 0)->orWhereIn('transaction_event_code', Transaction::REFUND_EVENT_CODES);
-        })->get();
+        $refunds = $this->baseQuery($from, $to)
+            ->whereIn('transaction_event_code', Transaction::REFUND_EVENT_CODES)
+            ->get();
 
         return [
             'count' => $refunds->count(),

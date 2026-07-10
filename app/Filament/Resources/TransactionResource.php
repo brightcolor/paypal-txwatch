@@ -286,7 +286,9 @@ class TransactionResource extends Resource
                 ->label('Betragsrichtung')
                 ->placeholder('Alle')
                 ->trueLabel('positiv (Einnahmen)')
-                ->falseLabel('negativ (Rückzahlungen)')
+                // Negative amounts also cover bank withdrawals (T0400/T0403) and fund
+                // holds (T2101), not just refunds - see Transaction::LEDGER_ONLY_EVENT_CODES.
+                ->falseLabel('negativ (Rückzahlungen, Auszahlungen, Reserven)')
                 ->queries(
                     true: fn (Builder $q) => $q->where('gross_amount', '>=', 0),
                     false: fn (Builder $q) => $q->where('gross_amount', '<', 0),
@@ -294,10 +296,7 @@ class TransactionResource extends Resource
 
             Tables\Filters\Filter::make('refunds_only')
                 ->label('Nur Rückzahlungen/Reversals')
-                ->query(fn (Builder $q) => $q->where(function (Builder $q) {
-                    $q->where('gross_amount', '<', 0)
-                        ->orWhereIn('transaction_event_code', Transaction::REFUND_EVENT_CODES);
-                })),
+                ->query(fn (Builder $q) => $q->whereIn('transaction_event_code', Transaction::REFUND_EVENT_CODES)),
 
             Tables\Filters\TernaryFilter::make('has_custom_field')
                 ->label('Custom Field')

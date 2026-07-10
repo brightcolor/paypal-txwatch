@@ -105,16 +105,33 @@ class ReportServiceTest extends TestCase
         $this->assertSame(50.0, $ratio['ratio']);
     }
 
-    public function test_refunds_summary_counts_negative_and_reversal_codes(): void
+    public function test_refunds_summary_counts_only_documented_refund_codes(): void
     {
+        // T0000 with a negative amount is NOT a documented refund code (it isn't even a
+        // withdrawal/hold code - just a plain payment code here) and must not be counted,
+        // since sign-correlation alone previously misclassified withdrawals/holds as refunds.
         $this->transaction(['gross_amount' => -50, 'transaction_event_code' => 'T0000']);
-        $this->transaction(['gross_amount' => 100, 'transaction_event_code' => 'T1107']);
+        $this->transaction(['gross_amount' => -80, 'transaction_event_code' => 'T1107']);
         $this->transaction(['gross_amount' => 100, 'transaction_event_code' => 'T0000']);
 
         $summary = (new ReportService())->refundsSummary();
 
-        $this->assertSame(2, $summary['count']);
-        $this->assertSame(50.0, $summary['total']);
+        $this->assertSame(1, $summary['count']);
+        $this->assertSame(-80.0, $summary['total']);
+    }
+
+    public function test_ledger_only_events_are_excluded_from_reports(): void
+    {
+        // A bank withdrawal (T0400) is not a sale and must not appear in revenue-facing
+        // report totals, even though it carries a (large, negative) gross_amount.
+        $this->transaction(['gross_amount' => 100, 'transaction_event_code' => 'T0006']);
+        $this->transaction(['gross_amount' => -5000, 'transaction_event_code' => 'T0400']);
+
+        $ratio = (new ReportService())->eventAssignmentRatio();
+        $this->assertSame(1, $ratio['total']);
+
+        $fees = (new ReportService())->feesByMonth();
+        $this->assertSame(1, $fees->sum('count'));
     }
 
     public function test_date_range_filters_are_applied(): void
