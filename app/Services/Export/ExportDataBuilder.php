@@ -28,16 +28,17 @@ class ExportDataBuilder
         $transactions = $query->excludingIrrelevant()->get();
 
         $columns = $this->visibleColumns($config['columns'], $config['mode']);
+        $vatRate = (float) $config['vat_rate'];
 
         $groups = $config['group_by']
             ? $this->groupTransactions($transactions, $config['group_by'])
             : collect(['' => $transactions]);
 
-        $renderedGroups = $groups->map(function (Collection $rows, string $label) use ($columns, $config) {
+        $renderedGroups = $groups->map(function (Collection $rows, string $label) use ($columns, $config, $vatRate) {
             return [
                 'label' => $label,
-                'rows' => $rows->map(fn (Transaction $t) => $this->renderRow($t, $columns, $config['mask_pii']))->all(),
-                'sum' => $config['show_group_sums'] ? $this->sum($rows) : null,
+                'rows' => $rows->map(fn (Transaction $t) => $this->renderRow($t, $columns, $config['mask_pii'], $vatRate))->all(),
+                'sum' => $config['show_group_sums'] ? $this->sum($rows, $vatRate) : null,
             ];
         })->values()->all();
 
@@ -53,14 +54,31 @@ class ExportDataBuilder
             'mode' => $config['mode'],
             'mask_pii' => $config['mask_pii'],
             'footer_note' => $config['footer_note'],
+            'vat_rate' => $vatRate,
             'columns' => $columns,
-            'column_labels' => array_map([ExportColumns::class, 'label'], $columns),
+            'column_labels' => $this->columnLabels($columns, $vatRate),
             'event' => $event,
             'period' => $this->period($transactions),
             'generated_at' => now(),
             'groups' => $renderedGroups,
-            'grand_total' => $config['show_grand_total'] ? $this->sum($transactions) : null,
+            'grand_total' => $config['show_grand_total'] ? $this->sum($transactions, $vatRate) : null,
         ];
+    }
+
+    /**
+     * Column headers, with the configured rate injected into the VAT header
+     * (the static label is rate-agnostic, e.g. "MwSt" -> "MwSt (19%)").
+     *
+     * @return array<int, string>
+     */
+    private function columnLabels(array $columns, float $vatRate): array
+    {
+        return array_map(
+            fn (string $key) => $key === 'vat'
+                ? 'MwSt (' . ExportColumns::formatRate($vatRate) . '%)'
+                : ExportColumns::label($key),
+            $columns,
+        );
     }
 
     /**
@@ -80,6 +98,7 @@ class ExportDataBuilder
             'description' => null,
             'show_event_info' => true,
             'footer_note' => 'Diese Auswertung basiert auf den zum Exportzeitpunkt lokal synchronisierten PayPal-Transaktionsdaten.',
+            'vat_rate' => 19.0,
         ];
 
         $fromTemplate = $template
@@ -98,12 +117,12 @@ class ExportDataBuilder
         return array_values(array_diff($columns, ExportColumns::INTERNAL_ONLY));
     }
 
-    private function renderRow(Transaction $t, array $columns, bool $maskPii): array
+    private function renderRow(Transaction $t, array $columns, bool $maskPii, float $vatRate): array
     {
         $row = [];
 
         foreach ($columns as $column) {
-            $row[$column] = ExportColumns::value($t, $column, $maskPii);
+            $row[$column] = ExportColumns::value($t, $column, $maskPii, $vatRate);
         }
 
         return $row;
@@ -129,11 +148,21 @@ class ExportDataBuilder
         })->sortKeys();
     }
 
-    private function sum(Collection $transactions): array
+    private function sum(Collection $transactions, float $vatRate): array
     {
+        // VAT total is the sum of the per-transaction rounded VAT (each PayPal
+        // transaction is effectively its own receipt), so the VAT column's
+        // footer always equals the sum of its cells. net_excl_vat is then
+        // derived from the exact gross total minus that VAT total, keeping
+        // gross = net_excl_vat + vat exact at the total level too.
+        $gross = $transactions->sum(fn (Transaction $t) => (float) $t->gross_amount);
+        $vat = round($transactions->sum(fn (Transaction $t) => ExportColumns::vatAmount((float) $t->gross_amount, $vatRate)), 2);
+
         return [
             'count' => $transactions->count(),
-            'gross' => $transactions->sum(fn (Transaction $t) => (float) $t->gross_amount),
+            'gross' => $gross,
+            'vat' => $vat,
+            'net_excl_vat' => round($gross - $vat, 2),
             'fee' => $transactions->sum(fn (Transaction $t) => (float) $t->fee_amount),
             'net' => $transactions->sum(fn (Transaction $t) => (float) $t->net_amount),
         ];

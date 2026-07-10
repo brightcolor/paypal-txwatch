@@ -47,6 +47,14 @@ class TransactionsExport implements FromArray, WithHeadings
         if ($this->data['grand_total']) {
             $rows[] = [];
             $rows[] = $this->sumRow('Gesamtsumme (' . $this->data['grand_total']['count'] . ')', $this->data['grand_total']);
+
+            // Explicit, column-independent VAT breakdown so the total VAT is
+            // always readable even if the "MwSt" column wasn't selected.
+            $rate = \App\Services\Export\ExportColumns::formatRate((float) $this->data['vat_rate']);
+            $rows[] = ['MwSt-Satz', $rate . '%'];
+            $rows[] = ['Netto gesamt (o. MwSt)', (float) $this->data['grand_total']['net_excl_vat']];
+            $rows[] = ['MwSt gesamt (' . $rate . '%)', (float) $this->data['grand_total']['vat']];
+            $rows[] = ['Brutto gesamt', (float) $this->data['grand_total']['gross']];
         }
 
         return $rows;
@@ -57,7 +65,7 @@ class TransactionsExport implements FromArray, WithHeadings
         $row = array_fill(0, count($this->data['columns']), '');
         $row[0] = $label;
 
-        foreach (['gross', 'fee', 'net'] as $field) {
+        foreach (['gross', 'vat', 'net_excl_vat', 'fee', 'net'] as $field) {
             $index = array_search($field, $this->data['columns'], true);
             if ($index !== false) {
                 $row[$index] = $sum[$field];

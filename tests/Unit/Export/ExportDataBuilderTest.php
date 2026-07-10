@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\ExportTemplate;
 use App\Models\PaypalAccount;
 use App\Models\Transaction;
+use App\Services\Export\ExportColumns;
 use App\Services\Export\ExportDataBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -115,6 +116,93 @@ class ExportDataBuilderTest extends TestCase
         $this->assertStringContainsString('*', $row['name']);
         $this->assertStringStartsWith('ma', $row['email']);
         $this->assertStringContainsString('*', $row['email']);
+    }
+
+    public function test_vat_is_computed_per_row_from_the_gross_inclusive_amount(): void
+    {
+        // Gross is VAT-inclusive: at 19%, a gross of 119.00 contains 19.00 VAT
+        // and 100.00 net.
+        $this->makeTransaction(['gross_amount' => 119.00]);
+
+        $result = (new ExportDataBuilder())->build(
+            Transaction::query(),
+            null,
+            ['columns' => ['gross', 'vat', 'net_excl_vat'], 'vat_rate' => 19],
+        );
+
+        $row = $result['groups'][0]['rows'][0];
+        $this->assertSame(19.0, $row['vat']);
+        $this->assertSame(100.0, $row['net_excl_vat']);
+    }
+
+    public function test_vat_rate_is_configurable_per_export(): void
+    {
+        $this->makeTransaction(['gross_amount' => 107.00]);
+
+        $result = (new ExportDataBuilder())->build(
+            Transaction::query(),
+            null,
+            ['columns' => ['gross', 'vat'], 'vat_rate' => 7],
+        );
+
+        $this->assertSame(7.0, $result['groups'][0]['rows'][0]['vat']);
+        $this->assertSame(7.0, $result['grand_total']['vat']);
+        $this->assertSame('MwSt (7%)', $result['column_labels'][array_search('vat', $result['columns'], true)]);
+    }
+
+    public function test_vat_totals_are_summed_and_gross_equals_net_plus_vat(): void
+    {
+        $this->makeTransaction(['gross_amount' => 119.00]);
+        $this->makeTransaction(['gross_amount' => 238.00]);
+
+        $result = (new ExportDataBuilder())->build(
+            Transaction::query(),
+            null,
+            ['columns' => ['gross', 'vat', 'net_excl_vat'], 'vat_rate' => 19],
+        );
+
+        $total = $result['grand_total'];
+        $this->assertSame(357.0, $total['gross']);
+        $this->assertSame(57.0, $total['vat']); // 19 + 38
+        $this->assertSame(300.0, $total['net_excl_vat']);
+        $this->assertSame($total['gross'], round($total['net_excl_vat'] + $total['vat'], 2));
+    }
+
+    public function test_format_rate_drops_trailing_zeros(): void
+    {
+        $this->assertSame('19', ExportColumns::formatRate(19.0));
+        $this->assertSame('7', ExportColumns::formatRate(7.0));
+        $this->assertSame('7,5', ExportColumns::formatRate(7.5));
+        $this->assertSame('0', ExportColumns::formatRate(0.0));
+    }
+
+    public function test_zero_vat_rate_yields_zero_vat(): void
+    {
+        $this->makeTransaction(['gross_amount' => 100.00]);
+
+        $result = (new ExportDataBuilder())->build(
+            Transaction::query(),
+            null,
+            ['columns' => ['gross', 'vat', 'net_excl_vat'], 'vat_rate' => 0],
+        );
+
+        $row = $result['groups'][0]['rows'][0];
+        $this->assertSame(0.0, $row['vat']);
+        $this->assertSame(100.0, $row['net_excl_vat']);
+    }
+
+    public function test_default_vat_rate_is_19_percent(): void
+    {
+        $this->makeTransaction(['gross_amount' => 119.00]);
+
+        $result = (new ExportDataBuilder())->build(
+            Transaction::query(),
+            null,
+            ['columns' => ['gross', 'vat']],
+        );
+
+        $this->assertSame(19.0, $result['vat_rate']);
+        $this->assertSame(19.0, $result['groups'][0]['rows'][0]['vat']);
     }
 
     public function test_it_uses_export_template_configuration(): void

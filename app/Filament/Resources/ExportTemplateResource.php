@@ -76,6 +76,15 @@ class ExportTemplateResource extends Resource
                         ]),
                     Forms\Components\Toggle::make('show_group_sums')->label('Summenzeile je Gruppe')->default(true),
                     Forms\Components\Toggle::make('show_grand_total')->label('Gesamtsumme')->default(true),
+                    Forms\Components\TextInput::make('vat_rate')
+                        ->label('MwSt-Satz (Standard)')
+                        ->helperText('Beim Export überschreibbar. Brutto gilt als MwSt-inklusive.')
+                        ->numeric()
+                        ->suffix('%')
+                        ->default(19)
+                        ->minValue(0)
+                        ->maxValue(100)
+                        ->required(),
                 ]),
 
             Forms\Components\Section::make('Kundenwirksame Darstellung')

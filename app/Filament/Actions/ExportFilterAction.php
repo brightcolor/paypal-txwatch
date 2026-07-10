@@ -41,6 +41,16 @@ class ExportFilterAction
                     ->helperText('Wenn gewählt, werden Spalten/Layout der Vorlage verwendet.')
                     ->live(),
 
+                Forms\Components\TextInput::make('vat_rate')
+                    ->label('MwSt-Satz')
+                    ->helperText('Für den MwSt-Ausweis (pro Position und gesamt). Brutto gilt als MwSt-inklusive.')
+                    ->numeric()
+                    ->suffix('%')
+                    ->default(19)
+                    ->minValue(0)
+                    ->maxValue(100)
+                    ->required(),
+
                 Forms\Components\Section::make('Ad-hoc-Konfiguration')
                     ->visible(fn (Forms\Get $get) => blank($get('export_template_id')))
                     ->schema([
@@ -82,7 +92,9 @@ class ExportFilterAction
                     ? ExportTemplate::find($data['export_template_id'])
                     : null;
 
-                $overrides = $template ? [] : [
+                // vat_rate is always taken from the dialog (default 19) so the rate is
+                // definable per export and overrides any rate stored on the template.
+                $overrides = ($template ? [] : [
                     'columns' => $data['columns'] ?? ExportTemplate::DEFAULT_COLUMNS,
                     'mode' => $data['mode'] ?? ExportTemplate::MODE_CUSTOMER,
                     'group_by' => filled($data['group_by'] ?? null) ? $data['group_by'] : null,
@@ -90,7 +102,7 @@ class ExportFilterAction
                     'title' => $data['title'] ?? null,
                     'subtitle' => $data['subtitle'] ?? null,
                     'description' => $data['description'] ?? null,
-                ];
+                ]) + ['vat_rate' => (float) ($data['vat_rate'] ?? 19)];
 
                 $built = app(ExportDataBuilder::class)->build($query, $template, $overrides);
                 $format = $data['format'];

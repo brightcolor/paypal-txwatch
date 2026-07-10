@@ -154,6 +154,8 @@
                     <td colspan="{{ count($columns) }}">
                         Summe ({{ $group['sum']['count'] }} Transaktionen)
                         &nbsp;&middot;&nbsp; Brutto: {{ number_format($group['sum']['gross'], 2, ',', '.') }}
+                        &nbsp;&middot;&nbsp; Netto (o. MwSt): {{ number_format($group['sum']['net_excl_vat'], 2, ',', '.') }}
+                        &nbsp;&middot;&nbsp; MwSt ({{ \App\Services\Export\ExportColumns::formatRate($vat_rate) }}%): {{ number_format($group['sum']['vat'], 2, ',', '.') }}
                         &nbsp;&middot;&nbsp; Gebühr: {{ number_format($group['sum']['fee'], 2, ',', '.') }}
                         &nbsp;&middot;&nbsp; Netto: {{ number_format($group['sum']['net'], 2, ',', '.') }}
                     </td>
@@ -167,6 +169,8 @@
         <div class="grand-total">
             <div class="box"><div class="label">Transaktionen</div><div class="value">{{ $grand_total['count'] }}</div></div>
             <div class="box"><div class="label">Brutto</div><div class="value">{{ number_format($grand_total['gross'], 2, ',', '.') }}</div></div>
+            <div class="box"><div class="label">Netto (o. MwSt)</div><div class="value">{{ number_format($grand_total['net_excl_vat'], 2, ',', '.') }}</div></div>
+            <div class="box"><div class="label">MwSt ({{ \App\Services\Export\ExportColumns::formatRate($vat_rate) }}%)</div><div class="value">{{ number_format($grand_total['vat'], 2, ',', '.') }}</div></div>
             <div class="box"><div class="label">Gebühren</div><div class="value">{{ number_format($grand_total['fee'], 2, ',', '.') }}</div></div>
             <div class="box"><div class="label">Netto</div><div class="value">{{ number_format($grand_total['net'], 2, ',', '.') }}</div></div>
         </div>

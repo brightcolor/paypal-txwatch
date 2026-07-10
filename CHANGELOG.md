@@ -4,6 +4,25 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.7.0] - 2026-07-10
+
+### Neu
+
+- **MwSt-Ausweis im Export**: Exporte weisen jetzt die MwSt **pro Position** (neue Spalte "MwSt", standardmäßig
+  enthalten) und **gesamt** (in Gruppensummen und Gesamtsumme) aus. Zusätzlich verfügbar ist die Spalte
+  "Netto (o. MwSt)". Der Bruttobetrag gilt als MwSt-inklusive (deutscher B2C-Fall), d. h. MwSt =
+  Brutto × Satz/(100 + Satz).
+- Der **MwSt-Satz ist beim Export frei definierbar** (Feld im Export-Dialog, Default **19 %**) und
+  überschreibt einen ggf. in der Export-Vorlage hinterlegten Satz. Export-Vorlagen können einen eigenen
+  Standardsatz speichern (`vat_rate`, Default 19 %).
+- PDF-Gesamtsumme und Summenzeilen zeigen jetzt zusätzlich **Netto (o. MwSt)** und **MwSt (Satz %)**;
+  CSV/XLSX enthalten am Ende explizite, spaltenunabhängige Zeilen für MwSt-Satz, Netto gesamt, MwSt gesamt
+  und Brutto gesamt.
+
+Die MwSt-Summen werden aus den je Transaktion gerundeten Beträgen gebildet, sodass die Summenzeile exakt der
+Summe der Positionswerte entspricht; das Netto (o. MwSt) ergibt sich aus Brutto − MwSt, wodurch
+Brutto = Netto (o. MwSt) + MwSt auch in der Gesamtsumme exakt aufgeht.
+
 ## [0.6.0] - 2026-07-10
 
 ### Neu

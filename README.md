@@ -198,7 +198,12 @@ z. B. Testbuchungen, interne Umbuchungen oder Ausreißer, die die Auswertung ver
 3. Entweder eine gespeicherte **Export-Vorlage** wählen (siehe **Exporte → Export-Vorlagen**) oder ad-hoc
    Spalten (per Drag & Drop sortierbar), Modus (Kunde/Intern), Gruppierung, PII-Maskierung sowie
    Titel/Untertitel/Beschreibung festlegen.
-4. Der Export enthält **exakt** das aktuell gefilterte Ergebnis, inkl. Gruppensummen und Gesamtsumme.
+4. **MwSt-Satz** festlegen (Default **19 %**) – die MwSt wird pro Position (Spalte "MwSt") und in den
+   Summen ausgewiesen. Der Bruttobetrag gilt als MwSt-inklusive (MwSt = Brutto × Satz/(100 + Satz)); die
+   Spalte **"Netto (o. MwSt)"** steht optional zur Verfügung. Der im Dialog gewählte Satz überschreibt einen
+   in der Vorlage hinterlegten Standardsatz.
+5. Der Export enthält **exakt** das aktuell gefilterte Ergebnis, inkl. Gruppensummen, Gesamtsumme und
+   MwSt-Ausweis (Netto o. MwSt / MwSt / Brutto).
 
 Export-Vorlagen können Logo, Event-Infoblock, Fußzeilen-Hinweis und rechtliche Hinweise pro Event
 berücksichtigen (siehe **Events & Kunden → Events**). Jeder Export wird unter **Exporte → Exporthistorie**

@@ -15,7 +15,7 @@ class ExportTemplate extends Model
 
     public const DEFAULT_COLUMNS = [
         'date', 'transaction_id', 'name', 'email', 'custom_field',
-        'invoice_id', 'status', 'gross', 'fee', 'net', 'currency', 'event',
+        'invoice_id', 'status', 'gross', 'vat', 'fee', 'net', 'currency', 'event',
     ];
 
     protected $fillable = [
@@ -32,6 +32,7 @@ class ExportTemplate extends Model
         'description',
         'show_event_info',
         'footer_note',
+        'vat_rate',
     ];
 
     protected function casts(): array
@@ -42,6 +43,7 @@ class ExportTemplate extends Model
             'show_grand_total' => 'boolean',
             'mask_pii' => 'boolean',
             'show_event_info' => 'boolean',
+            'vat_rate' => 'decimal:2',
         ];
     }
 
