@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.25.4] - 2026-07-11
+
+### Behoben
+
+- **500 in der Transaktionsliste beim Aktivieren von Filtern** (z. B. „Nur Rückzahlungen"): Filament
+  injiziert Closure-Argumente **per Parametername** – die Filter-Closures nannten den Query-Parameter `$q`
+  statt `$query` und bekamen dadurch einen Builder ohne Model ⇒ `Call to undefined method Builder::refunds()`.
+  Alle Filter-Closures korrigiert; neuer Regressions-Test aktiviert jeden Filter einmal (die reine
+  Seiten-Smoke konnte das nicht sehen). Gefunden über das Fehler-Log.
+
+### Geändert
+
+- **Alle Tabellen im Panel sehen jetzt aus wie die Berichte-Tabellen**: Zellen und Spaltenköpfe brechen nicht
+  mehr mitten im Wert um („1.436,46 €" bleibt eine Zeile, „Nach Gebühren" bleibt einzeilig); auf schmalen
+  Bildschirmen scrollt die Tabelle horizontal statt die Spalten zu quetschen. Spalten mit bewusstem Umbruch
+  (`->wrap()`) sind ausgenommen.
+
 ## [0.25.3] - 2026-07-11
 
 ### Behoben

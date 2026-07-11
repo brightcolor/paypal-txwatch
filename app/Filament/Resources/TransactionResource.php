@@ -425,7 +425,10 @@ class TransactionResource extends Resource
                     Forms\Components\DatePicker::make('from')->label('Von'),
                     Forms\Components\DatePicker::make('until')->label('Bis'),
                 ])
-                ->query(fn (Builder $q, array $data) => $q
+                // NOTE: Filament injects closure args BY NAME - the query param
+                // must be called $query (a different name resolves to a model-less
+                // builder from the container -> "undefined method" 500s).
+                ->query(fn (Builder $query, array $data) => $query
                     ->when($data['from'] ?? null, fn ($q, $v) => $q->whereDate('transaction_initiation_date', '>=', $v))
                     ->when($data['until'] ?? null, fn ($q, $v) => $q->whereDate('transaction_initiation_date', '<=', $v))),
 
@@ -435,7 +438,7 @@ class TransactionResource extends Resource
                     Forms\Components\TextInput::make('min')->label('von')->numeric(),
                     Forms\Components\TextInput::make('max')->label('bis')->numeric(),
                 ])
-                ->query(fn (Builder $q, array $data) => $q
+                ->query(fn (Builder $query, array $data) => $query
                     ->when($data['min'] ?? null, fn ($q, $v) => $q->where('gross_amount', '>=', $v))
                     ->when($data['max'] ?? null, fn ($q, $v) => $q->where('gross_amount', '<=', $v))),
 
@@ -478,8 +481,8 @@ class TransactionResource extends Resource
                 ->trueLabel('mit Gebühren')
                 ->falseLabel('ohne Gebühren')
                 ->queries(
-                    true: fn (Builder $q) => $q->where('fee_amount', '<>', 0)->whereNotNull('fee_amount'),
-                    false: fn (Builder $q) => $q->where(fn ($q) => $q->whereNull('fee_amount')->orWhere('fee_amount', 0)),
+                    true: fn (Builder $query) => $query->where('fee_amount', '<>', 0)->whereNotNull('fee_amount'),
+                    false: fn (Builder $query) => $query->where(fn ($q) => $q->whereNull('fee_amount')->orWhere('fee_amount', 0)),
                 ),
 
             Tables\Filters\TernaryFilter::make('amount_sign')
@@ -490,8 +493,8 @@ class TransactionResource extends Resource
                 // holds (T2101), not just refunds - see Transaction::LEDGER_ONLY_PREFIXES.
                 ->falseLabel('negativ (Rückzahlungen, Auszahlungen, Reserven)')
                 ->queries(
-                    true: fn (Builder $q) => $q->where('gross_amount', '>=', 0),
-                    false: fn (Builder $q) => $q->where('gross_amount', '<', 0),
+                    true: fn (Builder $query) => $query->where('gross_amount', '>=', 0),
+                    false: fn (Builder $query) => $query->where('gross_amount', '<', 0),
                 ),
 
             Tables\Filters\SelectFilter::make('art')
@@ -506,9 +509,9 @@ class TransactionResource extends Resource
 
                     return $labels->combine($labels)->all() + ['Sonstige' => 'Sonstige'];
                 })
-                ->query(fn (Builder $q, array $data) => filled($data['value'] ?? null)
-                    ? $q->ofType($data['value'])
-                    : $q),
+                ->query(fn (Builder $query, array $data) => filled($data['value'] ?? null)
+                    ? $query->ofType($data['value'])
+                    : $query),
 
             Tables\Filters\SelectFilter::make('reconciliation_status')
                 ->label('pretix-Abgleich')
@@ -520,7 +523,7 @@ class TransactionResource extends Resource
 
             Tables\Filters\Filter::make('refunds_only')
                 ->label('Nur Rückzahlungen/Reversals')
-                ->query(fn (Builder $q) => $q->refunds()),
+                ->query(fn (Builder $query) => $query->refunds()),
 
             Tables\Filters\TernaryFilter::make('has_custom_field')
                 ->label('Bestellnummer')
@@ -528,8 +531,8 @@ class TransactionResource extends Resource
                 ->trueLabel('mit Bestellnummer')
                 ->falseLabel('ohne Bestellnummer')
                 ->queries(
-                    true: fn (Builder $q) => $q->whereNotNull('custom_field')->where('custom_field', '<>', ''),
-                    false: fn (Builder $q) => $q->where(fn ($q) => $q->whereNull('custom_field')->orWhere('custom_field', '')),
+                    true: fn (Builder $query) => $query->whereNotNull('custom_field')->where('custom_field', '<>', ''),
+                    false: fn (Builder $query) => $query->where(fn ($q) => $q->whereNull('custom_field')->orWhere('custom_field', '')),
                 ),
 
             Tables\Filters\TernaryFilter::make('is_relevant')
@@ -538,8 +541,8 @@ class TransactionResource extends Resource
                 ->trueLabel('nur relevante')
                 ->falseLabel('nur nicht relevante')
                 ->queries(
-                    true: fn (Builder $q) => $q->excludingIrrelevant(),
-                    false: fn (Builder $q) => $q->whereNotNull('marked_irrelevant_at'),
+                    true: fn (Builder $query) => $query->excludingIrrelevant(),
+                    false: fn (Builder $query) => $query->whereNotNull('marked_irrelevant_at'),
                 ),
 
             Tables\Filters\TernaryFilter::make('is_assigned')
@@ -548,13 +551,13 @@ class TransactionResource extends Resource
                 ->trueLabel('zugeordnet')
                 ->falseLabel('nicht zugeordnet')
                 ->queries(
-                    true: fn (Builder $q) => $q->whereNotNull('event_id'),
-                    false: fn (Builder $q) => $q->whereNull('event_id'),
+                    true: fn (Builder $query) => $query->whereNotNull('event_id'),
+                    false: fn (Builder $query) => $query->whereNull('event_id'),
                 ),
 
             Tables\Filters\Filter::make('duplicates_only')
                 ->label('Nur Mehrfachtreffer (gleiche Transaktions-ID)')
-                ->query(fn (Builder $q) => $q->whereIn('transaction_id', function ($sub) {
+                ->query(fn (Builder $query) => $query->whereIn('transaction_id', function ($sub) {
                     $sub->select('transaction_id')
                         ->from('transactions')
                         ->groupBy('transaction_id')

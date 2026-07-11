@@ -103,6 +103,15 @@
     .fi-ta-table thead { position: sticky; top: 0; z-index: 5; }
     /* money columns read better with equal-width digits */
     .fi-ta-text-item-label { font-variant-numeric: tabular-nums; }
+    /* Same behavior as the report tables: cells and headers never wrap
+       mid-value ("1.436,46 €" stays on one line, "Nach Gebühren" stays one
+       line) - on small screens the table scrolls horizontally instead of
+       squeezing. Columns that opt into wrapping via ->wrap() get Filament's
+       whitespace-normal class and are excluded. */
+    .fi-ta-header-cell-label { white-space: nowrap; }
+    .fi-ta-text-item-label:not(.whitespace-normal) { white-space: nowrap; }
+    .fi-ta-text:not(.whitespace-normal) { white-space: nowrap; }
+    .fi-ta-content { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
     /* ===== Badges: solid AdminLTE colors instead of pale pills ===== */
     .fi-badge { font-weight: 600 !important; border: none !important; }
