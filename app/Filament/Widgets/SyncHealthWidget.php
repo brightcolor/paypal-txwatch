@@ -23,6 +23,9 @@ class SyncHealthWidget extends BaseWidget
 
     protected static bool $isLazy = false;
 
+    // Operational health - useful but low-priority, so near the bottom.
+    protected static ?int $sort = 8;
+
     public static function canView(): bool
     {
         // Operator-only: customers have no business seeing sync health.

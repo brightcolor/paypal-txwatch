@@ -15,6 +15,9 @@ class RecentSyncRunsWidget extends BaseWidget
 
     protected static bool $isLazy = false;
 
+    // Diagnostic detail - lowest priority, at the very bottom.
+    protected static ?int $sort = 9;
+
     public static function canView(): bool
     {
         // Operator-only: customers have no business seeing sync runs.

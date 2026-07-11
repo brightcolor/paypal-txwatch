@@ -13,7 +13,6 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\MaxWidth;
 use Filament\View\PanelsRenderHook;
-use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -72,7 +71,6 @@ class AdminPanelProvider extends PanelProvider
                 Pages\Dashboard::class,
             ])
             ->widgets([
-                Widgets\AccountWidget::class,
                 \App\Filament\Widgets\DashboardStatsOverview::class,
                 \App\Filament\Widgets\ComparisonStatsWidget::class,
                 \App\Filament\Widgets\NeedsReviewWidget::class,

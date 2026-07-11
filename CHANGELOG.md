@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.33.1] - 2026-07-11
+
+### Geändert
+
+- **Dashboard aufgeräumt**: Das „Willkommen/Abmelden"-Konto-Widget oben entfernt. Feste Reihenfolge:
+  KPI-Kacheln → Monats-Vergleiche → „Zu prüfen" → Top-Events → Umsatz-Chart, und **Sync-Gesundheit** sowie
+  **letzte Sync-Läufe** ganz nach unten (niedrigere Priorität).
+
 ## [0.33.0] - 2026-07-11
 
 ### Behoben / Neu
