@@ -39,7 +39,7 @@ class RevenueByDayChart extends ChartWidget
 
         return [
             'datasets' => [[
-                'label' => 'Bruttoumsatz',
+                'label' => 'Umsatz',
                 'data' => $data,
                 'borderColor' => '#2563eb',
                 'backgroundColor' => 'rgba(37, 99, 235, 0.15)',

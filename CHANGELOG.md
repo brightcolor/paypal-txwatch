@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.14.1] - 2026-07-11
+
+### Geändert
+
+- **Begriffe entwirrt – Steuer vs. Gebühren**: "Brutto"/"Netto" sind Steuerbegriffe und werden nur noch für
+  den MwSt-Ausweis im Export verwendet ("Brutto", "Netto (o. MwSt)", "MwSt"). Für Zahlungsbeträge gilt
+  jetzt durchgängig: **"Betrag"** (vom Kunden gezahlt), **"Gebühr"**, **"Nach Gebühren"** – in
+  Transaktionstabelle, Detailseite, Dashboard ("Umsatz" statt "Bruttoumsatz"), Umsatz-Chart, Berichten und
+  Export-Spalten.
+
 ## [0.14.0] - 2026-07-11
 
 ### Neu

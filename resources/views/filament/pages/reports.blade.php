@@ -41,7 +41,7 @@
                     <tr class="text-left text-gray-500">
                         <th class="py-1.5 pr-4">Event-Kürzel</th>
                         <th class="py-1.5 pr-4 text-right">Anzahl</th>
-                        <th class="py-1.5 pr-4 text-right">Brutto</th>
+                        <th class="py-1.5 pr-4 text-right">Umsatz</th>
                     </tr>
                 </thead>
                 <tbody>

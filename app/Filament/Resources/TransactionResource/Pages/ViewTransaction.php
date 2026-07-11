@@ -72,9 +72,9 @@ class ViewTransaction extends ViewRecord
             Section::make('Beträge')
                 ->columns(4)
                 ->schema([
-                    TextEntry::make('gross_amount')->label('Brutto')->money(fn ($record) => $record->currency ?? 'EUR'),
+                    TextEntry::make('gross_amount')->label('Betrag')->money(fn ($record) => $record->currency ?? 'EUR'),
                     TextEntry::make('fee_amount')->label('Gebühr')->money(fn ($record) => $record->currency ?? 'EUR'),
-                    TextEntry::make('net_amount')->label('Netto')->money(fn ($record) => $record->currency ?? 'EUR'),
+                    TextEntry::make('net_amount')->label('Nach Gebühren')->money(fn ($record) => $record->currency ?? 'EUR'),
                     TextEntry::make('currency')->label('Währung'),
                 ]),
 

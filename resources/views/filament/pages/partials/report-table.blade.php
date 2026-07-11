@@ -4,9 +4,9 @@
             <tr class="text-left text-gray-500">
                 <th class="py-1.5 pr-4">{{ $labelHeading }}</th>
                 <th class="py-1.5 pr-4 text-right">Anzahl</th>
-                <th class="py-1.5 pr-4 text-right">Brutto</th>
+                <th class="py-1.5 pr-4 text-right">Umsatz</th>
                 <th class="py-1.5 pr-4 text-right">Gebühr</th>
-                <th class="py-1.5 pr-4 text-right">Netto</th>
+                <th class="py-1.5 pr-4 text-right">Nach Gebühren</th>
                 <th class="py-1.5 pr-4 text-right">Gebührenquote</th>
             </tr>
         </thead>

@@ -239,7 +239,7 @@ verfügbar.
 
 Unter **Berichte** (mit optionalem Zeitraumfilter):
 
-- Gebührenanalyse nach Event, nach Monat und im Konten-Vergleich (Brutto/Gebühr/Netto/Gebührenquote)
+- Gebührenanalyse nach Event, nach Monat und im Konten-Vergleich (Umsatz/Gebühr/Nach Gebühren/Gebührenquote)
 - Event-Kürzel-Analyse aus der Bestellnummer (z. B. fasst `Order SOMMERFEST-2026-A1B2` … `-C3D4` automatisch zu `SOMMERFEST-2026`
   zusammen, um wiederkehrende Muster sichtbar zu machen)
 - Event-Zuordnungsquote und Rückzahlungs-/Reversal-Summe

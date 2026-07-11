@@ -28,9 +28,9 @@ class DashboardStatsOverview extends BaseWidget
 
         return [
             Stat::make('Transaktionen (30 Tage)', number_format($count, 0, ',', '.')),
-            Stat::make('Bruttoumsatz', number_format($gross, 2, ',', '.') . ' €'),
+            Stat::make('Umsatz', number_format($gross, 2, ',', '.') . ' €'),
             Stat::make('Gebühren', number_format($fees, 2, ',', '.') . ' € (' . number_format($feeRatio, 1) . '%)'),
-            Stat::make('Netto', number_format($net, 2, ',', '.') . ' €'),
+            Stat::make('Nach Gebühren', number_format($net, 2, ',', '.') . ' €'),
             Stat::make('Ø Warenkorb', number_format($avgBasket, 2, ',', '.') . ' €'),
             Stat::make('Rückzahlungen/Reversals', $refunds),
             Stat::make('Nicht zugeordnet', $unassigned)

@@ -164,9 +164,11 @@ class TransactionResource extends Resource
                     ->tooltip(fn (Transaction $record) => $record->transaction_event_code),
                 Tables\Columns\BadgeColumn::make('transaction_status')->label('Status')->toggleable(),
                 Tables\Columns\TextColumn::make('transaction_event_code')->label('T-Code')->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('gross_amount')->label('Brutto')->money(fn ($record) => $record->currency ?? 'EUR')->sortable(),
+                // "Brutto/Netto" are tax-law terms and stay reserved for the VAT
+                // breakdown in exports; payment amounts use neutral wording.
+                Tables\Columns\TextColumn::make('gross_amount')->label('Betrag')->money(fn ($record) => $record->currency ?? 'EUR')->sortable(),
                 Tables\Columns\TextColumn::make('fee_amount')->label('Gebühr')->money(fn ($record) => $record->currency ?? 'EUR')->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('net_amount')->label('Netto')->money(fn ($record) => $record->currency ?? 'EUR')->sortable(),
+                Tables\Columns\TextColumn::make('net_amount')->label('Nach Gebühren')->money(fn ($record) => $record->currency ?? 'EUR')->sortable(),
                 Tables\Columns\TextColumn::make('currency')->label('Währung')->toggleable(),
                 // Redundant with the combined "Event" column above now that pretix
                 // auto-assignment fills it; kept as an opt-in column for checking the

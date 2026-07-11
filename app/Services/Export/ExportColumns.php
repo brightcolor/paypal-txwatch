@@ -22,11 +22,14 @@ class ExportColumns
         'custom_field' => 'Bestellnummer',
         'invoice_id' => 'Invoice ID',
         'status' => 'Status',
+        // "Brutto"/"Netto (o. MwSt)" are the tax-facing pair (VAT breakdown);
+        // the after-fee amount deliberately avoids "Netto" to not conflate
+        // payment fees with tax terminology.
         'gross' => 'Brutto',
         'net_excl_vat' => 'Netto (o. MwSt)',
         'vat' => 'MwSt',
         'fee' => 'Gebühr',
-        'net' => 'Netto',
+        'net' => 'Nach Gebühren',
         'currency' => 'Währung',
         'event' => 'Event (zugeordnet)',
         'payment_method' => 'Zahlungsart',
