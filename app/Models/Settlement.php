@@ -17,6 +17,7 @@ class Settlement extends Model
         'event_id', 'customer_id', 'title', 'period_from', 'period_to', 'vat_rate',
         'tx_count', 'gross', 'fees', 'payout', 'vat', 'net_excl_vat', 'blocks', 'events',
         'status', 'paid_at', 'paid_reference', 'note', 'created_by_user_id',
+        'sent_at', 'sent_to',
     ];
 
     protected function casts(): array
@@ -33,6 +34,7 @@ class Settlement extends Model
             'blocks' => 'array',
             'events' => 'array',
             'paid_at' => 'datetime',
+            'sent_at' => 'datetime',
         ];
     }
 

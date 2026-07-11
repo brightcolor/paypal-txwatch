@@ -80,6 +80,9 @@ class SettlementResource extends Resource
                     ->formatStateUsing(fn (string $state) => $state === Settlement::STATUS_PAID ? 'ausgezahlt' : 'offen')
                     ->color(fn (string $state) => $state === Settlement::STATUS_PAID ? 'success' : 'warning'),
                 Tables\Columns\TextColumn::make('paid_at')->label('Ausgezahlt am')->dateTime('d.m.Y')->placeholder('–'),
+                Tables\Columns\IconColumn::make('sent_at')->label('Versendet')->boolean()
+                    ->tooltip(fn (Settlement $r) => $r->sent_at ? ('an ' . $r->sent_to . ' am ' . $r->sent_at->format('d.m.Y H:i')) : null)
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('createdBy.name')->label('Erstellt von')->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')->label('Erstellt')->dateTime('d.m.Y H:i')->sortable(),
             ])
@@ -98,6 +101,33 @@ class SettlementResource extends Resource
                         $name = 'abrechnung-' . Str::slug($record->title) . '-' . $record->created_at->format('Ymd') . '.pdf';
 
                         return response()->streamDownload(fn () => print ($pdf), $name);
+                    }),
+                Tables\Actions\Action::make('sendMail')
+                    ->label('Per E-Mail senden')
+                    ->icon('heroicon-o-envelope')
+                    ->color('info')
+                    // Operator-only, and only once SMTP is actually configured.
+                    ->visible(fn () => static::canManage() && \App\Models\MailSetting::current()->isConfigured())
+                    ->form(fn (Settlement $record) => [
+                        Forms\Components\TextInput::make('to')->label('Empfänger')->email()->required()
+                            ->default(fn () => $record->customer?->contact_email),
+                    ])
+                    ->requiresConfirmation()
+                    ->modalDescription('Sendet die Abrechnung als PDF an den angegebenen Empfänger.')
+                    ->action(function (Settlement $record, array $data) {
+                        try {
+                            \App\Models\MailSetting::current()->apply();
+                            $pdf = app(PdfRenderer::class)->render($record->pdfData(), 'exports.settlement');
+                            $name = 'abrechnung-' . Str::slug($record->title) . '-' . $record->created_at->format('Ymd') . '.pdf';
+
+                            \Illuminate\Support\Facades\Mail::to($data['to'])
+                                ->send(new \App\Mail\SettlementMail($record, $pdf, $name));
+
+                            $record->update(['sent_at' => now(), 'sent_to' => $data['to']]);
+                            Notification::make()->title('Abrechnung gesendet an ' . $data['to'])->success()->send();
+                        } catch (\Throwable $e) {
+                            Notification::make()->title('Versand fehlgeschlagen')->body($e->getMessage())->danger()->persistent()->send();
+                        }
                     }),
                 Tables\Actions\Action::make('markPaid')
                     ->label('Als ausgezahlt markieren')

@@ -12,6 +12,7 @@ class ListTransactions extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            \App\Filament\Actions\ExportPreviewAction::make(),
             \App\Filament\Actions\ExportFilterAction::make(),
             \App\Filament\Actions\SaveFilterAction::make(),
         ];

@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.32.0] - 2026-07-11
+
+### Neu
+
+- **Abrechnungs-Versand per E-Mail**: Neue Aktion „Per E-Mail senden" an der Abrechnung (nur Betreiber, nur
+  bei aktivem SMTP) verschickt die Abrechnung als PDF an den Kunden (Standard-Empfänger: Kunden-Kontakt-
+  E-Mail) und markiert sie als „Versendet" (Spalte + Zeitpunkt/Empfänger). Neues `SettlementMail`-Mailable.
+- **Export-Vorschau**: Neue Aktion „Vorschau" auf der Transaktionsliste zeigt die ersten 25 Zeilen und die
+  Gesamtsumme des Exports (gleicher `ExportDataBuilder`), bevor eine Datei erzeugt wird.
+
 ## [0.31.0] - 2026-07-11
 
 ### Neu

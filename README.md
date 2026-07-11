@@ -321,6 +321,26 @@ php artisan errors:recent --trace 42 # voller Stacktrace + Kontext für Eintrag 
 Der Sammler ist bewusst defensiv (läuft im Laravel-Exception-Handler): Er wirft nie selbst und schreibt
 DB-Fehler nicht zurück in die DB, damit das Logging nie den Request killt oder in eine Schleife läuft.
 
+## Kundenportal, Finanzabschluss, E-Mail & mehr
+
+- **Kundenportal (Rolle *Kunde*)**: Ein Kundenbenutzer (mit `customer_id`) sieht **ausschließlich** Daten des
+  eigenen Kunden – Transaktionen, Berichte, Monatsabschluss, Dashboard-Zahlen und die eigenen Abrechnungen
+  (read-only, PDF-Download). Serverseitig über `App\Support\CustomerScope` erzwungen; ein Kunde ohne
+  `customer_id` sieht nichts.
+- **Finanzabschluss** (Berichte → Finanzabschluss): **Auszahlungs-Abgleich** (Bilanzbrücke PayPal→Bank:
+  Eingang netto, ausgezahlte Beträge, rechnerischer Saldo) und **Monatsabschluss** für den Steuerberater
+  (Umsatz/Gebühren/Erstattungen/MwSt pro Monat, CSV-Download).
+- **Ticket-Statistik** (pretix → Ticket-Statistik): Kapazität vs. verkauft/verfügbar je Event, live aus den
+  pretix-Kontingenten (gecacht, aktualisierbar).
+- **Käuferkonflikte** (PayPal → Käuferkonflikte): offene PayPal-Disputes aller Konten mit Antwortfrist;
+  der Scheduler (`disputes:check`, alle 6 h) meldet neue Disputes an Admins – Frühwarnung vor Rückbuchungen.
+- **E-Mail-Versand** (Einstellungen → E-Mail-Versand): SMTP im Panel konfigurierbar (Passwort verschlüsselt,
+  Testmail). Ist er aktiv, kommen System-Warnungen zusätzlich per Mail, und **Abrechnungen lassen sich direkt
+  als PDF an den Kunden mailen** (Status „Versendet"). Ohne SMTP bleibt die Glocke der Kanal.
+- **Login-Historie** (System → Login-Historie): erfolgreiche/fehlgeschlagene Anmeldungen mit IP und Gerät.
+- **Export-Vorschau**: Auf der Transaktionsliste zeigt „Vorschau" die ersten Zeilen samt Summe, bevor
+  exportiert wird. **Dashboard**: Umsatz-Vergleiche (Vormonat/Vorjahr) und Top-Events.
+
 ## Troubleshooting
 
 | Problem | Ursache / Lösung |
