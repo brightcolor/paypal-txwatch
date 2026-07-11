@@ -32,10 +32,9 @@ class AdminPanelProvider extends PanelProvider
             ->brandName('PayPal TxWatch')
             ->brandLogo(fn () => view('filament.brand-logo'))
             ->favicon(asset('favicon.svg'))
-            // AdminLTE-style theme (see filament.adminlte-theme): classic light
-            // admin look with a dark sidebar - the dark-mode toggle would fight
-            // that design, so it's off.
-            ->darkMode(false)
+            // AdminLTE-style theme (see filament.adminlte-theme). Dark mode is
+            // supported: the light-only surface colors in the theme are scoped
+            // to html:not(.dark) so Filament's dark palette shows through.
             // Use the full viewport width for content (the default is a narrow centered
             // column that leaves large unused margins on wide screens, which matters here
             // because the transactions table has many columns).

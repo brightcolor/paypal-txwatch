@@ -14,8 +14,9 @@ class TransactionViewPageTest extends TestCase
 
     private function admin(): User
     {
+        $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
         $user = User::factory()->create();
-        $user->assignRole(\Spatie\Permission\Models\Role::findOrCreate('admin'));
+        $user->assignRole(\Spatie\Permission\Models\Role::findByName('admin'));
 
         return $user;
     }

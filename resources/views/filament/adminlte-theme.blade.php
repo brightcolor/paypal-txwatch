@@ -12,8 +12,8 @@
         --lte-card-border: #007bff;
     }
 
-    /* ===== Page canvas ===== */
-    .fi-body { background-color: var(--lte-body) !important; }
+    /* ===== Page canvas (light-only surfaces; dark mode keeps Filament's) ===== */
+    html:not(.dark) .fi-body { background-color: var(--lte-body) !important; }
     .fi-main { padding-top: 1rem !important; padding-bottom: 1.25rem !important; gap: 1rem !important; }
     .fi-main > * + * { margin-top: 1rem !important; }
     .fi-page { gap: 1rem !important; }
@@ -47,34 +47,33 @@
     .fi-sidebar-item-active .fi-sidebar-item-icon { color: #fff !important; font-weight: 600; }
     .fi-sidebar-item-badge .fi-badge { box-shadow: none; }
 
-    /* ===== Topbar ===== */
-    .fi-topbar nav {
+    /* ===== Topbar (light-only white) ===== */
+    html:not(.dark) .fi-topbar nav {
         background-color: #fff !important;
         box-shadow: 0 1px 4px rgba(0,0,0,.08) !important;
-        ring: none;
     }
 
-    /* ===== Cards / sections: AdminLTE "card-outline" ===== */
+    /* ===== Cards / sections: AdminLTE "card-outline" (accent + shadow work in both modes) ===== */
     .fi-section, .fi-wi-widget > section, .fi-fo-tabs, .fi-ta-ctn {
         border-top: 3px solid var(--lte-card-border) !important;
         border-radius: .4rem !important;
         box-shadow: 0 1px 3px rgba(0,0,0,.12) !important;
     }
     .fi-section-content { padding: .8rem 1rem !important; }
-    .fi-section-header { padding: .7rem 1rem !important; border-bottom: 1px solid #edf0f3; }
-    .fi-section-header-heading { font-size: .95rem !important; font-weight: 600 !important; color: #1f2d3d !important; }
+    .fi-section-header { padding: .7rem 1rem !important; }
+    html:not(.dark) .fi-section-header { border-bottom: 1px solid #edf0f3; }
+    .fi-section-header-heading { font-size: .95rem !important; font-weight: 600 !important; }
+    html:not(.dark) .fi-section-header-heading { color: #1f2d3d !important; }
 
     /* ===== Tables: striped, hover, compact, sticky header ===== */
-    .fi-ta-header-cell {
-        padding-top: .45rem !important;
-        padding-bottom: .45rem !important;
-        background: #f8fafc !important;
-        border-bottom: 2px solid #dee2e6 !important;
-    }
-    .fi-ta-header-cell-label { font-size: .72rem !important; text-transform: uppercase; letter-spacing: .03em; color: #5f6b7a !important; }
+    .fi-ta-header-cell { padding-top: .45rem !important; padding-bottom: .45rem !important; }
+    html:not(.dark) .fi-ta-header-cell { background: #f8fafc !important; border-bottom: 2px solid #dee2e6 !important; }
+    .fi-ta-header-cell-label { font-size: .72rem !important; text-transform: uppercase; letter-spacing: .03em; }
+    html:not(.dark) .fi-ta-header-cell-label { color: #5f6b7a !important; }
     .fi-ta-cell { padding-top: .32rem !important; padding-bottom: .32rem !important; }
-    .fi-ta-row:nth-child(even) { background-color: #fafbfd; }
-    .fi-ta-row:hover { background-color: #eef4fb !important; transition: background-color .1s; }
+    html:not(.dark) .fi-ta-row:nth-child(even) { background-color: #fafbfd; }
+    html:not(.dark) .fi-ta-row:hover { background-color: #eef4fb !important; transition: background-color .1s; }
+    .dark .fi-ta-row:hover { background-color: rgba(255,255,255,.04) !important; }
     .fi-ta-record { --min-height: 0 !important; }
     .fi-ta-text-item { line-height: 1.3 !important; }
     .fi-ta-table thead { position: sticky; top: 0; z-index: 5; }
@@ -134,7 +133,7 @@
     .fi-input-wrp { border-radius: .3rem !important; }
 
     /* ===== Login card ===== */
-    .fi-simple-layout { background: var(--lte-body) !important; }
+    html:not(.dark) .fi-simple-layout { background: var(--lte-body) !important; }
     .fi-simple-main {
         border-top: 3px solid var(--lte-card-border) !important;
         box-shadow: 0 4px 18px rgba(0,0,0,.12) !important;

@@ -35,6 +35,14 @@ class TransactionResource extends Resource
         return false;
     }
 
+    public static function canViewAny(): bool
+    {
+        // All four business roles carry view-reports; this only shuts out a
+        // hypothetical role-less active user (defense in depth - customers are
+        // additionally row-scoped in getEloquentQuery()).
+        return auth()->user()?->can('view-reports') ?? false;
+    }
+
     /**
      * Customers only ever see transactions belonging to events of their own
      * customer record; every other role (admin/manager/auditor) sees all.
@@ -399,9 +407,9 @@ class TransactionResource extends Resource
                         return $query;
                     }
 
-                    $fields = $data['field'] === 'all'
-                        ? ['custom_field', 'invoice_id', 'transaction_id', 'payer_name', 'payer_email', 'subject']
-                        : [$data['field']];
+                    $fields = ($data['field'] ?? null) === 'all'
+                        ? self::SEARCHABLE_FIELDS
+                        : [$data['field'] ?? 'custom_field'];
 
                     return $query->where(function (Builder $q) use ($fields, $data) {
                         foreach ($fields as $field) {
@@ -573,11 +581,27 @@ class TransactionResource extends Resource
         );
     }
 
+    /** Columns the custom-field/full-text search may target. */
+    private const SEARCHABLE_FIELDS = ['custom_field', 'invoice_id', 'transaction_id', 'payer_name', 'payer_email', 'subject'];
+
     private static function applyStringSearch(Builder $q, string $field, string $value, string $mode, bool $caseSensitive): void
     {
+        // $field is interpolated into raw SQL below, so it MUST come from the
+        // fixed allow-list - the value in the request cannot be trusted just
+        // because the UI is a <select> (Livewire state is client-controllable).
+        if (! in_array($field, self::SEARCHABLE_FIELDS, true)) {
+            return;
+        }
+
         $isPostgres = $q->getConnection()->getDriverName() === 'pgsql';
 
         if ($mode === 'regex') {
+            // Skip an un-compilable pattern instead of letting the DB raise and
+            // 500 the whole table. (@ silences the warning on a bad pattern.)
+            if (@preg_match('/' . str_replace('/', '\/', $value) . '/', '') === false) {
+                return;
+            }
+
             $operator = $isPostgres ? ($caseSensitive ? '~' : '~*') : 'REGEXP';
             $q->orWhereRaw("{$field} {$operator} ?", [$value]);
 

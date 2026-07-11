@@ -4,6 +4,33 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.20.0] - 2026-07-11
+
+### Sicherheit
+
+- **SQL-Injection in der Volltextsuche behoben**: Das Suchfeld (`custom_field`, `invoice_id`, …) wurde in
+  Roh-SQL interpoliert und stammte aus dem Request – ein eingeloggter Nutzer hätte über einen manipulierten
+  Feldwert (Livewire-State ist client-seitig setzbar) beliebiges SQL einschleusen können. Das Feld wird jetzt
+  strikt gegen eine Allow-Liste geprüft (Regressionstests inkl. Payload-Nachweis).
+- **Regex-Suche abgesichert**: Ein ungültiges Muster wird jetzt ignoriert statt einen DB-Fehler/500 auszulösen.
+- **Transaktionsliste zusätzlich per Berechtigung geschützt** (`view-reports`) – schließt einen hypothetischen
+  rollenlosen Nutzer aus (Kunden bleiben zusätzlich zeilenweise gescoped).
+
+Der übrige Sicherheits-Check war sauber: alle Admin-Ressourcen (Benutzer, PayPal-Konten, pretix, Audit-Log,
+Failed-Jobs) sind korrekt per Berechtigung gated, Secrets liegen verschlüsselt, `APP_DEBUG=false`,
+HttpOnly-Cookies, keine weiteren Raw-SQL-Stellen mit User-Input.
+
+### UI
+
+- **Dark-Mode wieder aktiv**: Das AdminLTE-Theme ist jetzt dark-tauglich – helle Flächenfarben sind auf den
+  Light-Mode beschränkt (`html:not(.dark)`), sodass Filaments dunkle Palette im Dark-Mode durchscheint.
+
+### Hinweis (offen, betrifft nur den ungenutzten „Kunde"-Zugang)
+
+- Die Berichte-Seite und Export-Historie sind noch nicht kundenweise gescoped. Solange keine
+  „customer"-Benutzer angelegt sind, ist das ohne Wirkung; vor Freischaltung eines Kundenzugangs muss das
+  ergänzt werden.
+
 ## [0.19.0] - 2026-07-11
 
 ### Performance / Skalierung
