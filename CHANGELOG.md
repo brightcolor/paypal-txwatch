@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.31.0] - 2026-07-11
+
+### Neu
+
+- **PayPal-Käuferkonflikte (Disputes)** (PayPal → Käuferkonflikte): Zeigt offene Disputes aller aktiven
+  Konten live aus der PayPal-Disputes-API (zwischengespeichert, aktualisierbar) – mit Status, Grund, Betrag,
+  Antwortfrist (rot markiert bei ≤3 Tagen/überfällig) und Transaktions-ID. Frühwarnung, **bevor** ein
+  Konflikt zur Rückbuchung wird.
+- **Automatische Dispute-Warnung**: Scheduler-Command `disputes:check` (alle 6 Stunden) benachrichtigt
+  Admins über **neu** aufgetauchte Disputes (Glocke + optional E-Mail), ohne bei bereits gesehenen zu nerven.
+
 ## [0.30.0] - 2026-07-11
 
 ### Neu

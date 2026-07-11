@@ -21,6 +21,10 @@ Schedule::command('pretix:schedule-import')->everyThirtyMinutes()->withoutOverla
 // Once a day: warn admins if the nightly backup marker is missing or stale.
 Schedule::command('backup:check')->dailyAt('09:00');
 
+// Every few hours: alert admins about newly seen open PayPal disputes so they
+// can respond before the buyer window closes (chargeback prevention).
+Schedule::command('disputes:check')->everySixHours()->withoutOverlapping();
+
 // Keep the error log from growing forever: drop resolved errors last seen more
 // than 30 days ago (unresolved ones stay until handled).
 Schedule::call(function () {

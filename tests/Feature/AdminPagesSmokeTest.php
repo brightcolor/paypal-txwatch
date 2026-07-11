@@ -60,6 +60,7 @@ class AdminPagesSmokeTest extends TestCase
         \App\Filament\Pages\MailSettingsPage::class,
         \App\Filament\Pages\FinancialCloseReport::class,
         \App\Filament\Pages\TicketStatsPage::class,
+        \App\Filament\Pages\DisputesPage::class,
     ];
 
     private function admin(): User
