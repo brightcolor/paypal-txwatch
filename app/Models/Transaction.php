@@ -212,6 +212,18 @@ class Transaction extends Model
     }
 
     /**
+     * A PayPal chargeback/dispute reversal: the T11xx "reversals" group other
+     * than the documented merchant refund (T1107). These are money clawed back
+     * by the buyer/bank, usually with a dispute fee - accounted separately from
+     * voluntary refunds.
+     */
+    public function isChargeback(): bool
+    {
+        return $this->eventCodeGroup() === 'T11'
+            && ! in_array($this->transaction_event_code, self::REFUND_EVENT_CODES, true);
+    }
+
+    /**
      * Single source of truth for "is a refund": PayPal refunds carry a
      * documented T-code; pretix-booked refunds have no T-code and are the
      * only pretix rows with a negative amount.
@@ -252,6 +264,10 @@ class Transaction extends Model
             }
 
             return filled($this->payment_method_type) ? 'Zahlung' : '–';
+        }
+
+        if ($this->isChargeback()) {
+            return 'Rückbuchung/Chargeback';
         }
 
         return self::TYPE_PREFIX_LABELS[$group] ?? 'Sonstige';

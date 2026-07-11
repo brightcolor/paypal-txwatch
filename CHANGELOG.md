@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.22.0] - 2026-07-11
+
+### Neu
+
+- **Auszahlungs-Tracking**: „Abrechnung erstellen" legt jetzt einen **Abrechnungs-Datensatz** an (eingefrorener
+  Snapshot der Summen – bleibt stabil, auch wenn sich Transaktionen später ändern). Neue Ansicht
+  **Exporte → Abrechnungen**: PDF herunterladen, **„Als ausgezahlt markieren"** (Datum, Referenz, Notiz),
+  wieder öffnen, Status-Filter und Summe der Auszahlungen. Zähler-Badge zeigt offene Abrechnungen.
+- **Sammelabrechnung pro Kunde**: Aktion „Sammelabrechnung" am Kunden fasst alle seine Events in einem
+  Dokument zusammen – mit **Aufschlüsselung je Veranstaltung** plus Gesamt-Auszahlungsbetrag.
+- **Chargebacks/Rückbuchungen** werden jetzt getrennt von freiwilligen Erstattungen behandelt: PayPal-T11xx
+  außer dem Merchant-Refund (T1107) gelten als „Rückbuchung/Chargeback" – eigene Art, eigener Block in der
+  Abrechnung, sauber in Auszahlungssumme und MwSt berücksichtigt.
+
 ## [0.21.0] - 2026-07-11
 
 ### Neu

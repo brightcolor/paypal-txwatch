@@ -30,14 +30,15 @@
 <div class="content">
     <div class="header">
         <div>
-            @if ($event->logo_path)
+            @if ($event && $event->logo_path && file_exists(storage_path('app/public/' . $event->logo_path)))
                 <img style="max-height:50px; max-width:160px; object-fit:contain;" src="{{ storage_path('app/public/' . $event->logo_path) }}" alt="Logo">
             @endif
-            <h1>Abrechnung: {{ $event->displayName() }}</h1>
+            <h1>{{ $title }}</h1>
             <h2>
-                @if ($event->customer) für {{ $event->customer->name }} @endif
-                @if ($event->event_date) &middot; Veranstaltung am {{ $event->event_date->format('d.m.Y') }} @endif
-                @if ($event->venue) &middot; {{ $event->venue }} @endif
+                @if (($customer ?? null)) für {{ $customer->name }}
+                @elseif ($event && $event->customer) für {{ $event->customer->name }} @endif
+                @if ($event && $event->event_date) &middot; Veranstaltung am {{ $event->event_date->format('d.m.Y') }} @endif
+                @if ($event && $event->venue) &middot; {{ $event->venue }} @endif
             </h2>
         </div>
         <div class="meta">
@@ -48,6 +49,22 @@
             Erstellt am {{ $generated_at->format('d.m.Y H:i') }}
         </div>
     </div>
+
+    @if (! empty($events))
+        <table class="blocks">
+            <thead><tr><th>Veranstaltung</th><th class="num">Transaktionen</th><th class="num">Betrag</th><th class="num">Auszahlung</th></tr></thead>
+            <tbody>
+            @foreach ($events as $ev)
+                <tr>
+                    <td>{{ $ev['label'] }}</td>
+                    <td class="num">{{ $ev['count'] }}</td>
+                    <td class="num">{{ number_format($ev['amount'], 2, ',', '.') }} €</td>
+                    <td class="num">{{ number_format($ev['payout'], 2, ',', '.') }} €</td>
+                </tr>
+            @endforeach
+            </tbody>
+        </table>
+    @endif
 
     <table class="blocks">
         <thead>

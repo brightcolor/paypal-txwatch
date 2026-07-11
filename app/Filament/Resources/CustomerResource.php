@@ -49,6 +49,29 @@ class CustomerResource extends Resource
                 Tables\Columns\IconColumn::make('is_active')->label('Aktiv')->boolean(),
             ])
             ->actions([
+                Tables\Actions\Action::make('settlement')
+                    ->label('Sammelabrechnung')
+                    ->icon('heroicon-o-document-currency-euro')
+                    ->visible(fn ($record) => $record->events()->whereHas('transactions')->exists())
+                    ->form([
+                        Forms\Components\TextInput::make('vat_rate')
+                            ->label('MwSt-Satz (Fallback)')
+                            ->helperText('Nur für Zahlungen ohne pretix-Verknüpfung.')
+                            ->numeric()->suffix('%')->default(19)->minValue(0)->maxValue(100)->required(),
+                    ])
+                    ->action(function ($record, array $data) {
+                        $builder = app(\App\Services\Export\SettlementBuilder::class);
+                        $settlement = $builder->persist(
+                            $builder->buildForCustomer($record, (float) ($data['vat_rate'] ?? 19)),
+                            auth()->user(),
+                        );
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Sammelabrechnung erstellt')
+                            ->body('Auszahlungsbetrag ' . number_format((float) $settlement->payout, 2, ',', '.') . ' €. Unter Exporte → Abrechnungen verfügbar.')
+                            ->success()
+                            ->send();
+                    }),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([

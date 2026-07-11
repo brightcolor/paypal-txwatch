@@ -102,15 +102,17 @@ class EventResource extends Resource
                             ->required(),
                     ])
                     ->action(function (Event $record, array $data) {
-                        $settlement = app(\App\Services\Export\SettlementBuilder::class)
-                            ->build($record, (float) ($data['vat_rate'] ?? 19));
-                        $pdf = app(\App\Services\Export\PdfRenderer::class)
-                            ->render($settlement, 'exports.settlement');
+                        $builder = app(\App\Services\Export\SettlementBuilder::class);
+                        $settlement = $builder->persist(
+                            $builder->build($record, (float) ($data['vat_rate'] ?? 19)),
+                            auth()->user(),
+                        );
 
-                        $filename = 'abrechnung-' . \Illuminate\Support\Str::slug($record->displayName())
-                            . '-' . now()->format('Ymd-His') . '.pdf';
-
-                        return response()->streamDownload(fn () => print ($pdf), $filename);
+                        \Filament\Notifications\Notification::make()
+                            ->title('Abrechnung erstellt')
+                            ->body('Auszahlungsbetrag ' . number_format((float) $settlement->payout, 2, ',', '.') . ' €. Unter Exporte → Abrechnungen als PDF herunterladbar und als ausgezahlt markierbar.')
+                            ->success()
+                            ->send();
                     }),
                 Tables\Actions\Action::make('toggleActive')
                     ->label(fn ($record) => $record->is_active ? 'Deaktivieren' : 'Aktivieren')

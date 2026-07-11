@@ -15,6 +15,7 @@ use App\Filament\Resources\PaypalAccountResource;
 use App\Filament\Resources\PretixConnectionResource;
 use App\Filament\Resources\PretixImportRunResource;
 use App\Filament\Resources\SavedFilterResource;
+use App\Filament\Resources\SettlementResource;
 use App\Filament\Resources\SyncRunResource;
 use App\Filament\Resources\TransactionResource;
 use App\Filament\Resources\UserResource;
@@ -47,6 +48,7 @@ class AdminPagesSmokeTest extends TestCase
         ExportHistoryResource::class,
         AuditLogResource::class,
         FailedJobResource::class,
+        SettlementResource::class,
     ];
 
     private const PAGES = [
