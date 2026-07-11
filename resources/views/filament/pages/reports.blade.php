@@ -49,7 +49,7 @@
                         <tr>
                             <td class="lbl">{{ $row['prefix'] }}</td>
                             <td class="num">{{ $row['count'] }}</td>
-                            <td class="num">{{ number_format($row['gross'], 2, ',', '.') }}&nbsp;€</td>
+                            <td class="num amt">{{ number_format($row['gross'], 2, ',', '.') }}&nbsp;€</td>
                         </tr>
                     @empty
                         <tr><td colspan="3" class="rpt-empty">Keine Daten im gewählten Zeitraum.</td></tr>

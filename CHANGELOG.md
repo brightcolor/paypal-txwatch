@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.25.6] - 2026-07-11
+
+### Geändert
+
+- **Einheitliches Geld-Farbschema in allen Tabellen**: Betrag/Umsatz **blau**, Gebühr **rot** (wenn
+  belastet), Nach Gebühren/Auszahlung **grün** – negative Werte immer rot. Gilt für Transaktionsliste,
+  Transaktions-Detailansicht, „Zu prüfen"-Widget, Abrechnungsliste und die Berichte-Tabellen.
+
+### Behoben
+
+- Abrechnungsliste: Status-Badge-Closures nutzten `$s` statt `$state` (gleiche Injektions-Falle wie zuvor) –
+  hätte beim Rendern mit Datensätzen einen 500er ausgelöst; beim Farbschema-Umbau mit korrigiert.
+
 ## [0.25.5] - 2026-07-11
 
 ### Geändert

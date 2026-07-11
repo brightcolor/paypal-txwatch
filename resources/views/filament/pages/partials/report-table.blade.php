@@ -19,9 +19,9 @@
                 <tr>
                     <td class="lbl">{{ $row['label'] }}</td>
                     <td class="num">{{ $row['count'] }}</td>
-                    <td class="num">{{ number_format($row['gross'], 2, ',', '.') }}&nbsp;€</td>
+                    <td class="num amt">{{ number_format($row['gross'], 2, ',', '.') }}&nbsp;€</td>
                     <td class="num @if($row['fee'] < 0) neg @endif">{{ number_format($row['fee'], 2, ',', '.') }}&nbsp;€</td>
-                    <td class="num strong">{{ number_format($row['net'], 2, ',', '.') }}&nbsp;€</td>
+                    <td class="num net @if($row['net'] < 0) neg @endif">{{ number_format($row['net'], 2, ',', '.') }}&nbsp;€</td>
                     <td class="num muted">{{ $row['fee_ratio'] }}&nbsp;%</td>
                 </tr>
             @empty

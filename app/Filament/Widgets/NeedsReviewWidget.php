@@ -51,7 +51,8 @@ class NeedsReviewWidget extends BaseWidget
                     ->limit(24),
                 TextColumn::make('custom_field')->label('Bestellnummer')
                     ->formatStateUsing(fn (?string $state) => \App\Services\CustomFieldParser::orderNumber($state)),
-                TextColumn::make('gross_amount')->label('Betrag')->money('EUR')->alignEnd(),
+                TextColumn::make('gross_amount')->label('Betrag')->money('EUR')->alignEnd()
+                    ->color(fn (Transaction $record) => (float) $record->gross_amount < 0 ? 'danger' : 'primary'),
                 TextColumn::make('pretix_total')->label('pretix')->alignEnd()
                     ->state(fn (Transaction $r) => $r->pretixOrder ? number_format((float) $r->pretixOrder->total, 2, ',', '.') . ' €' : '–'),
                 TextColumn::make('reconciliation_status')->label('Problem')->badge()

@@ -54,10 +54,12 @@ class SettlementResource extends Resource
                     ->formatStateUsing(fn (Settlement $r) => optional($r->period_from)->format('d.m.Y') . ' – ' . optional($r->period_to)->format('d.m.Y')),
                 Tables\Columns\TextColumn::make('payout')->label('Auszahlung')->money('EUR')->alignEnd()
                     ->weight(\Filament\Support\Enums\FontWeight::Bold)
+                    // Payout = the "Nach Gebühren" figure -> green (red if negative).
+                    ->color(fn (Settlement $record) => (float) $record->payout < 0 ? 'danger' : 'success')
                     ->summarize(Tables\Columns\Summarizers\Sum::make()->label('Summe')->money('EUR')),
                 Tables\Columns\TextColumn::make('status')->label('Status')->badge()
-                    ->formatStateUsing(fn (string $s) => $s === Settlement::STATUS_PAID ? 'ausgezahlt' : 'offen')
-                    ->color(fn (string $s) => $s === Settlement::STATUS_PAID ? 'success' : 'warning'),
+                    ->formatStateUsing(fn (string $state) => $state === Settlement::STATUS_PAID ? 'ausgezahlt' : 'offen')
+                    ->color(fn (string $state) => $state === Settlement::STATUS_PAID ? 'success' : 'warning'),
                 Tables\Columns\TextColumn::make('paid_at')->label('Ausgezahlt am')->dateTime('d.m.Y')->placeholder('–'),
                 Tables\Columns\TextColumn::make('createdBy.name')->label('Erstellt von')->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')->label('Erstellt')->dateTime('d.m.Y H:i')->sortable(),

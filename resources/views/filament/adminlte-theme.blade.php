@@ -194,6 +194,12 @@
     .rpt td.lbl { font-weight: 500; white-space: nowrap; }
     .rpt td.strong { font-weight: 600; }
     .rpt td.muted { color: #6c757d; }
+    /* App-wide money colors: Betrag/Umsatz blue, Nach Gebühren green,
+       charged fees / negatives red (.neg declared last so it wins). */
+    .rpt td.amt { color: #007bff; }
+    .dark .rpt td.amt { color: #64b1ff; }
+    .rpt td.net { color: #28a745; font-weight: 600; }
+    .dark .rpt td.net { color: #63d385; }
     .rpt td.neg { color: #dc3545; }
     .dark .rpt td.neg { color: #f28b95; }
     .rpt-empty { padding: .75rem .55rem; color: #9aa0a6; }

@@ -72,11 +72,14 @@ class ViewTransaction extends ViewRecord
             Section::make('Beträge')
                 ->columns(4)
                 ->schema([
-                    TextEntry::make('gross_amount')->label('Betrag')->money(fn ($record) => $record->currency ?? 'EUR'),
-                    // Like the report tables: charged fees (negative) in red.
+                    // App-wide money color scheme: Betrag blue, Gebühr red (when
+                    // charged), Nach Gebühren green - negatives always red.
+                    TextEntry::make('gross_amount')->label('Betrag')->money(fn ($record) => $record->currency ?? 'EUR')
+                        ->color(fn ($record) => (float) $record->gross_amount < 0 ? 'danger' : 'primary'),
                     TextEntry::make('fee_amount')->label('Gebühr')->money(fn ($record) => $record->currency ?? 'EUR')
                         ->color(fn ($record) => (float) $record->fee_amount < 0 ? 'danger' : null),
-                    TextEntry::make('net_amount')->label('Nach Gebühren')->money(fn ($record) => $record->currency ?? 'EUR'),
+                    TextEntry::make('net_amount')->label('Nach Gebühren')->money(fn ($record) => $record->currency ?? 'EUR')
+                        ->color(fn ($record) => (float) $record->net_amount < 0 ? 'danger' : 'success'),
                     TextEntry::make('currency')->label('Währung'),
                 ]),
 

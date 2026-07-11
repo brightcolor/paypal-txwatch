@@ -215,13 +215,14 @@ class TransactionResource extends Resource
                 Tables\Columns\TextColumn::make('transaction_event_code')->label('T-Code')->toggleable(isToggledHiddenByDefault: true),
                 // "Brutto/Netto" are tax-law terms and stay reserved for the VAT
                 // breakdown in exports; payment amounts use neutral wording.
-                // Right-aligned, negative amounts red, incoming money green.
+                // App-wide money color scheme: Betrag blue, Gebühr red (when
+                // charged), Nach Gebühren green - negatives always red.
                 Tables\Columns\TextColumn::make('gross_amount')
                     ->label('Betrag')
                     ->money(fn ($record) => $record->currency ?? 'EUR')
                     ->alignEnd()
                     ->weight(\Filament\Support\Enums\FontWeight::SemiBold)
-                    ->color(fn ($record) => (float) $record->gross_amount < 0 ? 'danger' : 'success')
+                    ->color(fn ($record) => (float) $record->gross_amount < 0 ? 'danger' : 'primary')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('fee_amount')
                     ->label('Gebühr')
@@ -235,7 +236,7 @@ class TransactionResource extends Resource
                     ->label('Nach Gebühren')
                     ->money(fn ($record) => $record->currency ?? 'EUR')
                     ->alignEnd()
-                    ->color(fn ($record) => (float) $record->net_amount < 0 ? 'danger' : null)
+                    ->color(fn ($record) => (float) $record->net_amount < 0 ? 'danger' : 'success')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('currency')->label('Währung')->toggleable(),
                 // Redundant with the combined "Event" column above now that pretix
