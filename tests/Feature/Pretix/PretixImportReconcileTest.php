@@ -51,7 +51,7 @@ class PretixImportReconcileTest extends TestCase
             '*/events/sportfest/orders/*' => Http::response([
                 'results' => [
                     ['code' => 'ABCDE', 'status' => 'p', 'total' => '50.00', 'currency' => 'EUR', 'email' => 'a@x.de', 'payments' => [['provider' => 'paypal']]],
-                    ['code' => 'FGHIJ', 'status' => 'p', 'total' => '99.00', 'currency' => 'EUR', 'email' => 'b@x.de', 'payments' => [['provider' => 'banktransfer']]],
+                    ['code' => 'FGHIJ', 'status' => 'p', 'total' => '99.00', 'currency' => 'EUR', 'email' => 'b@x.de', 'payments' => [['provider' => 'paypal']]],
                 ],
                 'next' => null,
             ]),
@@ -119,6 +119,8 @@ class PretixImportReconcileTest extends TestCase
 
         $this->assertSame(2, $summary['orders']);
         $this->assertEqualsCanonicalizing(['PAGE1', 'PAGE2'], PretixOrder::pluck('order_code')->all());
+        // Negative provider-extraction case: banktransfer is not PayPal.
+        $this->assertFalse(PretixOrder::where('order_code', 'PAGE2')->first()->isPaypal());
     }
 
     public function test_ledger_events_sharing_the_order_code_do_not_cause_a_false_mismatch(): void
@@ -171,6 +173,6 @@ class PretixImportReconcileTest extends TestCase
         app(PretixOrderImporter::class)->import($connection);
 
         $this->assertTrue(PretixOrder::where('order_code', 'ABCDE')->first()->isPaypal());
-        $this->assertFalse(PretixOrder::where('order_code', 'FGHIJ')->first()->isPaypal());
+        $this->assertTrue(PretixOrder::where('order_code', 'FGHIJ')->first()->isPaypal());
     }
 }

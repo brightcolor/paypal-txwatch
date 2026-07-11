@@ -79,7 +79,7 @@ class ImportPretixOrdersJob implements ShouldQueue
 
             $connection->forceFill([
                 'import_running' => false,
-                'last_import_summary' => "{$r['orders']} Bestellungen / {$r['events']} Event(s) · abgeglichen {$r['matched']}, Abweichung {$r['mismatch']}, nicht in pretix {$r['unmatched']}",
+                'last_import_summary' => "{$r['orders']} Bestellungen / {$r['events']} Event(s) · {$r['booked']} Nicht-PayPal verbucht · abgeglichen {$r['matched']}, Abweichung {$r['mismatch']}, nicht in pretix {$r['unmatched']}",
             ])->save();
         } catch (Throwable $e) {
             $run->pushLog('Fehler: ' . $e->getMessage());

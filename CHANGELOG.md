@@ -4,6 +4,25 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.13.0] - 2026-07-11
+
+### Neu
+
+- **Nicht-PayPal-Bestellungen werden als Transaktionen verbucht**: Der pretix-Import legt für bezahlte
+  Bestellungen mit anderer Zahlungsart (Überweisung, Boxoffice, …) jetzt eigene Transaktionen an – damit
+  deckt die Abrechnung den **gesamten Umsatz** ab, nicht nur PayPal. **Überweisungen erhalten die
+  konfigurierte Gebühr** (Standard **0,20 €/Transaktion**) als `Gebühr`, sodass Netto sie widerspiegelt;
+  andere Zahlarten bekommen keine Gebühr.
+- **PayPal-Bestellungen werden dabei übersprungen** (kommen bereits über den PayPal-Sync – keine
+  Doppelzählung); der Schalter "Auch PayPal-Bestellungen importieren" an der Verbindung kann das für
+  Verbindungen ohne PayPal-Sync übersteuern.
+- Die verbuchten Transaktionen nutzen dasselbe Bestellnummern-Schema (`Order <EVENT>-<CODE>`) wie PayPal –
+  Suche, Filter, Event-Zuordnungsregeln, pretix-Verlinkung und Abgleich funktionieren identisch. Zahlungsart
+  ist als `banktransfer`/… sichtbar, Art = "Zahlung", Status wird von pretix gespiegelt (bezahlt→S,
+  offen→P, storniert→V, abgelaufen→D). Erneuter Import ist idempotent; eine später stornierte Bestellung
+  wird im Status gespiegelt (nie gelöscht).
+- `paypal_account_id` an Transaktionen ist jetzt nullable (pretix-Buchungen haben kein PayPal-Konto).
+
 ## [0.12.5] - 2026-07-11
 
 ### Behoben

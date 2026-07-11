@@ -213,7 +213,9 @@ class Transaction extends Model
         $group = $this->eventCodeGroup();
 
         if ($group === null) {
-            return '–';
+            // No PayPal event code: pretix-booked or CSV rows. If we at least
+            // know the payment method, it's a payment.
+            return filled($this->payment_method_type) ? 'Zahlung' : '–';
         }
 
         return self::TYPE_PREFIX_LABELS[$group] ?? 'Sonstige';

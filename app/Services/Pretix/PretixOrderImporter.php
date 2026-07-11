@@ -16,14 +16,16 @@ use Throwable;
  */
 class PretixOrderImporter
 {
-    public function __construct(private readonly PretixReconciler $reconciler)
-    {
+    public function __construct(
+        private readonly PretixReconciler $reconciler,
+        private readonly PretixTransactionBooker $booker,
+    ) {
     }
 
     /**
      * @param  callable(string, array<string, int|string>): void|null  $onProgress
      *         invoked with a human message + optional counter patch, for live logging
-     * @return array{events: int, orders: int, matched: int, mismatch: int, unmatched: int}
+     * @return array{events: int, orders: int, booked: int, matched: int, mismatch: int, unmatched: int}
      */
     public function import(PretixConnection $connection, ?callable $onProgress = null): array
     {
@@ -55,6 +57,9 @@ class PretixOrderImporter
                 $progress("Event {$index}/{$total}: {$slug} – {$eventOrders} Bestellungen.", ['events_done' => $index, 'orders_imported' => $orderCount]);
             }
 
+            $progress('Verbuche Nicht-PayPal-Zahlungen (Überweisung etc.) …');
+            $booking = $this->booker->book($connection, $progress);
+
             $progress('Gleiche mit PayPal-Transaktionen ab …');
             $reconciliation = $this->reconciler->reconcile($connection);
             $progress("Abgleich fertig: {$reconciliation['matched']} abgeglichen, {$reconciliation['mismatch']} Abweichung, {$reconciliation['unmatched']} nicht in pretix.", [
@@ -69,7 +74,10 @@ class PretixOrderImporter
                 'last_error' => null,
             ])->save();
 
-            return array_merge(['events' => count($events), 'orders' => $orderCount], $reconciliation);
+            return array_merge(
+                ['events' => count($events), 'orders' => $orderCount, 'booked' => $booking['booked'] + $booking['updated']],
+                $reconciliation,
+            );
         } catch (Throwable $e) {
             $connection->forceFill([
                 'last_synced_at' => now(),

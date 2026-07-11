@@ -168,6 +168,26 @@ Falls die Transaction-Search-Berechtigung (noch) nicht verfügbar ist, kann ein 
 
 Zahlen werden sowohl im deutschen (`1.234,56`) als auch im englischen Format (`1,234.56`) erkannt.
 
+## pretix-Anbindung
+
+Unter **pretix → pretix-Verbindungen** wird eine pretix-Instanz hinterlegt (Basis-URL, Organizer-Slug,
+API-Token – verschlüsselt gespeichert) und per **"Verbindung testen"** geprüft. **"Import & Abgleich"**
+läuft als Hintergrund-Job (Live-Fortschritt unter **pretix → pretix-Importe**, inkl. zeitgestempeltem
+Verlauf) und macht drei Dinge:
+
+1. **Import** aller Bestellungen aller Events als Referenzdaten (idempotent).
+2. **Verbuchung der Nicht-PayPal-Zahlungen**: Bezahlte Bestellungen mit anderer Zahlungsart (Überweisung,
+   Boxoffice, …) werden als eigene Transaktionen angelegt – Überweisungen mit der an der Verbindung
+   konfigurierten **Gebühr (Standard 0,20 €/Transaktion)**, damit die Abrechnung den gesamten Umsatz korrekt
+   abbildet. PayPal-Bestellungen werden übersprungen (kommen über den PayPal-Sync; Schalter an der
+   Verbindung kann das übersteuern).
+3. **Abgleich (PayPal führend)**: Jede PayPal-Transaktion mit Bestellnummer erhält einen Status –
+   *abgeglichen* (pretix-Summe plausibel gleich), *Betrag weicht ab* oder *nicht in pretix* – als Spalte und
+   Filter in der Transaktionsliste.
+
+Verknüpfte **Bestellnummern sind klickbar** (↗-Symbol) und öffnen die Bestellung im pretix-Control-Panel in
+einem neuen Fenster.
+
 ## Suche & Filter
 
 Unter **Transaktionen** steht ein Filter "Bestellnummer / Volltextsuche" zur Verfügung: Feld wählbar
