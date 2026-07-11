@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.15.0] - 2026-07-11
+
+### Geändert
+
+- **Interne PayPal-Zwischenbuchungen raus aus der Transaktionsliste**: Reserven/Holds (T21xx), deren
+  Freigaben und Auszahlungen (T04xx/T20xx) erscheinen nicht mehr in der Transaktionstabelle (und waren
+  bereits aus Umsatz/Berichten ausgeschlossen). Die Filter-Optionen "Auszahlung"/"Reserve/Hold" sowie der
+  Schnellfilter "Nur echte Umsätze" entfallen entsprechend.
+- Stattdessen zeigt die **Detailansicht der zugehörigen Zahlung** eine neue (eingeklappte) Sektion
+  **"Interne PayPal-Buchungen zu dieser Zahlung"** mit allen zugehörigen Buchungen (Datum, Art, T-Code,
+  Betrag, Transaktions-ID). Die Zuordnung läuft über Bestellnummer, PayPal-Reference-ID (beide Richtungen)
+  und die verknüpfte pretix-Bestellung.
+
 ## [0.14.1] - 2026-07-11
 
 ### Geändert

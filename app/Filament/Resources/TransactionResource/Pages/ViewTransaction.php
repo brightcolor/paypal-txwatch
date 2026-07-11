@@ -78,6 +78,33 @@ class ViewTransaction extends ViewRecord
                     TextEntry::make('currency')->label('Währung'),
                 ]),
 
+            Section::make('Interne PayPal-Buchungen zu dieser Zahlung')
+                ->description('Reserven/Holds, Freigaben und Auszahlungen, die PayPal zu dieser Zahlung verbucht hat. Diese Buchungen erscheinen nicht in der Transaktionsliste und fließen nicht in Umsatz/Berichte ein.')
+                ->collapsed()
+                ->visible(fn (Transaction $record) => $record->relatedLedgerTransactions()->isNotEmpty())
+                ->schema([
+                    TextEntry::make('related_ledger')
+                        ->label('')
+                        ->state(function (Transaction $record) {
+                            $rows = $record->relatedLedgerTransactions()->map(fn (Transaction $t) => '<tr>'
+                                . '<td style="padding:2px 12px 2px 0;">' . e(optional($t->transaction_initiation_date)->format('d.m.Y H:i') ?? '–') . '</td>'
+                                . '<td style="padding:2px 12px 2px 0;">' . e($t->typeLabel()) . '</td>'
+                                . '<td style="padding:2px 12px 2px 0;">' . e($t->transaction_event_code) . '</td>'
+                                . '<td style="padding:2px 12px 2px 0; text-align:right;">' . e(number_format((float) $t->gross_amount, 2, ',', '.') . ' ' . ($t->currency ?? '')) . '</td>'
+                                . '<td style="padding:2px 0;">' . e($t->transaction_id) . '</td>'
+                                . '</tr>')->implode('');
+
+                            return new \Illuminate\Support\HtmlString(
+                                '<table style="font-size:12px; border-collapse:collapse;">'
+                                . '<thead><tr style="text-align:left; color:#64748b;">'
+                                . '<th style="padding:2px 12px 2px 0;">Datum</th><th style="padding:2px 12px 2px 0;">Art</th>'
+                                . '<th style="padding:2px 12px 2px 0;">T-Code</th><th style="padding:2px 12px 2px 0; text-align:right;">Betrag</th>'
+                                . '<th style="padding:2px 0;">Transaktions-ID</th>'
+                                . '</tr></thead><tbody>' . $rows . '</tbody></table>'
+                            );
+                        }),
+                ]),
+
             Section::make('Zahler')
                 ->columns(3)
                 ->schema([

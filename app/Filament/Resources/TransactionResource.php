@@ -42,6 +42,10 @@ class TransactionResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery()
+            // Internal PayPal ledger movements (holds/releases, withdrawals) are not
+            // customer transactions and stay out of the list entirely - they are shown
+            // on the related payment's detail page instead (relatedLedgerTransactions).
+            ->excludingLedgerEvents()
             // Eager-load every relationship the table columns touch, otherwise each of
             // the 25 rows/page lazily loads event + paypalAccount + irrelevantMarkedBy +
             // pretixOrder (N+1: dozens of extra queries per page render).
@@ -430,17 +434,18 @@ class TransactionResource extends Resource
             Tables\Filters\SelectFilter::make('art')
                 ->label('Art')
                 ->options(function () {
-                    $labels = array_values(array_unique(array_values(Transaction::TYPE_PREFIX_LABELS)));
+                    // Ledger types (Auszahlung, Reserve/Hold) are excluded from the
+                    // list entirely, so they are no filter options either.
+                    $labels = collect(Transaction::TYPE_PREFIX_LABELS)
+                        ->except(Transaction::LEDGER_ONLY_PREFIXES)
+                        ->unique()
+                        ->values();
 
-                    return array_combine($labels, $labels) + ['Sonstige' => 'Sonstige'];
+                    return $labels->combine($labels)->all() + ['Sonstige' => 'Sonstige'];
                 })
                 ->query(fn (Builder $q, array $data) => filled($data['value'] ?? null)
                     ? $q->ofType($data['value'])
                     : $q),
-
-            Tables\Filters\Filter::make('real_turnover_only')
-                ->label('Nur echte Umsätze (ohne Auszahlungen/Reserven)')
-                ->query(fn (Builder $q) => $q->excludingLedgerEvents()),
 
             Tables\Filters\SelectFilter::make('reconciliation_status')
                 ->label('pretix-Abgleich')

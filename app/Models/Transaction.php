@@ -312,4 +312,45 @@ class Transaction extends Model
     {
         return $query->whereNull('marked_irrelevant_at');
     }
+
+    /**
+     * The internal PayPal ledger movements (holds/releases T21xx, withdrawals
+     * T04xx/T20xx) that belong to this payment - matched via the same order
+     * custom field, the PayPal reference id (both directions) or the same
+     * linked pretix order. Shown on the payment's detail page; the list view
+     * hides ledger rows entirely.
+     *
+     * @return \Illuminate\Support\Collection<int, self>
+     */
+    public function relatedLedgerTransactions(): \Illuminate\Support\Collection
+    {
+        if ($this->isLedgerEvent()) {
+            return collect();
+        }
+
+        return self::query()
+            ->whereKeyNot($this->getKey())
+            ->where(function (Builder $q) {
+                foreach (self::LEDGER_ONLY_PREFIXES as $prefix) {
+                    $q->orWhere('transaction_event_code', 'like', $prefix.'%');
+                }
+            })
+            ->where(function (Builder $q) {
+                $q->orWhere('paypal_reference_id', $this->transaction_id);
+
+                if (filled($this->paypal_reference_id)) {
+                    $q->orWhere('transaction_id', $this->paypal_reference_id);
+                }
+
+                if (filled($this->custom_field)) {
+                    $q->orWhere('custom_field', $this->custom_field);
+                }
+
+                if ($this->pretix_order_id) {
+                    $q->orWhere('pretix_order_id', $this->pretix_order_id);
+                }
+            })
+            ->orderBy('transaction_initiation_date')
+            ->get();
+    }
 }
