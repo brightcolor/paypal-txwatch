@@ -50,12 +50,14 @@ class AdminPagesSmokeTest extends TestCase
         FailedJobResource::class,
         SettlementResource::class,
         \App\Filament\Resources\ErrorLogEntryResource::class,
+        \App\Filament\Resources\LoginEventResource::class,
     ];
 
     private const PAGES = [
         Reports::class,
         PaypalCsvImport::class,
         TwoFactorAuthSettings::class,
+        \App\Filament\Pages\MailSettingsPage::class,
     ];
 
     private function admin(): User

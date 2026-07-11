@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.26.0] - 2026-07-11
+
+### Neu
+
+- **Login-Historie** (System → Login-Historie, nur Admin): protokolliert erfolgreiche und fehlgeschlagene
+  Anmeldungen mit Zeitpunkt, Benutzer/E-Mail, IP und Gerät/Browser. Filterbar nach Ergebnis, manuell
+  löschbar (>90 Tage). Aufzeichnung ist ausfallsicher (bricht nie den Login).
+- **E-Mail-Versand konfigurierbar** (Einstellungen → E-Mail-Versand, nur Admin): SMTP-Zugang im Panel
+  einstellbar (Host/Port/Verschlüsselung/Login), Passwort verschlüsselt gespeichert, „Testmail senden"-Knopf.
+  Ist der Versand aktiv, verschickt die App System-Warnungen (Fehler-Log, Backup, Abgleich) **zusätzlich zur
+  Glocke per E-Mail** an die konfigurierten Empfänger (Standard: alle aktiven Admins). Kein Redeploy nötig.
+
 ## [0.25.6] - 2026-07-11
 
 ### Geändert
