@@ -12,7 +12,11 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('type');
             $table->morphs('notifiable');
-            $table->text('data');
+            // JSON (not text): Filament's DatabaseNotifications queries this with
+            // the `data->>'format'` operator. On Postgres that operator only
+            // exists for json/jsonb columns - a text column 500s with
+            // "operator does not exist: text ->> unknown".
+            $table->json('data');
             $table->timestamp('read_at')->nullable();
             $table->timestamps();
         });

@@ -20,3 +20,11 @@ Schedule::command('pretix:schedule-import')->everyThirtyMinutes()->withoutOverla
 
 // Once a day: warn admins if the nightly backup marker is missing or stale.
 Schedule::command('backup:check')->dailyAt('09:00');
+
+// Keep the error log from growing forever: drop resolved errors last seen more
+// than 30 days ago (unresolved ones stay until handled).
+Schedule::call(function () {
+    \App\Models\ErrorLogEntry::where('resolved', true)
+        ->where('last_seen_at', '<', now()->subDays(30))
+        ->delete();
+})->weekly();

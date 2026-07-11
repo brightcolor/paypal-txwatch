@@ -24,4 +24,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        // Persist every server error (5xx) into error_log_entries so 500s are
+        // reviewable in the panel / via `errors:recent` without reading raw logs.
+        // ErrorLogger is self-contained and never throws.
+        $exceptions->report(function (\Throwable $e): void {
+            \App\Support\ErrorLogger::record($e);
+        });
     })->create();

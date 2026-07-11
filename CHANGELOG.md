@@ -4,6 +4,28 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.25.0] - 2026-07-11
+
+### Behoben
+
+- **500-Fehler beim Wegklicken einer Benachrichtigung** (Postgres): Die Spalte `notifications.data` war als
+  `text` angelegt, Filament fragt sie aber mit dem JSON-Operator `->>` ab → `SQLSTATE 42883: operator does
+  not exist: text ->> unknown`. Spalte auf `jsonb` umgestellt (Migration repariert bestehende DBs, frische
+  Installs bekommen direkt `json`).
+
+### Neu
+
+- **Fehler-Log** (`System → Fehler-Log`, nur Admin): Jeder Server-Fehler (HTTP 5xx / unbehandelte Exception)
+  wird strukturiert in `error_log_entries` festgehalten – mit Exception-Typ, Nachricht, Datei:Zeile, Route,
+  URL, Methode, User, App-Version, **bereinigtem** Request-Input (Passwörter/Secrets/Tokens redigiert),
+  Stacktrace und Vorkommens-Zähler. Gleicher Fehler wird per Fingerprint gruppiert (zählt hoch statt zu
+  fluten). Bei einem **neuen** Fehler werden Admins über die Glocke benachrichtigt. Einträge sind als
+  „erledigt" markierbar und löschbar (reine Diagnose, kein Audit); erledigte >30 Tage werden wöchentlich
+  automatisch entfernt. Der Fehler-Sammler ist defensiv: er wirft nie selbst und schreibt DB-Fehler nicht in
+  die DB (kein Rekursions-/Ausfallrisiko).
+- **`php artisan errors:recent`**: Fehler-Log per CLI ansehen (`--all`, `--limit`, `--trace <#>` für Trace +
+  Kontext eines Eintrags).
+
 ## [0.24.0] - 2026-07-11
 
 ### Neu

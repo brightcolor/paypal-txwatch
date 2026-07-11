@@ -300,6 +300,27 @@ Ebenfalls auf dem Dashboard erscheint der Block **"Zu prüfen"**, sobald es abzu
 (Betrag weicht von pretix ab oder keine pretix-Bestellung gefunden) – eine kurze Inbox mit Direktsprung in
 die jeweilige Transaktion. Ist nichts offen, wird der Block ausgeblendet.
 
+## Fehler-Log (500er nachvollziehen)
+
+Jeder Server-Fehler (HTTP 5xx / unbehandelte Exception) wird strukturiert in der Tabelle
+`error_log_entries` festgehalten und ist unter **System → Fehler-Log** (nur Admin) einsehbar – mit
+Exception-Typ, Nachricht, Datei:Zeile, Route/URL/Methode, User, App-Version, **bereinigtem** Request-Input
+(Passwörter/Secrets/Tokens werden vor dem Speichern redigiert), Stacktrace und Vorkommens-Zähler. Gleiche
+Fehler werden per Fingerprint gruppiert (ein Eintrag, hochzählender Zähler), bei einem neuen Fehler kommt
+eine Glocken-Benachrichtigung. Einträge lassen sich als „erledigt" markieren und löschen; erledigte älter als
+30 Tage verschwinden wöchentlich automatisch.
+
+Per CLI (auf dem Server, im `app`-Container):
+
+```bash
+php artisan errors:recent            # letzte 20 offene Fehler, gruppiert
+php artisan errors:recent --all      # inkl. erledigter
+php artisan errors:recent --trace 42 # voller Stacktrace + Kontext für Eintrag #42
+```
+
+Der Sammler ist bewusst defensiv (läuft im Laravel-Exception-Handler): Er wirft nie selbst und schreibt
+DB-Fehler nicht zurück in die DB, damit das Logging nie den Request killt oder in eine Schleife läuft.
+
 ## Troubleshooting
 
 | Problem | Ursache / Lösung |
@@ -310,6 +331,8 @@ die jeweilige Transaktion. Ist nichts offen, wird der Block ausgeblendet.
 | PDF-Export schlägt fehl ("Node.js/Chromium…") | Läuft zuverlässig mit Docker Compose (Chromium/Puppeteer im Image enthalten); lokal ohne Docker `CHROMIUM_PATH`/`NODE_MODULE_PATH` in `.env` auf eine funktionierende Node/Chromium-Installation zeigen lassen. CSV/XLSX funktionieren immer, auch ohne Chromium |
 | Transaktionen tauchen doppelt mit leicht unterschiedlichen Daten auf | Kein Bug: PayPal kann dieselbe `transaction_id` mit späteren Aktualisierungen (Status, Updated Date) erneut liefern. PayPal TxWatch legt dafür bewusst eine neue Revision an (Änderungsverlauf), statt sie zu überschreiben – sichtbar über die geteilte `transaction_id` |
 | Automatischer Sync läuft nicht | Prüfen, ob `queue:work` und `schedule:work` (bzw. die Docker-Services `queue`/`scheduler`) laufen und das Konto `sync_enabled=true` hat |
+| Seite 500t / weißer Schirm | **System → Fehler-Log** ansehen (oder `php artisan errors:recent`) – der genaue Fehler samt Trace, Route und Request steht dort |
+| Nach Update zeigt die Seite dauerhaft "Wird aktualisiert…" | `app`/`queue`-Container hängen (z. B. Status `Created` nach unvollständigem Watchtower-Update). Auf dem Server `docker ps -a` prüfen und mit `docker compose up -d` bzw. `docker start` hochziehen |
 
 ## Bekannte Grenzen der PayPal API
 

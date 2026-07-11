@@ -49,6 +49,7 @@ class AdminPagesSmokeTest extends TestCase
         AuditLogResource::class,
         FailedJobResource::class,
         SettlementResource::class,
+        \App\Filament\Resources\ErrorLogEntryResource::class,
     ];
 
     private const PAGES = [
@@ -83,6 +84,24 @@ class AdminPagesSmokeTest extends TestCase
                 $this->assertLessThan(500, $status, "{$resource} [{$page}] returned {$status}");
             }
         }
+    }
+
+    public function test_error_log_view_page_renders(): void
+    {
+        $admin = $this->admin();
+
+        $entry = \App\Models\ErrorLogEntry::create([
+            'fingerprint' => 'abc', 'exception_class' => 'RuntimeException', 'message' => 'Boom',
+            'file' => '/app/Foo.php', 'line' => 12, 'status_code' => 500, 'method' => 'GET',
+            'url' => 'https://x/admin', 'context' => ['ip' => '127.0.0.1'], 'trace' => '#0 ...',
+            'occurrences' => 2, 'first_seen_at' => now(), 'last_seen_at' => now(),
+        ]);
+
+        $status = $this->actingAs($admin)
+            ->get(\App\Filament\Resources\ErrorLogEntryResource::getUrl('view', ['record' => $entry]))
+            ->status();
+
+        $this->assertLessThan(500, $status, "Error-log view returned {$status}");
     }
 
     public function test_no_custom_admin_page_returns_a_500(): void
