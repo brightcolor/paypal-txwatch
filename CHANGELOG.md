@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.25.5] - 2026-07-11
+
+### Geändert
+
+- **Gebühren überall rot wie in den Berichten**: Die Gebühren-Spalte in der Transaktionsliste und das
+  Gebühren-Feld in der Transaktions-Detailansicht zeigen belastete (negative) Gebühren jetzt rot statt grau
+  – konsistent zur Berichte-Seite.
+
 ## [0.25.4] - 2026-07-11
 
 ### Behoben

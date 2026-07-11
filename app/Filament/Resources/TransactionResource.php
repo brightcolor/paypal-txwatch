@@ -227,7 +227,8 @@ class TransactionResource extends Resource
                     ->label('Gebühr')
                     ->money(fn ($record) => $record->currency ?? 'EUR')
                     ->alignEnd()
-                    ->color('gray')
+                    // Like the report tables: charged fees (negative) in red.
+                    ->color(fn ($record) => (float) $record->fee_amount < 0 ? 'danger' : 'gray')
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('net_amount')

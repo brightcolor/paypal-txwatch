@@ -73,7 +73,9 @@ class ViewTransaction extends ViewRecord
                 ->columns(4)
                 ->schema([
                     TextEntry::make('gross_amount')->label('Betrag')->money(fn ($record) => $record->currency ?? 'EUR'),
-                    TextEntry::make('fee_amount')->label('Gebühr')->money(fn ($record) => $record->currency ?? 'EUR'),
+                    // Like the report tables: charged fees (negative) in red.
+                    TextEntry::make('fee_amount')->label('Gebühr')->money(fn ($record) => $record->currency ?? 'EUR')
+                        ->color(fn ($record) => (float) $record->fee_amount < 0 ? 'danger' : null),
                     TextEntry::make('net_amount')->label('Nach Gebühren')->money(fn ($record) => $record->currency ?? 'EUR'),
                     TextEntry::make('currency')->label('Währung'),
                 ]),
