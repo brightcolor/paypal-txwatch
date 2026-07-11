@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.12.4] - 2026-07-11
+
+### Behoben
+
+- **Bestellnummern-Links in der Transaktionstabelle funktionierten nicht zuverlässig**: Die Spalte kombinierte
+  `copyable` mit dem Link – der Kopier-Click-Handler lag innerhalb des Links und verschluckte den
+  Navigations-Klick; zudem fehlte jede visuelle Kennzeichnung. Jetzt: verknüpfte Bestellnummern zeigen ein
+  **"Öffnet in neuem Fenster"-Symbol** (↗), verlinken zuverlässig auf die pretix-Bestellung (neues Fenster)
+  – in Tabelle **und** Detailseite. Kopieren des Rohwerts bleibt auf der Detailseite verfügbar. Neuer
+  Render-Test prüft das erzeugte HTML auf `<a … target="_blank">`.
+
 ## [0.12.3] - 2026-07-11
 
 ### Behoben

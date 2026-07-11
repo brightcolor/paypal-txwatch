@@ -44,8 +44,11 @@ class ViewTransaction extends ViewRecord
                         ->state(fn (Transaction $record) => \App\Services\CustomFieldParser::orderNumber($record->custom_field) ?? '–')
                         ->url(fn (Transaction $record) => $record->pretixOrderUrl(), shouldOpenInNewTab: true)
                         ->color(fn (Transaction $record) => $record->pretixOrderUrl() ? 'primary' : null)
-                        ->helperText(fn (Transaction $record) => $record->pretixOrderUrl() ? 'In pretix öffnen' : null)
-                        ->copyable(),
+                        // Same copyable-vs-link conflict as in the table: the copy click
+                        // handler would swallow the navigation, so no ->copyable() here.
+                        ->icon(fn (Transaction $record) => $record->pretixOrderUrl() ? 'heroicon-m-arrow-top-right-on-square' : null)
+                        ->iconPosition(\Filament\Support\Enums\IconPosition::After)
+                        ->helperText(fn (Transaction $record) => $record->pretixOrderUrl() ? 'Öffnet die Bestellung in pretix (neues Fenster)' : null),
                     TextEntry::make('reconciliation_status')
                         ->label('pretix-Abgleich')
                         ->badge()

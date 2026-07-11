@@ -115,11 +115,14 @@ class TransactionResource extends Resource
                     ->formatStateUsing(fn (?string $state) => \App\Services\CustomFieldParser::orderNumber($state))
                     ->url(fn (Transaction $record) => $record->pretixOrderUrl(), shouldOpenInNewTab: true)
                     ->color(fn (Transaction $record) => $record->pretixOrderUrl() ? 'primary' : null)
-                    ->tooltip(fn (Transaction $record) => $record->pretixOrderUrl() ? 'In pretix öffnen' : null)
+                    // External-link icon signals "opens in a new window". No ->copyable()
+                    // here: its click handler sits inside the <a> and swallows the
+                    // navigation click (copy stays available on the detail page).
+                    ->icon(fn (Transaction $record) => $record->pretixOrderUrl() ? 'heroicon-m-arrow-top-right-on-square' : null)
+                    ->iconPosition(\Filament\Support\Enums\IconPosition::After)
+                    ->tooltip(fn (Transaction $record) => $record->pretixOrderUrl() ? 'Bestellung in pretix öffnen (neues Fenster)' : null)
                     ->searchable()
-                    ->toggleable()
-                    ->copyable()
-                    ->copyableState(fn (?string $state) => \App\Services\CustomFieldParser::orderNumber($state)),
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('reconciliation_status')
                     ->label('pretix-Abgleich')
                     ->badge()
