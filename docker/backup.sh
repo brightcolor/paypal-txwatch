@@ -36,4 +36,13 @@ mv "${BACKUP_DIR}/storage-${STAMP}.tar.gz.tmp" "${BACKUP_DIR}/storage-${STAMP}.t
 echo "[$(date '+%F %T')] rotating (keep ${KEEP_DAYS} days)…"
 find "${BACKUP_DIR}" -name '*.gz' -mtime "+${KEEP_DAYS}" -delete
 
+# Heartbeat the app can see (storage/ is bind-mounted into the container) so
+# the scheduled backup:check command can warn admins if a backup goes stale.
+date +%s > "${BASE_DIR}/storage/app/last-backup-at" 2>/dev/null || true
+
+# --- Optional offsite copy (recommended: a backup on the same disk is not a
+# backup). Configure an rclone remote once, then uncomment:
+#   rclone copy "${BACKUP_DIR}" "REMOTE:paypal-txwatch-backups" --max-age 25h
+# (install rclone + `rclone config` a remote such as an S3 bucket or another host).
+
 echo "[$(date '+%F %T')] done: $(du -sh "${BACKUP_DIR}" | cut -f1) total in ${BACKUP_DIR}"

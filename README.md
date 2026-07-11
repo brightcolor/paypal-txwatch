@@ -116,7 +116,14 @@ EOF
 ```
 
 Restore der DB: siehe Kommentar im Skript. **Wichtig:** `backups/` zusätzlich regelmäßig auf ein anderes
-System kopieren (Offsite) – ein Backup auf derselben Platte schützt nicht vor Plattenausfall.
+System kopieren (Offsite) – ein Backup auf derselben Platte schützt nicht vor Plattenausfall. Das Skript
+enthält dafür einen auskommentierten `rclone copy`-Block; einmalig `rclone config` einrichten (z. B. S3
+oder ein anderer Host) und die Zeile aktivieren.
+
+**Backup-Überwachung:** `backup.sh` schreibt nach jedem Lauf einen Zeitstempel nach
+`storage/app/last-backup-at` (in den Container gemountet). Der tägliche Scheduler-Befehl `backup:check`
+(09:00) benachrichtigt alle Admins über die Glocke, wenn das letzte Backup fehlt oder älter als 36 Stunden
+ist – so fällt ein stillschweigend gestopptes Backup auf.
 
 ### Lokale Docker-Entwicklung
 
@@ -208,6 +215,12 @@ Weitere Automatik:
 
 - **Auto-Import**: Verbindungen mit "Automatischer Import aktiv" werden **alle 30 Minuten** importiert und
   abgeglichen (Scheduler; Überlappungsschutz pro Verbindung).
+- **Webhook (nahezu Echtzeit, optional)**: Jede Verbindung zeigt in der Bearbeiten-Ansicht eine eigene
+  **Webhook-URL** (`/webhooks/pretix/<geheim>`). In pretix unter **Organizer → Webhooks** eintragen (Events
+  z. B. „Order placed/paid/changed"); ein eingehender Webhook stößt einen inkrementellen Import an (um eine
+  Minute verzögert, damit ein Schwung Bestellungen in einem Lauf zusammengefasst wird). Autorisierung über
+  das Geheimnis in der URL; unbekannte/inaktive Geheimnisse werden ignoriert. Der 30-Minuten-Auto-Import
+  bleibt als Sicherheitsnetz aktiv.
 - **Erstattungen**: Abgeschlossene pretix-Erstattungen von Nicht-PayPal-Bestellungen werden als negative
   Transaktionen verbucht (ohne Gebühr), sodass die Abrechnung erstattetes Geld korrekt abzieht.
   PayPal-Erstattungen kommen weiterhin über den PayPal-Sync.
@@ -283,6 +296,10 @@ Auf dem **Dashboard** zeigt der Block "Sync-Gesundheit" jedes aktive Konto mit S
 (Warnung, wenn seit mehr als `PAYPAL_SYNC_WARNING_THRESHOLD_HOURS` Stunden – Standard 2h, skaliert mit dem
 eigenen Sync-Intervall – kein erfolgreicher Sync lief) sowie einem direkten "Verbindung testen"-Button je Konto.
 
+Ebenfalls auf dem Dashboard erscheint der Block **"Zu prüfen"**, sobald es abzugleichende Transaktionen gibt
+(Betrag weicht von pretix ab oder keine pretix-Bestellung gefunden) – eine kurze Inbox mit Direktsprung in
+die jeweilige Transaktion. Ist nichts offen, wird der Block ausgeblendet.
+
 ## Troubleshooting
 
 | Problem | Ursache / Lösung |
@@ -330,3 +347,6 @@ idempotenten Upsert/Änderungsverlauf, Event-Zuordnungsregeln, Sync-Fehlerbehand
   Login wird bei aktiviertem 2FA jede Panel-Anfrage bis zur bestätigten Challenge umgeleitet
   (`EnsureTwoFactorChallengeIsPassed`); zusätzlich 10 einmalige Wiederherstellungscodes als Fallback.
   Der Verify-Endpunkt ist auf 6 Versuche/Minute rate-limitiert.
+- **2FA-Pflicht für Admins**: Standardmäßig (`TWO_FACTOR_REQUIRED_FOR_ADMINS=true`) wird jeder Admin ohne
+  aktiviertes 2FA nach dem Login auf die 2FA-Einrichtungsseite umgeleitet, bis er es aktiviert – ein
+  Admin-Konto kann nicht ungeschützt bleiben. Über die Env-Variable abschaltbar.

@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.24.0] - 2026-07-11
+
+### Neu
+
+- **"Zu prüfen"-Inbox auf dem Dashboard**: Ein Widget listet Transaktionen, die der Abgleich markiert hat
+  (Betrag weicht von pretix ab oder keine pretix-Bestellung gefunden) mit Direktsprung in die Transaktion.
+  Wird ausgeblendet, wenn nichts offen ist.
+- **pretix-Webhook (nahezu Echtzeit)**: Jede pretix-Verbindung hat eine eigene, geheime Webhook-URL
+  (`/webhooks/pretix/<geheim>`). In pretix eingetragen, stößt ein Order-Event einen inkrementellen Import an
+  (um eine Minute verzögert, damit Bestell-Schübe in einem Lauf zusammengefasst werden). Unbekannte/inaktive
+  Geheimnisse werden ignoriert; der 30-Minuten-Auto-Import bleibt als Sicherheitsnetz.
+- **2FA-Pflicht für Admins**: Admins ohne aktiviertes 2FA werden nach dem Login zur Einrichtung gezwungen
+  (`TWO_FACTOR_REQUIRED_FOR_ADMINS`, Standard an) – ein Admin-Konto kann nicht ungeschützt bleiben.
+- **Backup-Überwachung**: `backup.sh` schreibt einen Zeitstempel-Marker; der tägliche Befehl `backup:check`
+  benachrichtigt Admins, wenn das letzte Backup fehlt oder älter als 36 Stunden ist. Zusätzlich ein
+  auskommentierter `rclone`-Block im Skript für Offsite-Kopien.
+
 ## [0.23.0] - 2026-07-11
 
 ### Neu

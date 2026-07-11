@@ -15,6 +15,7 @@ class PretixConnection extends Model
         'base_url',
         'organizer_slug',
         'api_token',
+        'webhook_secret',
         'is_active',
         'sync_enabled',
         'bank_transfer_fee_cents',
@@ -41,9 +42,21 @@ class PretixConnection extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function (self $connection) {
+            $connection->webhook_secret ??= \Illuminate\Support\Str::random(48);
+        });
+    }
+
     public function importRuns(): HasMany
     {
         return $this->hasMany(PretixImportRun::class);
+    }
+
+    public function webhookUrl(): string
+    {
+        return url("/webhooks/pretix/{$this->webhook_secret}");
     }
 
     /**

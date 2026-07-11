@@ -17,3 +17,6 @@ Schedule::command('paypal:schedule-sync')->everyMinute()->withoutOverlapping();
 // manual "Import & Abgleich" clicks. 30 minutes is plenty for billing data;
 // the job's own guard prevents overlapping runs per connection.
 Schedule::command('pretix:schedule-import')->everyThirtyMinutes()->withoutOverlapping();
+
+// Once a day: warn admins if the nightly backup marker is missing or stale.
+Schedule::command('backup:check')->dailyAt('09:00');

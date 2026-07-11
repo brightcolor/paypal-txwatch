@@ -114,4 +114,10 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    | Require admins to enable two-factor authentication before they can use
+    | the panel (enforced by EnsureTwoFactorChallengeIsPassed).
+    */
+    'two_factor_required_for_admins' => (bool) env('TWO_FACTOR_REQUIRED_FOR_ADMINS', true),
+
 ];

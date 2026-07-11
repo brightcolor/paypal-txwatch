@@ -94,6 +94,17 @@ class PretixConnectionResource extends Resource
                         ->default(false),
                 ]),
 
+            Forms\Components\Section::make('Webhook (near-realtime Import)')
+                ->description('Diese URL in pretix unter Organizer → Webhooks eintragen (Trigger: Bestellungen). Dann wird bei jeder Bestelländerung automatisch importiert – ohne auf den 30-Minuten-Takt zu warten.')
+                ->hiddenOn('create')
+                ->schema([
+                    Forms\Components\TextInput::make('webhook_url')
+                        ->label('Webhook-URL')
+                        ->disabled()
+                        ->dehydrated(false)
+                        ->formatStateUsing(fn (?PretixConnection $record) => $record?->webhookUrl()),
+                ]),
+
             Forms\Components\Section::make('Status')
                 ->columns(2)
                 ->hiddenOn('create')
