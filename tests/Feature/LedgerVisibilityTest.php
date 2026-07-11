@@ -54,7 +54,8 @@ class LedgerVisibilityTest extends TestCase
         $admin = $this->admin();
 
         // List: payment visible, ledger rows (hold/release/withdrawal) not.
-        $html = Livewire::actingAs($admin)->test(ListTransactions::class)->html();
+        // (loadTable: the table defers row loading to a follow-up request.)
+        $html = Livewire::actingAs($admin)->test(ListTransactions::class)->call('loadTable')->html();
         $this->assertStringContainsString('PAY1', $html);
         $this->assertStringNotContainsString('HOLD1', $html);
         $this->assertStringNotContainsString('WD1', $html);

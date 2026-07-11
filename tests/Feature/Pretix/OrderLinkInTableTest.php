@@ -44,6 +44,8 @@ class OrderLinkInTableTest extends TestCase
 
         $html = Livewire::actingAs($admin)
             ->test(ListTransactions::class)
+            // The table defers row loading to a follow-up request.
+            ->call('loadTable')
             ->html();
 
         // The cell must be a real anchor to the pretix control panel, opening a new tab,

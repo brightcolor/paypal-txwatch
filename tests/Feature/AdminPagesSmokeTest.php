@@ -10,6 +10,7 @@ use App\Filament\Resources\CustomerResource;
 use App\Filament\Resources\EventResource;
 use App\Filament\Resources\ExportHistoryResource;
 use App\Filament\Resources\ExportTemplateResource;
+use App\Filament\Resources\FailedJobResource;
 use App\Filament\Resources\PaypalAccountResource;
 use App\Filament\Resources\PretixConnectionResource;
 use App\Filament\Resources\PretixImportRunResource;
@@ -45,6 +46,7 @@ class AdminPagesSmokeTest extends TestCase
         UserResource::class,
         ExportHistoryResource::class,
         AuditLogResource::class,
+        FailedJobResource::class,
     ];
 
     private const PAGES = [

@@ -87,7 +87,8 @@ class TransactionResource extends Resource
         return $form->schema([
             Forms\Components\Select::make('event_id')
                 ->label('Event')
-                ->relationship('event', 'name')
+                // Deactivated events are retired: they never appear in pickers.
+                ->relationship('event', 'name', fn ($query) => $query->where('is_active', true))
                 ->searchable()
                 ->preload()
                 ->native(false),
@@ -97,6 +98,26 @@ class TransactionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            // Render the page shell immediately and load rows via a follow-up
+            // request - the perceived open time drops substantially.
+            ->deferLoading()
+            // The list never shows the raw PayPal payload; hydrating 25 rows of
+            // multi-KB JSON casts per page was a measurable share of render time.
+            // Only the table query skips them - the detail page still loads all
+            // columns through the resource query.
+            ->modifyQueryUsing(function (Builder $query) {
+                $heavy = ['raw_payload', 'item_info', 'raw_hash', 'note', 'subject'];
+                $columns = \Illuminate\Support\Facades\Cache::remember(
+                    'tx_table_columns',
+                    now()->addMinutes(10),
+                    fn () => array_values(array_diff(
+                        \Illuminate\Support\Facades\Schema::getColumnListing('transactions'),
+                        $heavy,
+                    )),
+                );
+
+                return $query->select(array_map(fn (string $c) => "transactions.{$c}", $columns));
+            })
             ->defaultSort('transaction_initiation_date', 'desc')
             ->columns([
                 Tables\Columns\TextColumn::make('transaction_initiation_date')
@@ -206,7 +227,7 @@ class TransactionResource extends Resource
                     ->form([
                         Forms\Components\Select::make('event_id')
                             ->label('Event')
-                            ->options(fn () => Event::query()->pluck('name', 'id'))
+                            ->options(fn () => Event::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id'))
                             ->searchable()
                             ->required(),
                     ])
@@ -269,7 +290,7 @@ class TransactionResource extends Resource
                         ->form([
                             Forms\Components\Select::make('event_id')
                                 ->label('Event')
-                                ->options(fn () => Event::query()->pluck('name', 'id'))
+                                ->options(fn () => Event::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id'))
                                 ->searchable()
                                 ->required(),
                         ])
@@ -407,7 +428,7 @@ class TransactionResource extends Resource
 
             Tables\Filters\SelectFilter::make('event_id')
                 ->label('Event')
-                ->relationship('event', 'name'),
+                ->relationship('event', 'name', fn ($query) => $query->where('is_active', true)),
 
             Tables\Filters\TernaryFilter::make('has_fee')
                 ->label('Gebühren')

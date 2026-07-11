@@ -28,6 +28,13 @@ php artisan route:clear
 echo "[paypal-txwatch] Warming caches..."
 php artisan config:cache
 php artisan route:cache
+# Filament's documented production optimizations: precompile all Blade views,
+# cache the icon manifest (icon discovery scans thousands of SVGs otherwise)
+# and Filament's component manifest. Together with opcache.validate_timestamps=0
+# (see docker/php.ini) this is where most of the panel's render time goes.
+php artisan view:cache
+php artisan icons:cache
+php artisan filament:cache-components
 
 echo "[paypal-txwatch] Handing off to PHP-FPM..."
 exec php-fpm

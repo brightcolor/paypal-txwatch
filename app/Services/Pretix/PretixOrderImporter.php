@@ -151,7 +151,9 @@ class PretixOrderImporter
     {
         $assigned = 0;
 
-        foreach (Event::query()->whereNotNull('pretix_event_slug')->get() as $event) {
+        // Deactivated events are retired: no new assignments happen for them
+        // (existing assignments stay untouched).
+        foreach (Event::query()->whereNotNull('pretix_event_slug')->where('is_active', true)->get() as $event) {
             // Escape LIKE wildcards in the slug; matching is case-insensitive
             // (pretix slugs are lowercase, PayPal custom fields are uppercase).
             $slug = addcslashes(strtolower($event->pretix_event_slug), '%_');

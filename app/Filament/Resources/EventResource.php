@@ -78,7 +78,21 @@ class EventResource extends Resource
                 Tables\Columns\TextColumn::make('transactions_count')->label('Transaktionen')->counts('transactions'),
                 Tables\Columns\IconColumn::make('is_active')->label('Aktiv')->boolean(),
             ])
+            ->filters([
+                Tables\Filters\TernaryFilter::make('is_active')
+                    ->label('Status')
+                    ->placeholder('Alle')
+                    ->trueLabel('nur aktive')
+                    ->falseLabel('nur deaktivierte'),
+            ])
             ->actions([
+                Tables\Actions\Action::make('toggleActive')
+                    ->label(fn ($record) => $record->is_active ? 'Deaktivieren' : 'Aktivieren')
+                    ->icon(fn ($record) => $record->is_active ? 'heroicon-o-eye-slash' : 'heroicon-o-eye')
+                    ->color(fn ($record) => $record->is_active ? 'gray' : 'success')
+                    ->requiresConfirmation()
+                    ->modalDescription('Deaktivierte Events tauchen in keiner Auswahlliste mehr auf und erhalten keine automatischen Zuweisungen. Bestehende Zuordnungen bleiben erhalten.')
+                    ->action(fn ($record) => $record->update(['is_active' => ! $record->is_active])),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([

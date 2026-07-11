@@ -4,6 +4,33 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.16.0] - 2026-07-11
+
+### Neu
+
+- **Events deaktivierbar**: Neue Aktion "Deaktivieren" in der Event-Liste (plus Status-Filter). Deaktivierte
+  Events verschwinden aus **allen Auswahllisten** (Event zuweisen, Massenzuweisung, Transaktions-Filter,
+  Formular) und erhalten **keine automatischen Zuweisungen** mehr beim pretix-Import – der Import
+  reaktiviert sie auch nicht und legt weiterhin alle pretix-Events an (neue als aktiv). Bestehende
+  Zuordnungen bleiben erhalten.
+- **UI für fehlgeschlagene Jobs** unter **System → Fehlgeschlagene Jobs** (nur Admin, mit Zähler-Badge in
+  der Navigation): zeigt Job, Queue, Zeitpunkt und Fehlermeldung (voller Trace per Hover); Aktionen
+  "Erneut versuchen" (queue:retry) und "Entfernen" (einzeln/Bulk).
+
+### Performance
+
+Profiling der Transaktionsseite ergab: ~95 % der Zeit steckte im PHP-/Filament-Rendering, nicht in SQL
+(67 ms von 1.334 ms). Maßnahmen:
+
+- **OPcache korrekt konfiguriert**: `validate_timestamps=0` (Code ändert sich nur per Deploy),
+  `max_accelerated_files=30000` (Filament+vendor überschreiten die Standard-10000, der Cache verdrängte
+  sich laufend selbst), mehr OPcache-Speicher.
+- **Filaments Produktions-Caches** beim Containerstart: `view:cache`, `icons:cache` (Icon-Discovery scannt
+  sonst tausende SVGs pro Request), `filament:cache-components`.
+- **Transaktionstabelle**: lädt die schweren JSON-Spalten (`raw_payload`, `item_info`, …) nicht mehr in der
+  Liste (25 × mehrere KB pro Seitenaufruf) und nutzt **deferLoading** – die Seite erscheint sofort, die
+  Zeilen folgen asynchron.
+
 ## [0.15.1] - 2026-07-11
 
 ### Geändert
