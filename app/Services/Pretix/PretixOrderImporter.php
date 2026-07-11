@@ -117,6 +117,7 @@ class PretixOrderImporter
                 'payment_provider' => $this->extractProvider($raw),
                 'email' => $raw['email'] ?? null,
                 'total' => isset($raw['total']) ? (float) $raw['total'] : null,
+                'tax_total' => $this->extractTaxTotal($raw),
                 'currency' => $raw['currency'] ?? null,
                 'order_datetime' => $raw['datetime'] ?? null,
                 'url' => $client->orderControlUrl($slug, $code),
@@ -173,6 +174,30 @@ class PretixOrderImporter
         }
 
         return $assigned;
+    }
+
+    /**
+     * The order's actual VAT: sum of the positions' and fees' tax_value.
+     * Null when the payload carries no positions (then exports fall back to
+     * the configured flat rate).
+     */
+    private function extractTaxTotal(array $raw): ?float
+    {
+        if (! isset($raw['positions']) && ! isset($raw['fees'])) {
+            return null;
+        }
+
+        $tax = 0.0;
+
+        foreach (($raw['positions'] ?? []) as $position) {
+            $tax += (float) ($position['tax_value'] ?? 0);
+        }
+
+        foreach (($raw['fees'] ?? []) as $orderFee) {
+            $tax += (float) ($orderFee['tax_value'] ?? 0);
+        }
+
+        return round($tax, 2);
     }
 
     private function extractProvider(array $raw): ?string

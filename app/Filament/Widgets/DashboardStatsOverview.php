@@ -21,7 +21,7 @@ class DashboardStatsOverview extends BaseWidget
         $gross = (clone $base)->sum('gross_amount');
         $fees = (clone $base)->sum('fee_amount');
         $net = (clone $base)->sum('net_amount');
-        $refunds = (clone $base)->whereIn('transaction_event_code', Transaction::REFUND_EVENT_CODES)->count();
+        $refunds = (clone $base)->refunds()->count();
         $avgBasket = $count > 0 ? $gross / $count : 0;
         $feeRatio = $gross != 0 ? abs($fees / $gross) * 100 : 0;
         $unassigned = (clone $base)->whereNull('event_id')->count();

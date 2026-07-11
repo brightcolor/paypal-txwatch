@@ -165,7 +165,51 @@ class ExportDataBuilderTest extends TestCase
 
         $this->assertSame(7.0, $result['groups'][0]['rows'][0]['vat']);
         $this->assertSame(7.0, $result['grand_total']['vat']);
-        $this->assertSame('MwSt (7%)', $result['column_labels'][array_search('vat', $result['columns'], true)]);
+        $this->assertSame('MwSt', $result['column_labels'][array_search('vat', $result['columns'], true)]);
+    }
+
+    public function test_real_pretix_tax_is_preferred_over_the_flat_rate(): void
+    {
+        $connection = \App\Models\PretixConnection::create([
+            'name' => 'V', 'base_url' => 'https://pretix.eu', 'organizer_slug' => 'v', 'api_token' => 'x',
+        ]);
+        // Mixed 19%/7% order: real tax 10.00 on a 119.00 total - the 19% flat
+        // formula would wrongly yield 19.00.
+        $order = \App\Models\PretixOrder::create([
+            'pretix_connection_id' => $connection->id, 'event_slug' => 's', 'order_code' => 'X1',
+            'total' => 119.00, 'tax_total' => 10.00, 'url' => 'https://x/', 'raw_payload' => [],
+        ]);
+
+        $this->makeTransaction(['gross_amount' => 119.00, 'pretix_order_id' => $order->id]);
+        $this->makeTransaction(['gross_amount' => 119.00]); // no pretix link -> flat rate
+
+        $result = (new ExportDataBuilder())->build(
+            Transaction::query()->orderBy('id'),
+            null,
+            ['columns' => ['gross', 'vat', 'net_excl_vat'], 'vat_rate' => 19],
+        );
+
+        [$linked, $unlinked] = $result['groups'][0]['rows'];
+        $this->assertSame(10.0, $linked['vat']);
+        $this->assertSame(109.0, $linked['net_excl_vat']);
+        $this->assertSame(19.0, $unlinked['vat']);
+        $this->assertSame(29.0, $result['grand_total']['vat']); // 10 real + 19 flat
+    }
+
+    public function test_partial_refund_carries_proportional_pretix_tax(): void
+    {
+        $connection = \App\Models\PretixConnection::create([
+            'name' => 'V', 'base_url' => 'https://pretix.eu', 'organizer_slug' => 'v', 'api_token' => 'x',
+        ]);
+        $order = \App\Models\PretixOrder::create([
+            'pretix_connection_id' => $connection->id, 'event_slug' => 's', 'order_code' => 'X2',
+            'total' => 100.00, 'tax_total' => 7.00, 'url' => 'https://x/', 'raw_payload' => [],
+        ]);
+
+        $refund = $this->makeTransaction(['gross_amount' => -50.00, 'pretix_order_id' => $order->id]);
+
+        // Half the order refunded -> half the real tax, negative.
+        $this->assertSame(-3.5, $refund->vatAmount(19.0));
     }
 
     public function test_vat_totals_are_summed_and_gross_equals_net_plus_vat(): void

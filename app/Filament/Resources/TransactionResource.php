@@ -478,7 +478,7 @@ class TransactionResource extends Resource
 
             Tables\Filters\Filter::make('refunds_only')
                 ->label('Nur Rückzahlungen/Reversals')
-                ->query(fn (Builder $q) => $q->whereIn('transaction_event_code', Transaction::REFUND_EVENT_CODES)),
+                ->query(fn (Builder $q) => $q->refunds()),
 
             Tables\Filters\TernaryFilter::make('has_custom_field')
                 ->label('Bestellnummer')

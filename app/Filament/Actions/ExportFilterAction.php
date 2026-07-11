@@ -43,7 +43,7 @@ class ExportFilterAction
 
                 Forms\Components\TextInput::make('vat_rate')
                     ->label('MwSt-Satz')
-                    ->helperText('Für den MwSt-Ausweis (pro Position und gesamt). Brutto gilt als MwSt-inklusive.')
+                    ->helperText('Fallback für Transaktionen ohne pretix-Verknüpfung; verknüpfte nutzen die echte MwSt aus pretix. Brutto gilt als MwSt-inklusive.')
                     ->numeric()
                     ->suffix('%')
                     ->default(19)

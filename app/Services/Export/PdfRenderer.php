@@ -13,9 +13,9 @@ use Throwable;
  */
 class PdfRenderer
 {
-    public function render(array $data): string
+    public function render(array $data, string $view = 'exports.pdf'): string
     {
-        $html = view('exports.pdf', $data)->render();
+        $html = view($view, $data)->render();
 
         $footerHtml = '<div style="font-size:9px; width:100%; text-align:center; color:#888; padding:0 10mm;">'
             . 'Seite <span class="pageNumber"></span> / <span class="totalPages"></span></div>';

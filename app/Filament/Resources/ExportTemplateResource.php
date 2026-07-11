@@ -78,7 +78,7 @@ class ExportTemplateResource extends Resource
                     Forms\Components\Toggle::make('show_grand_total')->label('Gesamtsumme')->default(true),
                     Forms\Components\TextInput::make('vat_rate')
                         ->label('MwSt-Satz (Standard)')
-                        ->helperText('Beim Export überschreibbar. Brutto gilt als MwSt-inklusive.')
+                        ->helperText('Beim Export überschreibbar; nur Fallback ohne pretix-Verknüpfung (verknüpfte nutzen die echte MwSt aus pretix).')
                         ->numeric()
                         ->suffix('%')
                         ->default(19)

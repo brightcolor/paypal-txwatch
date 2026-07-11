@@ -86,6 +86,32 @@ class EventResource extends Resource
                     ->falseLabel('nur deaktivierte'),
             ])
             ->actions([
+                Tables\Actions\Action::make('settlement')
+                    ->label('Abrechnung erstellen')
+                    ->icon('heroicon-o-document-currency-euro')
+                    ->visible(fn (Event $record) => $record->transactions()->exists())
+                    ->form([
+                        Forms\Components\TextInput::make('vat_rate')
+                            ->label('MwSt-Satz (Fallback)')
+                            ->helperText('Nur für Zahlungen ohne pretix-Verknüpfung; verknüpfte nutzen die echte MwSt aus pretix.')
+                            ->numeric()
+                            ->suffix('%')
+                            ->default(19)
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->required(),
+                    ])
+                    ->action(function (Event $record, array $data) {
+                        $settlement = app(\App\Services\Export\SettlementBuilder::class)
+                            ->build($record, (float) ($data['vat_rate'] ?? 19));
+                        $pdf = app(\App\Services\Export\PdfRenderer::class)
+                            ->render($settlement, 'exports.settlement');
+
+                        $filename = 'abrechnung-' . \Illuminate\Support\Str::slug($record->displayName())
+                            . '-' . now()->format('Ymd-His') . '.pdf';
+
+                        return response()->streamDownload(fn () => print ($pdf), $filename);
+                    }),
                 Tables\Actions\Action::make('toggleActive')
                     ->label(fn ($record) => $record->is_active ? 'Deaktivieren' : 'Aktivieren')
                     ->icon(fn ($record) => $record->is_active ? 'heroicon-o-eye-slash' : 'heroicon-o-eye')

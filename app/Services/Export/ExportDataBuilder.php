@@ -25,7 +25,8 @@ class ExportDataBuilder
         $config = $this->resolveConfig($template, $overrides);
         // Exports are customer-facing reports, so transactions marked "not relevant"
         // must never appear in them - regardless of the table's current filter state.
-        $transactions = $query->excludingIrrelevant()->get();
+        // pretixOrder is needed per row for the real VAT (Transaction::vatAmount).
+        $transactions = $query->excludingIrrelevant()->with(['event', 'pretixOrder'])->get();
 
         $columns = $this->visibleColumns($config['columns'], $config['mode']);
         $vatRate = (float) $config['vat_rate'];
@@ -66,17 +67,16 @@ class ExportDataBuilder
     }
 
     /**
-     * Column headers, with the configured rate injected into the VAT header
-     * (the static label is rate-agnostic, e.g. "MwSt" -> "MwSt (19%)").
+     * Column headers. The VAT header deliberately carries no rate: rows with
+     * a linked pretix order use the order's REAL tax (mixed rates possible),
+     * only the remaining rows use the configured flat rate.
      *
      * @return array<int, string>
      */
     private function columnLabels(array $columns, float $vatRate): array
     {
         return array_map(
-            fn (string $key) => $key === 'vat'
-                ? 'MwSt (' . ExportColumns::formatRate($vatRate) . '%)'
-                : ExportColumns::label($key),
+            fn (string $key) => ExportColumns::label($key),
             $columns,
         );
     }
@@ -150,13 +150,13 @@ class ExportDataBuilder
 
     private function sum(Collection $transactions, float $vatRate): array
     {
-        // VAT total is the sum of the per-transaction rounded VAT (each PayPal
-        // transaction is effectively its own receipt), so the VAT column's
-        // footer always equals the sum of its cells. net_excl_vat is then
-        // derived from the exact gross total minus that VAT total, keeping
-        // gross = net_excl_vat + vat exact at the total level too.
+        // VAT total is the sum of the per-transaction rounded VAT (each
+        // transaction is effectively its own receipt; real pretix tax where
+        // linked), so the VAT column's footer always equals the sum of its
+        // cells. net_excl_vat is derived from the exact gross total minus
+        // that VAT total, keeping gross = net_excl_vat + vat exact.
         $gross = $transactions->sum(fn (Transaction $t) => (float) $t->gross_amount);
-        $vat = round($transactions->sum(fn (Transaction $t) => ExportColumns::vatAmount((float) $t->gross_amount, $vatRate)), 2);
+        $vat = round($transactions->sum(fn (Transaction $t) => $t->vatAmount($vatRate)), 2);
 
         return [
             'count' => $transactions->count(),

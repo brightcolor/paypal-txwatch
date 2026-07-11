@@ -64,8 +64,9 @@ class ExportColumns
             'invoice_id' => $transaction->invoice_id,
             'status' => $transaction->transaction_status,
             'gross' => $transaction->gross_amount,
-            'vat' => self::vatAmount((float) $transaction->gross_amount, $vatRate),
-            'net_excl_vat' => round((float) $transaction->gross_amount - self::vatAmount((float) $transaction->gross_amount, $vatRate), 2),
+            // Real pretix tax when the order is linked, flat-rate fallback otherwise.
+            'vat' => $transaction->vatAmount($vatRate),
+            'net_excl_vat' => round((float) $transaction->gross_amount - $transaction->vatAmount($vatRate), 2),
             'fee' => $transaction->fee_amount,
             'net' => $transaction->net_amount,
             'currency' => $transaction->currency,

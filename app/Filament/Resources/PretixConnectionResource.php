@@ -86,6 +86,7 @@ class PretixConnectionResource extends Resource
                         ->helperText('Wird pro Überweisungs-Bestellung als Gebühr verbucht.'),
                     Forms\Components\Toggle::make('sync_enabled')
                         ->label('Automatischer Import aktiv')
+                        ->helperText('Import & Abgleich laufen automatisch alle 30 Minuten.')
                         ->default(true),
                     Forms\Components\Toggle::make('import_paypal_orders')
                         ->label('Auch PayPal-Bestellungen importieren')

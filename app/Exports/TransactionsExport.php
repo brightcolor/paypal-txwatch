@@ -49,11 +49,13 @@ class TransactionsExport implements FromArray, WithHeadings
             $rows[] = $this->sumRow('Gesamtsumme (' . $this->data['grand_total']['count'] . ')', $this->data['grand_total']);
 
             // Explicit, column-independent VAT breakdown so the total VAT is
-            // always readable even if the "MwSt" column wasn't selected.
+            // always readable even if the "MwSt" column wasn't selected. The
+            // configured rate is only the fallback assumption - rows linked to
+            // a pretix order use the order's real tax.
             $rate = \App\Services\Export\ExportColumns::formatRate((float) $this->data['vat_rate']);
-            $rows[] = ['MwSt-Satz', $rate . '%'];
+            $rows[] = ['MwSt-Satz (Annahme ohne pretix-Daten)', $rate . '%'];
             $rows[] = ['Netto gesamt (o. MwSt)', (float) $this->data['grand_total']['net_excl_vat']];
-            $rows[] = ['MwSt gesamt (' . $rate . '%)', (float) $this->data['grand_total']['vat']];
+            $rows[] = ['MwSt gesamt', (float) $this->data['grand_total']['vat']];
             $rows[] = ['Brutto gesamt', (float) $this->data['grand_total']['gross']];
         }
 

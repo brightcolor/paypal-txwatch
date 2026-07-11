@@ -19,6 +19,7 @@ class PretixOrder extends Model
         'payment_provider',
         'email',
         'total',
+        'tax_total',
         'currency',
         'order_datetime',
         'url',
@@ -29,6 +30,7 @@ class PretixOrder extends Model
     {
         return [
             'total' => 'decimal:2',
+            'tax_total' => 'decimal:2',
             'order_datetime' => 'datetime',
             'raw_payload' => 'array',
         ];

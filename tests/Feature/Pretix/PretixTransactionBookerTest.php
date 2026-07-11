@@ -111,6 +111,55 @@ class PretixTransactionBookerTest extends TestCase
         }
     }
 
+    public function test_done_refunds_are_booked_as_negative_transactions_without_fee(): void
+    {
+        $c = $this->connection();
+        $this->order($c, [
+            'total' => 50.00,
+            'raw_payload' => ['refunds' => [
+                ['local_id' => 7, 'state' => 'done', 'amount' => '20.00', 'provider' => 'banktransfer'],
+                ['local_id' => 8, 'state' => 'created', 'amount' => '5.00', 'provider' => 'banktransfer'], // not done -> skipped
+            ]],
+        ]);
+
+        $result = (new PretixTransactionBooker())->book($c);
+
+        $this->assertSame(1, $result['refunds']);
+        $this->assertSame(2, Transaction::count()); // payment + refund
+
+        $refund = Transaction::where('gross_amount', '<', 0)->firstOrFail();
+        $this->assertSame('-20.00', $refund->gross_amount);
+        $this->assertSame('0.00', $refund->fee_amount);
+        $this->assertTrue($refund->isRefundOrReversal());
+        $this->assertSame('Rückzahlung/Storno', $refund->typeLabel());
+
+        // Idempotent: booking again doesn't duplicate the refund.
+        (new PretixTransactionBooker())->book($c);
+        $this->assertSame(2, Transaction::count());
+
+        // Central refund scope finds it.
+        $this->assertSame(1, Transaction::query()->refunds()->count());
+    }
+
+    public function test_refunds_of_a_cancelled_but_previously_booked_order_net_the_balance_out(): void
+    {
+        $c = $this->connection();
+        $order = $this->order($c, ['total' => 30.00]);
+
+        (new PretixTransactionBooker())->book($c); // books +30
+
+        // Later: order fully refunded and cancelled in pretix.
+        $order->update([
+            'status' => 'c',
+            'raw_payload' => ['refunds' => [['local_id' => 1, 'state' => 'done', 'amount' => '30.00']]],
+        ]);
+        (new PretixTransactionBooker())->book($c);
+
+        $this->assertSame(2, Transaction::count());
+        $this->assertSame(0.0, (float) Transaction::sum('gross_amount')); // +30 -30
+        $this->assertSame('V', Transaction::where('gross_amount', '>', 0)->first()->transaction_status);
+    }
+
     public function test_rebooking_is_idempotent_and_mirrors_a_later_cancellation(): void
     {
         $c = $this->connection();

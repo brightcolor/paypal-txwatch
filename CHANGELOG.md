@@ -4,6 +4,29 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.17.0] - 2026-07-11
+
+### Neu
+
+- **Vereinsabrechnung pro Event**: Neue Aktion "Abrechnung erstellen" in der Event-Liste erzeugt ein PDF mit
+  allen Zahlungsquellen des Events (PayPal-Zahlungen/-Erstattungen, Überweisungen & weitere Zahlarten aus
+  pretix inkl. Überweisungsgebühr, pretix-Erstattungen), dem **Auszahlungsbetrag** als eine Zahl und einem
+  Umsatzsteuer-Ausweis. Interne Kontobewegungen und "nicht relevante" Transaktionen sind ausgeschlossen.
+- **pretix-Auto-Import**: Der Schalter "Automatischer Import aktiv" tut jetzt, was er verspricht – aktive
+  Verbindungen werden **alle 30 Minuten** automatisch importiert und abgeglichen (Scheduler,
+  Überlappungsschutz über den Job-Guard).
+- **pretix-Erstattungen werden verbucht**: Abgeschlossene ("done") Erstattungen von Nicht-PayPal-Bestellungen
+  erscheinen als eigene negative Transaktionen (ohne Gebühr, idempotent). Auch nachträglich stornierte,
+  bereits verbuchte Bestellungen werden so sauber ausgeglichen. Die Rückzahlungs-Kennzahlen (Dashboard,
+  Bericht, Filter) berücksichtigen sie über eine zentrale Refund-Definition.
+- **Echte MwSt aus pretix**: Der Import übernimmt die tatsächliche MwSt jeder Bestellung
+  (Positions-/Gebühren-Steuerwerte, gemischte Sätze inklusive). Exporte nutzen sie für alle verknüpften
+  Transaktionen – auch PayPal-Zahlungen mit pretix-Verknüpfung; Teil-Erstattungen anteilig. Der wählbare
+  MwSt-Satz ist nur noch **Fallback** für unverknüpfte Transaktionen; die MwSt-Spalte heißt daher schlicht
+  "MwSt".
+- **Backups**: `docker/backup.sh` (nächtlicher pg_dump + storage-Archiv, 14 Tage Rotation) mit
+  Cron-Einrichtung und Restore-Anleitung im README.
+
 ## [0.16.0] - 2026-07-11
 
 ### Neu

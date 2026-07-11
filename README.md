@@ -102,6 +102,22 @@ Persistente Daten (`storage/`, `docker/data/*`) liegen als **Bind Mounts** neben
 benannten Docker-Volumes. Läuft bereits [Watchtower](https://github.com/nicholas-fedor/watchtower) auf dem
 Host, aktualisiert es die Container automatisch, sobald CI ein neues `:latest`-Image gepusht hat.
 
+### Backups
+
+`docker/backup.sh` sichert die Postgres-Datenbank (pg_dump, custom format, gzip) und `storage/app`
+(Exporte, Logos) nach `backups/` neben dem Compose-File und rotiert nach 14 Tagen. Einrichtung auf dem
+Server (Skript liegt dort als `/opt/paypal-txwatch/backup.sh`):
+
+```bash
+cp docker/backup.sh /opt/paypal-txwatch/backup.sh && chmod +x /opt/paypal-txwatch/backup.sh
+cat > /etc/cron.d/paypal-txwatch-backup <<'EOF'
+30 3 * * * root /opt/paypal-txwatch/backup.sh >> /var/log/paypal-txwatch-backup.log 2>&1
+EOF
+```
+
+Restore der DB: siehe Kommentar im Skript. **Wichtig:** `backups/` zusätzlich regelmäßig auf ein anderes
+System kopieren (Offsite) – ein Backup auf derselben Platte schützt nicht vor Plattenausfall.
+
 ### Lokale Docker-Entwicklung
 
 Für lokale Entwicklung ohne Docker reicht `php artisan serve` (siehe oben) – produktionsnahe Container mit
@@ -187,6 +203,25 @@ Verlauf) und macht drei Dinge:
 
 Verknüpfte **Bestellnummern sind klickbar** (↗-Symbol) und öffnen die Bestellung im pretix-Control-Panel in
 einem neuen Fenster.
+
+Weitere Automatik:
+
+- **Auto-Import**: Verbindungen mit "Automatischer Import aktiv" werden **alle 30 Minuten** importiert und
+  abgeglichen (Scheduler; Überlappungsschutz pro Verbindung).
+- **Erstattungen**: Abgeschlossene pretix-Erstattungen von Nicht-PayPal-Bestellungen werden als negative
+  Transaktionen verbucht (ohne Gebühr), sodass die Abrechnung erstattetes Geld korrekt abzieht.
+  PayPal-Erstattungen kommen weiterhin über den PayPal-Sync.
+- **Echte MwSt**: Beim Import wird die tatsächliche MwSt der Bestellung übernommen
+  (Positions-/Gebühren-Steuerwerte, auch gemischte Sätze). Exporte nutzen sie für alle verknüpften
+  Transaktionen; der im Export-Dialog wählbare Satz ist nur noch der **Fallback** für unverknüpfte.
+
+## Vereinsabrechnung pro Event
+
+In der Event-Liste erzeugt **"Abrechnung erstellen"** ein PDF mit allen Zahlungsquellen des Events:
+PayPal-Zahlungen und -Erstattungen, Überweisungen/weitere Zahlarten aus pretix (inkl. der
+Überweisungsgebühr) und pretix-Erstattungen – je Block Anzahl/Betrag/Gebühren/Nach Gebühren, dazu der
+**Auszahlungsbetrag** als eine Zahl und ein Umsatzsteuer-Ausweis (echte MwSt aus pretix, wo verknüpft).
+Interne PayPal-Kontobewegungen und als "nicht relevant" markierte Transaktionen sind ausgeschlossen.
 
 ## Suche & Filter
 

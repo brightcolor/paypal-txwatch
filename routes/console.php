@@ -12,3 +12,8 @@ Artisan::command('inspire', function () {
 // their individual sync_interval_minutes; actual dispatching happens
 // inside the command so intervals stay per-account configurable.
 Schedule::command('paypal:schedule-sync')->everyMinute()->withoutOverlapping();
+
+// Keeps pretix orders, bookings and the PayPal reconciliation fresh without
+// manual "Import & Abgleich" clicks. 30 minutes is plenty for billing data;
+// the job's own guard prevents overlapping runs per connection.
+Schedule::command('pretix:schedule-import')->everyThirtyMinutes()->withoutOverlapping();

@@ -120,7 +120,7 @@ class ReportService
     public function refundsSummary(?Carbon $from = null, ?Carbon $to = null): array
     {
         $refunds = $this->baseQuery($from, $to)
-            ->whereIn('transaction_event_code', Transaction::REFUND_EVENT_CODES)
+            ->refunds()
             ->get();
 
         return [

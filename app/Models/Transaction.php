@@ -186,9 +186,41 @@ class Transaction extends Model
         return $this->pretixOrder?->url;
     }
 
+    /**
+     * VAT contained in this transaction's amount. Prefers the REAL tax from
+     * the linked pretix order (handles mixed 19%/7% positions correctly),
+     * scaled to this transaction's share of the order total so partial
+     * refunds carry their proportional VAT. Falls back to the flat-rate
+     * formula when no pretix tax data is available.
+     */
+    public function vatAmount(float $fallbackRate): float
+    {
+        $order = $this->pretixOrder;
+
+        if ($order && $order->tax_total !== null && (float) $order->total > 0) {
+            return round((float) $order->tax_total * ((float) $this->gross_amount / (float) $order->total), 2);
+        }
+
+        return \App\Services\Export\ExportColumns::vatAmount((float) $this->gross_amount, $fallbackRate);
+    }
+
     public function isRefundOrReversal(): bool
     {
-        return in_array($this->transaction_event_code, self::REFUND_EVENT_CODES, true);
+        return in_array($this->transaction_event_code, self::REFUND_EVENT_CODES, true)
+            || ($this->instrument_type === 'pretix' && (float) $this->gross_amount < 0);
+    }
+
+    /**
+     * Single source of truth for "is a refund": PayPal refunds carry a
+     * documented T-code; pretix-booked refunds have no T-code and are the
+     * only pretix rows with a negative amount.
+     */
+    public function scopeRefunds(Builder $query): Builder
+    {
+        return $query->where(function (Builder $q) {
+            $q->whereIn('transaction_event_code', self::REFUND_EVENT_CODES)
+                ->orWhere(fn (Builder $q2) => $q2->where('instrument_type', 'pretix')->where('gross_amount', '<', 0));
+        });
     }
 
     /**
@@ -213,8 +245,11 @@ class Transaction extends Model
         $group = $this->eventCodeGroup();
 
         if ($group === null) {
-            // No PayPal event code: pretix-booked or CSV rows. If we at least
-            // know the payment method, it's a payment.
+            // No PayPal event code: pretix-booked or CSV rows.
+            if ($this->isRefundOrReversal()) {
+                return 'Rückzahlung/Storno';
+            }
+
             return filled($this->payment_method_type) ? 'Zahlung' : '–';
         }
 
