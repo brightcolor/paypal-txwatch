@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.25.1] - 2026-07-11
+
+### Behoben
+
+- **500 auf dem Dashboard**, sobald das „Zu prüfen"-Widget etwas anzuzeigen hatte: Die Badge-/Format-Closures
+  benannten den Spaltenwert-Parameter `$s` statt `$state`, den Filament per Namen injiziert → `ViewException:
+  closure for [TextColumn], but [$s] was unresolvable`. Die Tests fingen es nicht, weil das Widget bei leerer
+  Liste ausgeblendet ist (Test-DB ohne Abweichungen); jetzt mit Regressions-Test, der eine Abweichung seedet
+  und das Widget rendert. Zuerst vom neuen Fehler-Log sichtbar gemacht.
+
 ## [0.25.0] - 2026-07-11
 
 ### Behoben
