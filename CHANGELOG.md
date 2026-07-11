@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.25.2] - 2026-07-11
+
+### Behoben
+
+- **Mobile Navigation: letzter Menüpunkt nicht erreichbar.** Die ausklappbare Sidebar nutzte `100vh` und
+  reichte damit hinter die Browser-/Systemleiste des Handys – die untersten Einträge (System-Gruppe, u. a.
+  „Fehler-Log") lagen unter der Leiste und waren nicht scrollbar. Sidebar auf `100dvh` begrenzt und den
+  Nav-Bereich scrollbar gemacht (mit etwas Innenabstand unten).
+
 ## [0.25.1] - 2026-07-11
 
 ### Behoben

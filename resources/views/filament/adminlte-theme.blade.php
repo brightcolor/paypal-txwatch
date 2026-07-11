@@ -50,6 +50,24 @@
     .fi-sidebar-item-active .fi-sidebar-item-icon { color: #fff !important; font-weight: 600; }
     .fi-sidebar-item-badge .fi-badge { box-shadow: none; }
 
+    /* ===== Mobile sidebar: reach the last menu item =====
+       Filament's off-canvas sidebar is 100vh, which counts the area *behind*
+       the phone's browser/system bars - so the bottom entries (System group:
+       Fehler-Log etc.) land under the chrome and can't be scrolled to. Pin it
+       to the dynamic viewport height and make the nav list scroll, with a bit
+       of bottom padding so the last item clears the edge. */
+    @media (max-width: 1023px) {
+        .fi-sidebar {
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+        }
+        .fi-sidebar-nav {
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 2rem !important;
+        }
+    }
+
     /* ===== Topbar (light-only white) ===== */
     html:not(.dark) .fi-topbar nav {
         background-color: #fff !important;
