@@ -74,7 +74,9 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 Widgets\AccountWidget::class,
                 \App\Filament\Widgets\DashboardStatsOverview::class,
+                \App\Filament\Widgets\ComparisonStatsWidget::class,
                 \App\Filament\Widgets\NeedsReviewWidget::class,
+                \App\Filament\Widgets\TopEventsWidget::class,
                 \App\Filament\Widgets\SyncHealthWidget::class,
                 \App\Filament\Widgets\RevenueByDayChart::class,
                 \App\Filament\Widgets\RecentSyncRunsWidget::class,

@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.29.0] - 2026-07-11
+
+### Neu
+
+- **Dashboard-Vergleiche**: Neue Kacheln „Umsatz diesen Monat" (vs. Vormonat), „Umsatz <Monat>" (vs.
+  Vorjahresmonat) und „Transaktionen diesen Monat" (vs. Vormonat) mit Prozent-Delta und Auf-/Ab-Trend.
+- **Top-Events (90 Tage)**: Dashboard-Tabelle mit den 5 umsatzstärksten Events (Transaktionen, Umsatz,
+  Nach Gebühren). Beide Widgets sind kundengescoped.
+
 ## [0.28.0] - 2026-07-11
 
 ### Neu / Sicherheit
