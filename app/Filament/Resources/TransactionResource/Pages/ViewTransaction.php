@@ -38,7 +38,9 @@ class ViewTransaction extends ViewRecord
                     TextEntry::make('invoice_id')->label('Invoice ID'),
                     TextEntry::make('event_ref')
                         ->label('Event')
-                        ->state(fn (Transaction $record) => \App\Services\CustomFieldParser::eventReference($record->custom_field) ?? '–'),
+                        ->state(fn (Transaction $record) => $record->event?->displayName()
+                            ?? \App\Services\CustomFieldParser::eventReference($record->custom_field)
+                            ?? '–'),
                     TextEntry::make('order_number')
                         ->label('Bestellnummer')
                         ->state(fn (Transaction $record) => \App\Services\CustomFieldParser::orderNumber($record->custom_field) ?? '–')

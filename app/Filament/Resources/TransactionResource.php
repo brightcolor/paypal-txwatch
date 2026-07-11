@@ -107,7 +107,14 @@ class TransactionResource extends Resource
                 Tables\Columns\TextColumn::make('payer_email')->label('E-Mail')->searchable()->toggleable(),
                 Tables\Columns\TextColumn::make('event_ref')
                     ->label('Event')
-                    ->state(fn (Transaction $record) => \App\Services\CustomFieldParser::eventReference($record->custom_field))
+                    // Real pretix event name once assigned; the parsed short code from
+                    // the order number as fallback. Truncated in the table, full name
+                    // on hover.
+                    ->state(fn (Transaction $record) => $record->event?->displayName()
+                        ?? \App\Services\CustomFieldParser::eventReference($record->custom_field))
+                    ->limit(25)
+                    ->tooltip(fn (Transaction $record) => $record->event?->displayName()
+                        ?? \App\Services\CustomFieldParser::eventReference($record->custom_field))
                     ->toggleable()
                     ->color('primary'),
                 Tables\Columns\TextColumn::make('custom_field')
@@ -161,7 +168,17 @@ class TransactionResource extends Resource
                 Tables\Columns\TextColumn::make('fee_amount')->label('Gebühr')->money(fn ($record) => $record->currency ?? 'EUR')->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('net_amount')->label('Netto')->money(fn ($record) => $record->currency ?? 'EUR')->sortable(),
                 Tables\Columns\TextColumn::make('currency')->label('Währung')->toggleable(),
-                Tables\Columns\TextColumn::make('event.name')->label('Event')->badge()->color(fn ($record) => $record->event_id ? 'success' : 'gray')->default('– nicht zugeordnet –'),
+                // Redundant with the combined "Event" column above now that pretix
+                // auto-assignment fills it; kept as an opt-in column for checking the
+                // formal assignment state.
+                Tables\Columns\TextColumn::make('event.name')
+                    ->label('Event (zugeordnet)')
+                    ->badge()
+                    ->limit(25)
+                    ->tooltip(fn (Transaction $record) => $record->event?->displayName())
+                    ->color(fn ($record) => $record->event_id ? 'success' : 'gray')
+                    ->default('– nicht zugeordnet –')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('paypalAccount.name')->label('PayPal-Konto')->toggleable(),
                 Tables\Columns\TextColumn::make('marked_irrelevant_at')
                     ->label('Relevanz')

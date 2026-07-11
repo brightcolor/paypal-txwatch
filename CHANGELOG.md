@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.14.0] - 2026-07-11
+
+### Neu
+
+- **Automatische Event-Zuweisung aus pretix**: Der Import legt für jedes pretix-Event ein lokales Event an
+  (Name wird bei jedem Import aus pretix übernommen; `display_name` bleibt als manuelle Überschreibung für
+  PDFs unangetastet) und **weist alle Transaktionen anhand des Event-Slugs in der Bestellnummer automatisch
+  zu** (`assignment_method: pretix`). Manuelle Zuweisungen werden **nie** überschrieben.
+- Die "Event"-Spalte in der Transaktionstabelle zeigt jetzt den **echten pretix-Eventnamen** (Fallback:
+  Kürzel aus der Bestellnummer) – **gekürzt auf 25 Zeichen, voller Name beim Hover**. Die formale
+  Zuordnungs-Spalte ("Event (zugeordnet)") ist standardmäßig ausgeblendet und einblendbar.
+- Damit füllen sich auch Gebührenanalyse nach Event, Event-Zuordnungsquote und der Event-Block im
+  PDF-Export automatisch.
+
 ## [0.13.0] - 2026-07-11
 
 ### Neu

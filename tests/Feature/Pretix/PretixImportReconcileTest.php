@@ -91,6 +91,34 @@ class PretixImportReconcileTest extends TestCase
         $this->assertSame(1, $summary['unmatched']);
     }
 
+    public function test_events_are_auto_created_from_pretix_and_transactions_assigned_by_slug(): void
+    {
+        Http::fake([
+            '*/events/sportfest/orders/*' => Http::response(['results' => [], 'next' => null]),
+            '*/events/*' => Http::response([
+                'results' => [['slug' => 'sportfest', 'name' => ['de' => 'Großes Sommersportfest des SV 2026']]],
+                'next' => null,
+            ]),
+        ]);
+
+        $auto = $this->tx('Order SPORTFEST-AAAAA', 10.00);
+        $manualEvent = \App\Models\Event::create(['name' => 'Manuell']);
+        $manual = $this->tx('Order SPORTFEST-BBBBB', 10.00);
+        $manual->update(['event_id' => $manualEvent->id, 'assignment_method' => 'manual']);
+
+        app(PretixOrderImporter::class)->import($this->connection());
+
+        $event = \App\Models\Event::where('pretix_event_slug', 'sportfest')->firstOrFail();
+        $this->assertSame('Großes Sommersportfest des SV 2026', $event->name);
+
+        $auto->refresh();
+        $this->assertSame($event->id, $auto->event_id);
+        $this->assertSame('pretix', $auto->assignment_method);
+
+        // Manual assignments are never overwritten.
+        $this->assertSame($manualEvent->id, $manual->fresh()->event_id);
+    }
+
     public function test_pagination_follows_next_across_pages_without_looping(): void
     {
         // Regression: previously the client re-sent page_size on the "next" URL,

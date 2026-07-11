@@ -2,6 +2,7 @@
 
 namespace App\Services\Pretix;
 
+use App\Models\Event;
 use App\Models\PretixConnection;
 use App\Models\PretixOrder;
 use App\Models\Transaction;
@@ -39,6 +40,11 @@ class PretixOrderImporter
             $total = count($events);
             $progress("{$total} Event(s) gefunden.", ['events_total' => $total]);
 
+            foreach ($events as $event) {
+                $this->upsertEvent($event['slug'], $event['name']);
+            }
+            $progress('Lokale Events angelegt/aktualisiert (Name aus pretix).');
+
             foreach ($events as $i => $event) {
                 $slug = $event['slug'];
                 $index = $i + 1;
@@ -59,6 +65,10 @@ class PretixOrderImporter
 
             $progress('Verbuche Nicht-PayPal-Zahlungen (Überweisung etc.) …');
             $booking = $this->booker->book($connection, $progress);
+
+            $progress('Weise Transaktionen den Events zu (per pretix-Slug) …');
+            $assigned = $this->assignEvents();
+            $progress("{$assigned} Transaktionen automatisch einem Event zugewiesen.");
 
             $progress('Gleiche mit PayPal-Transaktionen ab …');
             $reconciliation = $this->reconciler->reconcile($connection);
@@ -113,6 +123,54 @@ class PretixOrderImporter
                 'raw_payload' => $raw,
             ],
         );
+    }
+
+    /**
+     * Creates/updates the local Event for a pretix event. The name is kept in
+     * sync with pretix on every import (display_name remains as the user's
+     * override for PDFs and is never touched here).
+     */
+    private function upsertEvent(string $slug, string $name): void
+    {
+        if (blank($slug)) {
+            return;
+        }
+
+        Event::updateOrCreate(
+            ['pretix_event_slug' => $slug],
+            ['name' => $name ?: $slug],
+        );
+    }
+
+    /**
+     * Assigns transactions to their Event via the pretix slug found in the
+     * order number ("Order <SLUG>-<CODE>"). Only fills unassigned transactions
+     * - a manual assignment is never overwritten.
+     */
+    private function assignEvents(): int
+    {
+        $assigned = 0;
+
+        foreach (Event::query()->whereNotNull('pretix_event_slug')->get() as $event) {
+            // Escape LIKE wildcards in the slug; matching is case-insensitive
+            // (pretix slugs are lowercase, PayPal custom fields are uppercase).
+            $slug = addcslashes(strtolower($event->pretix_event_slug), '%_');
+
+            $assigned += Transaction::query()
+                ->whereNull('event_id')
+                ->where(function ($q) use ($slug) {
+                    $q->whereRaw('LOWER(custom_field) LIKE ?', ["order {$slug}-%"])
+                        ->orWhereRaw('LOWER(custom_field) LIKE ?', ["{$slug}-%"]);
+                })
+                ->update([
+                    'event_id' => $event->id,
+                    'assignment_method' => 'pretix',
+                    'assignment_rule_id' => null,
+                    'assigned_at' => now(),
+                ]);
+        }
+
+        return $assigned;
     }
 
     private function extractProvider(array $raw): ?string

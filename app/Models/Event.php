@@ -14,6 +14,7 @@ class Event extends Model
     protected $fillable = [
         'customer_id',
         'name',
+        'pretix_event_slug',
         'event_date',
         'venue',
         'display_name',
