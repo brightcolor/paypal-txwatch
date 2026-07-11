@@ -46,7 +46,7 @@ class PretixOrderImporter
             $progress("{$total} Event(s) gefunden.", ['events_total' => $total]);
 
             foreach ($events as $event) {
-                $this->upsertEvent($event['slug'], $event['name']);
+                $this->upsertEvent($client, $event);
             }
             $progress('Lokale Events angelegt/aktualisiert (Name aus pretix).');
 
@@ -132,20 +132,45 @@ class PretixOrderImporter
     }
 
     /**
-     * Creates/updates the local Event for a pretix event. The name is kept in
-     * sync with pretix on every import (display_name remains as the user's
-     * override for PDFs and is never touched here).
+     * Creates/updates the local Event for a pretix event, enriched with the
+     * details the customer export cover page needs: date, location and the
+     * event image from pretix. name/date/venue are kept in sync with pretix on
+     * every import; display_name stays as the user's PDF override, and a
+     * manually set logo/venue is not overwritten with an empty pretix value.
+     *
+     * @param  array{slug: string, name: string, date_from?: ?string, date_to?: ?string, location?: ?string}  $event
      */
-    private function upsertEvent(string $slug, string $name): void
+    private function upsertEvent(PretixClient $client, array $event): void
     {
+        $slug = $event['slug'];
+
         if (blank($slug)) {
             return;
         }
 
-        Event::updateOrCreate(
-            ['pretix_event_slug' => $slug],
-            ['name' => $name ?: $slug],
-        );
+        $model = Event::firstOrNew(['pretix_event_slug' => $slug]);
+        $model->name = $event['name'] ?: $slug;
+
+        if (filled($event['date_from'] ?? null)) {
+            $model->event_date = \Illuminate\Support\Carbon::parse($event['date_from']);
+        }
+        if (filled($event['location'] ?? null)) {
+            $model->venue = $event['location'];
+        }
+
+        // Fetch the event image once (only when we don't already have one).
+        if (blank($model->logo_path)) {
+            if ($url = $client->eventLogoUrl($slug)) {
+                if ($bytes = $client->download($url)) {
+                    $ext = pathinfo(parse_url($url, PHP_URL_PATH) ?: '', PATHINFO_EXTENSION) ?: 'png';
+                    $path = "event-logos/{$slug}." . strtolower($ext);
+                    \Illuminate\Support\Facades\Storage::disk('public')->put($path, $bytes);
+                    $model->logo_path = $path;
+                }
+            }
+        }
+
+        $model->save();
     }
 
     /**

@@ -14,9 +14,12 @@
 
     /* ===== Page canvas (light-only surfaces; dark mode keeps Filament's) ===== */
     html:not(.dark) .fi-body { background-color: var(--lte-body) !important; }
-    .fi-main { padding-top: 1rem !important; padding-bottom: 1.25rem !important; gap: 1rem !important; }
-    .fi-main > * + * { margin-top: 1rem !important; }
-    .fi-page { gap: 1rem !important; }
+    .fi-main { padding: .8rem 1rem !important; gap: .7rem !important; }
+    .fi-main > * + * { margin-top: .7rem !important; }
+    .fi-page { gap: .7rem !important; }
+    /* tighter page header (title + actions) */
+    .fi-header { margin-bottom: .1rem !important; }
+    .fi-header-heading { font-size: 1.3rem !important; }
 
     /* ===== Dark sidebar (the AdminLTE signature) ===== */
     .fi-sidebar { background-color: var(--lte-sidebar) !important; }
@@ -59,8 +62,8 @@
         border-radius: .4rem !important;
         box-shadow: 0 1px 3px rgba(0,0,0,.12) !important;
     }
-    .fi-section-content { padding: .8rem 1rem !important; }
-    .fi-section-header { padding: .7rem 1rem !important; }
+    .fi-section-content { padding: .65rem .9rem !important; }
+    .fi-section-header { padding: .55rem .9rem !important; }
     html:not(.dark) .fi-section-header { border-bottom: 1px solid #edf0f3; }
     .fi-section-header-heading { font-size: .95rem !important; font-weight: 600 !important; }
     html:not(.dark) .fi-section-header-heading { color: #1f2d3d !important; }
@@ -70,7 +73,10 @@
     html:not(.dark) .fi-ta-header-cell { background: #f8fafc !important; border-bottom: 2px solid #dee2e6 !important; }
     .fi-ta-header-cell-label { font-size: .72rem !important; text-transform: uppercase; letter-spacing: .03em; }
     html:not(.dark) .fi-ta-header-cell-label { color: #5f6b7a !important; }
-    .fi-ta-cell { padding-top: .32rem !important; padding-bottom: .32rem !important; }
+    .fi-ta-cell { padding-top: .28rem !important; padding-bottom: .28rem !important; }
+    /* tighter toolbar above tables (search + filters) */
+    .fi-ta-header-toolbar { padding: .5rem .75rem !important; }
+    .fi-ta-header-ctn { gap: .4rem !important; }
     html:not(.dark) .fi-ta-row:nth-child(even) { background-color: #fafbfd; }
     html:not(.dark) .fi-ta-row:hover { background-color: #eef4fb !important; transition: background-color .1s; }
     .dark .fi-ta-row:hover { background-color: rgba(255,255,255,.04) !important; }
@@ -93,8 +99,8 @@
     .fi-btn { border-radius: .3rem !important; box-shadow: 0 1px 2px rgba(0,0,0,.1) !important; }
 
     /* ===== Widgets grid ===== */
-    .fi-wi { gap: .9rem !important; }
-    .fi-wi-stats-overview-stat { padding: .85rem 1rem !important; }
+    .fi-wi { gap: .7rem !important; }
+    .fi-wi-stats-overview-stat { padding: .7rem .9rem !important; }
 
     /* ===== AdminLTE small boxes (dashboard) ===== */
     .lte-small-boxes { display: grid; gap: .9rem; grid-template-columns: repeat(1, 1fr); }
@@ -128,9 +134,18 @@
     .lte-bg-danger { background: linear-gradient(180deg, #e6505f, #dc3545); }
     .lte-bg-secondary { background: linear-gradient(180deg, #78828b, #6c757d); }
 
-    /* ===== Forms ===== */
-    .fi-fo-component-ctn { gap: .75rem !important; }
+    /* ===== Forms: tighter field stacks + polished inputs ===== */
+    .fi-fo-component-ctn { gap: .6rem !important; }
+    .fi-fo-field-wrp-label { font-size: .8rem !important; font-weight: 600 !important; }
     .fi-input-wrp { border-radius: .3rem !important; }
+    .fi-input-wrp:focus-within { box-shadow: 0 0 0 3px rgba(0,123,255,.15) !important; }
+    /* modals a touch tighter */
+    .fi-modal-content { gap: .7rem !important; }
+
+    /* small-boxes: a little more compact */
+    .lte-small-boxes { gap: .7rem; }
+    .lte-small-box .inner { padding: .7rem .9rem .5rem; }
+    .lte-small-box .value { font-size: 1.5rem; }
 
     /* ===== Login card ===== */
     html:not(.dark) .fi-simple-layout { background: var(--lte-body) !important; }

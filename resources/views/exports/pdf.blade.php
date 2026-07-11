@@ -83,9 +83,51 @@
             padding-top: 6px;
         }
         .content { padding: 15mm 10mm; }
+        /* Event cover page */
+        .cover { height: 267mm; display: flex; flex-direction: column; page-break-after: always; }
+        .cover-hero { text-align: center; padding-top: 22mm; }
+        .cover-hero img { max-width: 150mm; max-height: 95mm; object-fit: contain; border-radius: 6px; }
+        .cover-title { margin-top: 12mm; text-align: center; }
+        .cover-title h1 { font-size: 30px; color: #1d4ed8; margin: 0 0 6px 0; }
+        .cover-title .cust { font-size: 14px; color: #52606d; }
+        .cover-facts { margin: 12mm auto 0; width: 130mm; }
+        .cover-facts .fact { display: flex; padding: 7px 0; border-bottom: 1px solid #e2e8f0; font-size: 12.5px; }
+        .cover-facts .fact .k { width: 42mm; color: #64748b; font-weight: bold; }
+        .cover-desc { margin: 8mm auto 0; width: 130mm; font-size: 11.5px; color: #334155; line-height: 1.5; }
+        .cover-foot { margin-top: auto; text-align: center; font-size: 10px; color: #94a3b8; }
     </style>
 </head>
 <body>
+@if ($event)
+    <div class="content cover">
+        <div class="cover-hero">
+            @if ($event->logo_path && file_exists(storage_path('app/public/' . $event->logo_path)))
+                <img src="{{ storage_path('app/public/' . $event->logo_path) }}" alt="Event">
+            @endif
+        </div>
+        <div class="cover-title">
+            <h1>{{ $event->displayName() }}</h1>
+            @if ($event->customer)<div class="cust">Abrechnung für {{ $event->customer->name }}</div>@endif
+        </div>
+        <div class="cover-facts">
+            @if ($event->event_date)
+                <div class="fact"><span class="k">Veranstaltungsdatum</span><span>{{ $event->event_date->translatedFormat('l, d. F Y') }}</span></div>
+            @endif
+            @if ($event->venue)
+                <div class="fact"><span class="k">Ort</span><span>{{ $event->venue }}</span></div>
+            @endif
+            @if ($event->contact_person)
+                <div class="fact"><span class="k">Ansprechpartner</span><span>{{ $event->contact_person }}</span></div>
+            @endif
+            <div class="fact"><span class="k">Zahlungszeitraum</span><span>{{ optional($period['from'])->format('d.m.Y') ?? '–' }} – {{ optional($period['to'])->format('d.m.Y') ?? '–' }}</span></div>
+            <div class="fact"><span class="k">Transaktionen</span><span>{{ $grand_total['count'] ?? 0 }}</span></div>
+        </div>
+        @if ($event->short_description)
+            <div class="cover-desc">{{ $event->short_description }}</div>
+        @endif
+        <div class="cover-foot">{{ $title }} &middot; erstellt am {{ $generated_at->format('d.m.Y H:i') }}</div>
+    </div>
+@endif
 <div class="content">
     <div class="header">
         <div>

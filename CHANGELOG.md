@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.21.0] - 2026-07-11
+
+### Neu
+
+- **Event-Deckseite im Kundenexport**: Betrifft ein Export genau ein Event, beginnt das PDF jetzt mit einer
+  eigenen Titelseite – **Event-Bild aus pretix**, Eventname, Kunde, Veranstaltungsdatum, Ort,
+  Ansprechpartner, Zahlungszeitraum und Transaktionszahl. Danach folgt wie gehabt die Auswertung.
+- Der pretix-Import **reichert die lokalen Events automatisch an**: Datum (`date_from`), Ort (`location`)
+  und das in den pretix-Event-Einstellungen hinterlegte **Event-Bild** (wird einmalig heruntergeladen und
+  lokal gespeichert). Ein manuell gesetztes Logo/Datum wird nicht mit leeren pretix-Werten überschrieben.
+
+### UI
+
+- **Kompakteres Interface**: durchgängig reduzierte Abstände (Seitenränder, Sektionen, Tabellen-Toolbar und
+  -zeilen, Formulare, Widgets, Kacheln) und etwas Feinschliff (Fokus-Ring an Eingabefeldern, kompaktere
+  Seitenüberschrift).
+
 ## [0.20.0] - 2026-07-11
 
 ### Sicherheit

@@ -91,6 +91,35 @@ class PretixImportReconcileTest extends TestCase
         $this->assertSame(1, $summary['unmatched']);
     }
 
+    public function test_event_is_enriched_with_date_location_and_downloaded_logo(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+
+        Http::fake([
+            '*/events/sportfest/orders/*' => Http::response(['results' => [], 'next' => null]),
+            '*/events/sportfest/settings/' => Http::response(['logo_image' => 'https://pretix.eu/media/logo.png'], 200),
+            '*/media/logo.png' => Http::response('PNGBYTES', 200),
+            '*/events/*' => Http::response([
+                'results' => [[
+                    'slug' => 'sportfest',
+                    'name' => ['de' => 'Sommersportfest'],
+                    'date_from' => '2026-08-15T18:00:00Z',
+                    'location' => ['de' => 'Sporthalle Wismar'],
+                ]],
+                'next' => null,
+            ]),
+        ]);
+
+        app(PretixOrderImporter::class)->import($this->connection());
+
+        $event = \App\Models\Event::where('pretix_event_slug', 'sportfest')->firstOrFail();
+        $this->assertSame('Sommersportfest', $event->name);
+        $this->assertSame('2026-08-15', $event->event_date->format('Y-m-d'));
+        $this->assertSame('Sporthalle Wismar', $event->venue);
+        $this->assertNotNull($event->logo_path);
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($event->logo_path);
+    }
+
     public function test_events_are_auto_created_from_pretix_and_transactions_assigned_by_slug(): void
     {
         Http::fake([

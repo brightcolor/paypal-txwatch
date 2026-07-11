@@ -77,14 +77,75 @@ class PretixClient
             foreach ($results as $event) {
                 $events[] = [
                     'slug' => $event['slug'] ?? '',
-                    'name' => is_array($event['name'] ?? null)
-                        ? (reset($event['name']) ?: ($event['slug'] ?? ''))
-                        : ($event['name'] ?? ($event['slug'] ?? '')),
+                    'name' => self::localized($event['name'] ?? null) ?: ($event['slug'] ?? ''),
+                    'date_from' => $event['date_from'] ?? null,
+                    'date_to' => $event['date_to'] ?? null,
+                    'location' => self::localized($event['location'] ?? null),
                 ];
             }
         });
 
         return $events;
+    }
+
+    /**
+     * The event's logo image URL from its settings (or null). pretix exposes
+     * uploaded event images (logo/header) as absolute media URLs in the event
+     * settings endpoint.
+     */
+    public function eventLogoUrl(string $eventSlug): ?string
+    {
+        $organizer = $this->connection->organizer_slug;
+
+        try {
+            $settings = $this->http()->get("/organizers/{$organizer}/events/{$eventSlug}/settings/");
+
+            if (! $settings->successful()) {
+                return null;
+            }
+
+            $logo = $settings->json('logo_image') ?: $settings->json('og_image') ?: null;
+
+            if (! $logo) {
+                return null;
+            }
+
+            // Media paths may be relative to the instance host, not the API base.
+            return str_starts_with($logo, 'http')
+                ? $logo
+                : rtrim($this->connection->base_url, '/') . '/' . ltrim($logo, '/');
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Downloads a pretix media URL (token-authenticated) and returns the raw
+     * bytes, or null on any failure. Used to cache the event image locally.
+     * Uses an absolute URL directly so the API base URL is not prepended.
+     */
+    public function download(string $url): ?string
+    {
+        try {
+            $response = Http::withToken($this->connection->api_token, 'Token')->timeout(30)->get($url);
+
+            return $response->successful() ? $response->body() : null;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * pretix returns many text fields as {locale: value} maps; pick a sensible
+     * single string (German first, then whatever is there).
+     */
+    private static function localized(mixed $value): ?string
+    {
+        if (is_array($value)) {
+            return $value['de'] ?? $value['de-informal'] ?? $value['en'] ?? (reset($value) ?: null);
+        }
+
+        return $value !== '' ? $value : null;
     }
 
     /**
