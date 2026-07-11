@@ -57,9 +57,13 @@ class PretixTransactionBooker
                 continue;
             }
 
-            $isBankTransfer = str_contains(strtolower((string) $order->payment_provider), 'banktransfer');
-            $fee = $isBankTransfer ? -$connection->bankTransferFee() : 0.0;
+            // Per user decision (2026-07-11): "manual" orders are hand-confirmed
+            // bank-transfer receipts at HSP, so they carry the transfer fee too.
+            // Never charge the fee on zero-total orders (free tickets).
+            $provider = strtolower((string) $order->payment_provider);
+            $isBankTransfer = str_contains($provider, 'banktransfer') || $provider === 'manual';
             $gross = (float) $order->total;
+            $fee = ($isBankTransfer && $gross > 0) ? -$connection->bankTransferFee() : 0.0;
 
             $transaction = Transaction::updateOrCreate(
                 ['dedupe_key' => $dedupeKey],

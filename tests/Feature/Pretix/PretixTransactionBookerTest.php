@@ -92,6 +92,25 @@ class PretixTransactionBookerTest extends TestCase
         $this->assertSame('30.00', $tx->net_amount);
     }
 
+    public function test_manual_orders_are_treated_as_bank_transfers_with_fee_except_free_ones(): void
+    {
+        // "manual" = hand-confirmed bank-transfer receipts (user decision) -> fee applies.
+        $c = $this->connection();
+        $this->order($c, ['payment_provider' => 'manual', 'total' => 61.15]);
+        $this->order($c, ['payment_provider' => 'manual', 'total' => 0.00]);
+        $this->order($c, ['payment_provider' => 'free', 'total' => 0.00]);
+
+        (new PretixTransactionBooker())->book($c);
+
+        $paid = Transaction::where('gross_amount', '>', 0)->firstOrFail();
+        $this->assertSame('-0.20', $paid->fee_amount);
+        $this->assertSame('60.95', $paid->net_amount);
+
+        foreach (Transaction::where('gross_amount', 0)->get() as $freeTx) {
+            $this->assertSame('0.00', $freeTx->fee_amount);
+        }
+    }
+
     public function test_rebooking_is_idempotent_and_mirrors_a_later_cancellation(): void
     {
         $c = $this->connection();
