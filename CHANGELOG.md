@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.18.0] - 2026-07-11
+
+### UI-Überarbeitung im AdminLTE-Stil
+
+- **Dunkle Sidebar** mit blauem Aktiv-Zustand und Uppercase-Gruppenüberschriften, helle Topbar mit Schatten,
+  grauer Seitenhintergrund – der klassische Admin-Panel-Look.
+- **Dashboard mit "Small Boxes"**: 8 farbige Kennzahl-Kacheln (Umsatz, Transaktionen, Gebühren inkl. Quote,
+  Nach Gebühren, Ø Warenkorb, Rückzahlungen, Ohne Event, pretix-Abweichungen) mit Icon-Wasserzeichen und
+  **"Mehr Infos →"-Links direkt in die passend vorgefilterte Transaktionsliste**. Warnkacheln färben sich
+  automatisch (grün bei 0, gelb/rot bei Handlungsbedarf).
+- **Cards/Sektionen** mit blauer Akzent-Oberkante und Schatten; **Tabellen** gestreift, mit Hover-Effekt,
+  Sticky-Header, Uppercase-Spaltenköpfen und Tabellenziffern für Beträge.
+- **Beträge** rechtsbündig und gefärbt (Einnahmen grün, negative Beträge rot); **Status** jetzt deutsch und
+  farbig (bezahlt/ausstehend/abgelehnt/storniert); Badges in kräftigen Vollfarben statt blasser Pillen.
+- **Branding**: eigenes Logo in der Sidebar, Favicon, aufgeräumte Login-Karte. Dark-Mode-Umschalter
+  deaktiviert (kollidiert mit dem AdminLTE-Design).
+
 ## [0.17.1] - 2026-07-11
 
 ### Tests / Qualität

@@ -30,6 +30,12 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->brandName('PayPal TxWatch')
+            ->brandLogo(fn () => view('filament.brand-logo'))
+            ->favicon(asset('favicon.svg'))
+            // AdminLTE-style theme (see filament.adminlte-theme): classic light
+            // admin look with a dark sidebar - the dark-mode toggle would fight
+            // that design, so it's off.
+            ->darkMode(false)
             // Use the full viewport width for content (the default is a narrow centered
             // column that leaves large unused margins on wide screens, which matters here
             // because the transactions table has many columns).
@@ -38,7 +44,12 @@ class AdminPanelProvider extends PanelProvider
             ->passwordReset()
             ->profile()
             ->colors([
-                'primary' => Color::Blue,
+                'primary' => Color::hex('#007bff'),
+                'info' => Color::hex('#17a2b8'),
+                'success' => Color::hex('#28a745'),
+                'warning' => Color::hex('#ffc107'),
+                'danger' => Color::hex('#dc3545'),
+                'gray' => Color::Slate,
             ])
             ->navigationGroups([
                 'PayPal',
@@ -78,7 +89,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
-                fn () => view('filament.compact-styles'),
+                fn () => view('filament.adminlte-theme'),
             )
             ->renderHook(
                 PanelsRenderHook::FOOTER,
