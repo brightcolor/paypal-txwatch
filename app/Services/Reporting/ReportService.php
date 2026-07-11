@@ -3,6 +3,7 @@
 namespace App\Services\Reporting;
 
 use App\Models\Transaction;
+use App\Support\CustomerScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -17,9 +18,11 @@ class ReportService
 {
     private function baseQuery(?Carbon $from, ?Carbon $to): Builder
     {
-        return Transaction::query()
-            ->excludingLedgerEvents()
-            ->excludingIrrelevant()
+        return CustomerScope::transactions(
+            Transaction::query()
+                ->excludingLedgerEvents()
+                ->excludingIrrelevant()
+        )
             ->when($from, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '>=', $from))
             ->when($to, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '<=', $to));
     }
@@ -181,8 +184,8 @@ class ReportService
         $refunds = (float) $this->refundsSummary($from, $to)['total'];
 
         // Payouts are ledger events -> not in baseQuery(); query them directly.
-        $payoutRow = Transaction::query()
-            ->excludingIrrelevant()
+        // Customer-scoped too: payouts carry no event, so customers see none.
+        $payoutRow = CustomerScope::transactions(Transaction::query()->excludingIrrelevant())
             ->payouts()
             ->when($from, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '>=', $from))
             ->when($to, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '<=', $to))
@@ -212,8 +215,7 @@ class ReportService
      */
     public function payouts(?Carbon $from = null, ?Carbon $to = null): Collection
     {
-        return Transaction::query()
-            ->excludingIrrelevant()
+        return CustomerScope::transactions(Transaction::query()->excludingIrrelevant())
             ->payouts()
             ->when($from, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '>=', $from))
             ->when($to, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '<=', $to))

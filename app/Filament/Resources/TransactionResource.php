@@ -58,13 +58,9 @@ class TransactionResource extends Resource
             // the 25 rows/page lazily loads event + paypalAccount + irrelevantMarkedBy +
             // pretixOrder (N+1: dozens of extra queries per page render).
             ->with(['event', 'paypalAccount', 'irrelevantMarkedBy', 'pretixOrder']);
-        $user = auth()->user();
 
-        if ($user && $user->hasRole('customer')) {
-            $query->whereHas('event', fn (Builder $q) => $q->where('customer_id', $user->customer_id));
-        }
-
-        return $query;
+        // Customer users only ever see their own customer's transactions.
+        return \App\Support\CustomerScope::transactions($query);
     }
 
     /**

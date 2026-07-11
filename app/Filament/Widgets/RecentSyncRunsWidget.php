@@ -15,6 +15,12 @@ class RecentSyncRunsWidget extends BaseWidget
 
     protected static bool $isLazy = false;
 
+    public static function canView(): bool
+    {
+        // Operator-only: customers have no business seeing sync runs.
+        return ! (auth()->user()?->hasRole('customer') ?? false);
+    }
+
     public function table(Table $table): Table
     {
         return $table

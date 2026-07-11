@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.28.0] - 2026-07-11
+
+### Neu / Sicherheit
+
+- **Kundenportal-Scoping**: Ein Benutzer mit der Rolle *Kunde* sieht ab jetzt ausschließlich Daten des
+  eigenen `customer_id` – serverseitig erzwungen über einen zentralen `CustomerScope`:
+  - **Transaktionsliste**, **Berichte** und **Finanzabschluss (Monatsabschluss)** sind auf die eigenen
+    Events gescoped.
+  - **Abrechnungen** sind für Kunden sichtbar (read-only, PDF-Download), aber nur die eigenen; „Als
+    ausgezahlt"/„Wieder öffnen" bleiben dem Betreiber vorbehalten.
+  - **Dashboard**: KPI-Kacheln und Umsatz-Chart zeigen dem Kunden nur seine Zahlen (Cache pro Scope, damit
+    keine Betreiber-Zahlen durchschlagen); Sync-Gesundheit, letzte Läufe und „Zu prüfen" sind für Kunden
+    ausgeblendet.
+  - Der Auszahlungs-Abgleich (PayPal→Bank) ist ein Betreiber-Konzept und für Kunden ausgeblendet.
+  - Kunde ohne `customer_id` sieht **nichts** (statt versehentlich alles).
+
 ## [0.27.0] - 2026-07-11
 
 ### Neu

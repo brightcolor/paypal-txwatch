@@ -26,13 +26,19 @@ class NeedsReviewWidget extends BaseWidget
 
     public static function canView(): bool
     {
+        // Operator concern (reconciliation), and never shown to customers.
+        if (auth()->user()?->hasRole('customer') ?? false) {
+            return false;
+        }
+
         return static::baseQuery()->exists();
     }
 
     protected static function baseQuery(): Builder
     {
-        return Transaction::query()
-            ->excludingIrrelevant()
+        return \App\Support\CustomerScope::transactions(
+            Transaction::query()->excludingIrrelevant()
+        )
             ->whereIn('reconciliation_status', [
                 Transaction::RECONCILIATION_MISMATCH,
                 Transaction::RECONCILIATION_UNMATCHED,

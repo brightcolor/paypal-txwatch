@@ -23,9 +23,12 @@ class DashboardStatsOverview extends Widget
     protected function getViewData(): array
     {
         // 8 aggregate queries per dashboard hit adds up once the table grows;
-        // 60s staleness is irrelevant for these KPIs.
+        // 60s staleness is irrelevant for these KPIs. Key by the active customer
+        // scope so a customer never gets an operator's cached global figures.
+        $scope = \App\Support\CustomerScope::activeCustomerId() ?? 'all';
+
         return \Illuminate\Support\Facades\Cache::remember(
-            'dashboard_small_boxes',
+            "dashboard_small_boxes:{$scope}",
             now()->addSeconds(60),
             fn () => $this->computeViewData(),
         );
@@ -35,7 +38,10 @@ class DashboardStatsOverview extends Widget
     {
         $since = Carbon::now()->subDays(30);
 
-        $base = Transaction::query()->excludingLedgerEvents()->excludingIrrelevant()->where('transaction_initiation_date', '>=', $since);
+        // Customer users see only their own customer's figures.
+        $base = \App\Support\CustomerScope::transactions(
+            Transaction::query()->excludingLedgerEvents()->excludingIrrelevant()
+        )->where('transaction_initiation_date', '>=', $since);
 
         $count = (clone $base)->count();
         $gross = (clone $base)->sum('gross_amount');
@@ -45,7 +51,8 @@ class DashboardStatsOverview extends Widget
         $avgBasket = $count > 0 ? $gross / $count : 0;
         $feeRatio = $gross != 0 ? abs($fees / $gross) * 100 : 0;
         $unassigned = (clone $base)->whereNull('event_id')->count();
-        $mismatch = Transaction::query()->where('reconciliation_status', Transaction::RECONCILIATION_MISMATCH)->count();
+        $mismatch = \App\Support\CustomerScope::transactions(Transaction::query())
+            ->where('reconciliation_status', Transaction::RECONCILIATION_MISMATCH)->count();
 
         $eur = fn ($v) => number_format($v, 2, ',', '.') . ' €';
         $url = fn (array $filters = []) => TransactionResource::getUrl('index', array_filter(['tableFilters' => $filters]));

@@ -3,6 +3,7 @@
         {{ $this->form }}
     </form>
 
+    @if ($this->isOperator())
     @php($r = $this->reconciliation)
 
     <x-filament::section heading="Auszahlungs-Abgleich (PayPal → Bank)">
@@ -46,6 +47,7 @@
             </table>
         </div>
     </x-filament::section>
+    @endif
 
     <x-filament::section heading="Monatsabschluss (Steuerberater)">
         <x-slot name="description">Pro Monat: Umsatz, Gebühren, Erstattungen und Umsatzsteuer (echte pretix-Steuer, wo verknüpft, sonst Fallback-Satz). Oben rechts als CSV herunterladbar.</x-slot>

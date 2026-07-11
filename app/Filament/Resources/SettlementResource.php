@@ -28,7 +28,10 @@ class SettlementResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->can('manage-exports') ?? false;
+        $user = auth()->user();
+
+        // Managers/admins manage all; customers may read their own settlements.
+        return (bool) ($user?->can('manage-exports') || $user?->hasRole('customer'));
     }
 
     public static function canCreate(): bool
@@ -37,8 +40,24 @@ class SettlementResource extends Resource
         return false;
     }
 
+    /** Whether the current user may change settlements (mark paid / reopen). */
+    protected static function canManage(): bool
+    {
+        return auth()->user()?->can('manage-exports') ?? false;
+    }
+
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        // Customers only ever see their own customer's settlements.
+        return \App\Support\CustomerScope::byCustomerId(parent::getEloquentQuery());
+    }
+
     public static function getNavigationBadge(): ?string
     {
+        if (! static::canManage()) {
+            return null;
+        }
+
         $open = Settlement::where('status', Settlement::STATUS_OPEN)->count();
 
         return $open > 0 ? (string) $open : null;
@@ -84,7 +103,7 @@ class SettlementResource extends Resource
                     ->label('Als ausgezahlt markieren')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->visible(fn (Settlement $record) => ! $record->isPaid())
+                    ->visible(fn (Settlement $record) => static::canManage() && ! $record->isPaid())
                     ->form([
                         Forms\Components\DatePicker::make('paid_at')->label('Ausgezahlt am')->default(now())->required(),
                         Forms\Components\TextInput::make('paid_reference')->label('Referenz/Beleg')->helperText('z. B. Überweisungsverwendungszweck'),
@@ -103,7 +122,7 @@ class SettlementResource extends Resource
                     ->label('Wieder öffnen')
                     ->icon('heroicon-o-arrow-uturn-left')
                     ->color('gray')
-                    ->visible(fn (Settlement $record) => $record->isPaid())
+                    ->visible(fn (Settlement $record) => static::canManage() && $record->isPaid())
                     ->requiresConfirmation()
                     ->action(fn (Settlement $record) => $record->update(['status' => Settlement::STATUS_OPEN, 'paid_at' => null])),
             ]);

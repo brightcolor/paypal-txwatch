@@ -19,9 +19,9 @@ class RevenueByDayChart extends ChartWidget
     {
         $since = Carbon::now()->subDays(30)->startOfDay();
 
-        $rows = Transaction::query()
-            ->excludingLedgerEvents()
-            ->excludingIrrelevant()
+        $rows = \App\Support\CustomerScope::transactions(
+            Transaction::query()->excludingLedgerEvents()->excludingIrrelevant()
+        )
             ->where('transaction_initiation_date', '>=', $since)
             ->selectRaw('DATE(transaction_initiation_date) as day, SUM(gross_amount) as gross')
             ->groupBy('day')

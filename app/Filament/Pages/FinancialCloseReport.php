@@ -43,6 +43,15 @@ class FinancialCloseReport extends Page implements HasForms
         return auth()->user()?->can('view-reports') ?? false;
     }
 
+    /**
+     * The payout reconciliation (PayPal balance bridge) is an operator concept -
+     * customers only see their own monthly summary, not the bank-payout view.
+     */
+    public function isOperator(): bool
+    {
+        return ! (auth()->user()?->hasRole('customer') ?? false);
+    }
+
     public function mount(): void
     {
         // Default to the current calendar year for a sensible first view.
