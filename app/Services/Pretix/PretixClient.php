@@ -209,6 +209,57 @@ class PretixClient
     }
 
     /**
+     * Ticket capacity/availability for an event, aggregated across its quotas.
+     * pretix' quota endpoint with ?with_availability=true returns each quota's
+     * total size and remaining available_number; sold/blocked = size - available.
+     * A quota with size=null is unlimited and marks the event as uncapped.
+     *
+     * @return array{capacity: ?int, available: int, sold: int, unlimited: bool, quotas: int}
+     */
+    public function ticketAvailability(string $eventSlug): array
+    {
+        $organizer = $this->connection->organizer_slug;
+
+        $capacity = 0;
+        $available = 0;
+        $unlimited = false;
+        $quotaCount = 0;
+
+        try {
+            $this->paginate(
+                "/organizers/{$organizer}/events/{$eventSlug}/quotas/",
+                function (array $page) use (&$capacity, &$available, &$unlimited, &$quotaCount) {
+                    foreach ($page as $quota) {
+                        $quotaCount++;
+                        $size = $quota['size'] ?? null; // null = unlimited
+                        $avail = $quota['available_number'] ?? null;
+
+                        if ($size === null) {
+                            $unlimited = true;
+
+                            continue;
+                        }
+
+                        $capacity += (int) $size;
+                        $available += (int) ($avail ?? 0);
+                    }
+                },
+                ['with_availability' => 'true'],
+            );
+        } catch (Throwable) {
+            return ['capacity' => null, 'available' => 0, 'sold' => 0, 'unlimited' => false, 'quotas' => 0];
+        }
+
+        return [
+            'capacity' => $unlimited && $capacity === 0 ? null : $capacity,
+            'available' => $available,
+            'sold' => max(0, $capacity - $available),
+            'unlimited' => $unlimited,
+            'quotas' => $quotaCount,
+        ];
+    }
+
+    /**
      * Control-panel deep link for an order, e.g.
      * https://pretix.eu/control/event/{organizer}/{event}/orders/{code}/
      */

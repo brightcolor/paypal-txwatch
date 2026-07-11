@@ -59,6 +59,7 @@ class AdminPagesSmokeTest extends TestCase
         TwoFactorAuthSettings::class,
         \App\Filament\Pages\MailSettingsPage::class,
         \App\Filament\Pages\FinancialCloseReport::class,
+        \App\Filament\Pages\TicketStatsPage::class,
     ];
 
     private function admin(): User

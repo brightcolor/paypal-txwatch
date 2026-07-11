@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.30.0] - 2026-07-11
+
+### Neu
+
+- **Ticket-Statistik (pretix)** (pretix → Ticket-Statistik): Zeigt pro Event Kapazität, verkauft/blockiert,
+  verfügbar und Auslastung – live aus den pretix-Kontingenten (`quotas` mit Verfügbarkeit), zwischen-
+  gespeichert (10 Min) und manuell aktualisierbar. Unbegrenzte Kontingente werden als „unbegrenzt" erkannt.
+  Neuer `PretixClient::ticketAvailability()` + `PretixTicketStats`-Service.
+
 ## [0.29.0] - 2026-07-11
 
 ### Neu
