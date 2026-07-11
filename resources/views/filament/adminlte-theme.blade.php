@@ -14,12 +14,13 @@
 
     /* ===== Page canvas (light-only surfaces; dark mode keeps Filament's) ===== */
     html:not(.dark) .fi-body { background-color: var(--lte-body) !important; }
-    .fi-main { padding: .8rem 1rem !important; gap: .7rem !important; }
+    /* Tight top: trim the empty space above the page heading ("Dashboard"). */
+    .fi-main { padding: .3rem 1rem .8rem !important; gap: .6rem !important; }
     .fi-main > * + * { margin-top: .7rem !important; }
-    .fi-page { gap: .7rem !important; }
+    .fi-page { gap: .6rem !important; }
     /* tighter page header (title + actions) */
-    .fi-header { margin-bottom: .1rem !important; }
-    .fi-header-heading { font-size: 1.3rem !important; }
+    .fi-header { margin-bottom: 0 !important; padding-top: 0 !important; }
+    .fi-header-heading { font-size: 1.25rem !important; }
 
     /* ===== Dark sidebar (the AdminLTE signature) ===== */
     .fi-sidebar { background-color: var(--lte-sidebar) !important; }

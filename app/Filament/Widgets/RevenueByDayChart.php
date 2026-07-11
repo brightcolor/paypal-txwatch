@@ -15,7 +15,8 @@ class RevenueByDayChart extends ChartWidget
 
     protected static bool $isLazy = false;
 
-    protected static ?int $sort = 5;
+    // Directly under the KPI tiles.
+    protected static ?int $sort = 2;
 
     protected function getData(): array
     {
