@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.12.5] - 2026-07-11
+
+### Behoben
+
+- **Import-Starts wurden nach einem abgebrochenen Lauf stillschweigend verworfen**: Der Job nutzte Laravels
+  `ShouldBeUnique`, dessen unsichtbarer Cache-Lock nach einem gekillten Lauf in Produktion zweimal dazu
+  führte, dass neue Dispatches kommentarlos verschwanden (kein Queue-Eintrag, kein failed job, keine
+  Logzeile). Der Mechanismus wurde durch einen **expliziten, beobachtbaren Guard** über die
+  Import-Lauf-Tabelle ersetzt: Ein zweiter Start wird nur übersprungen (mit Logzeile), solange ein Lauf
+  derselben Verbindung *läuft* und jünger als das Job-Timeout ist – ein hängen gebliebener „running"-Eintrag
+  blockiert also nach spätestens 30 Minuten nichts mehr (selbstheilend).
+
 ## [0.12.4] - 2026-07-11
 
 ### Behoben

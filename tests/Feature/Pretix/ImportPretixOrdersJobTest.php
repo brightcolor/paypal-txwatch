@@ -59,6 +59,33 @@ class ImportPretixOrdersJobTest extends TestCase
         $this->assertStringContainsString('Abgleich fertig', $messages);
     }
 
+    public function test_a_second_run_is_skipped_while_one_is_active_but_allowed_after_it_finished(): void
+    {
+        Http::fake([
+            '*/events/sportfest/orders/*' => Http::response(['results' => [], 'next' => null]),
+            '*/events/*' => Http::response(['results' => [['slug' => 'sportfest', 'name' => 'S']], 'next' => null]),
+        ]);
+
+        $connection = PretixConnection::create([
+            'name' => 'Verein', 'base_url' => 'https://pretix.eu', 'organizer_slug' => 'verein', 'api_token' => 'tok',
+        ]);
+
+        // Active run younger than the timeout -> skip, no new run row.
+        PretixImportRun::create([
+            'pretix_connection_id' => $connection->id,
+            'status' => PretixImportRun::STATUS_RUNNING,
+            'started_at' => now()->subMinutes(5),
+            'log' => [],
+        ]);
+        (new ImportPretixOrdersJob($connection->id))->handle(app(PretixOrderImporter::class));
+        $this->assertSame(1, PretixImportRun::count());
+
+        // Stale "running" run older than the timeout must NOT block (self-healing).
+        PretixImportRun::query()->update(['started_at' => now()->subHours(2)]);
+        (new ImportPretixOrdersJob($connection->id))->handle(app(PretixOrderImporter::class));
+        $this->assertSame(2, PretixImportRun::count());
+    }
+
     public function test_failed_import_clears_running_flag_and_records_error(): void
     {
         Http::fake([
