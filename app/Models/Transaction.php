@@ -58,6 +58,14 @@ class Transaction extends Model
      */
     public const LEDGER_ONLY_PREFIXES = ['T04', 'T20', 'T21'];
 
+    /**
+     * The subset of ledger movements that are actual payouts/withdrawals to a
+     * bank account (T04xx bank withdrawals, T20xx payouts) - money leaving the
+     * PayPal balance. Distinct from T21xx holds/reserves, which never move money
+     * out. Used by the payout reconciliation (balance bridge to the bank).
+     */
+    public const PAYOUT_PREFIXES = ['T04', 'T20'];
+
     protected $fillable = [
         'paypal_account_id',
         'event_id',
@@ -294,6 +302,20 @@ class Transaction extends Model
     public function scopeExcludingLedgerEvents(Builder $query): Builder
     {
         return $query->where('is_ledger', false);
+    }
+
+    /**
+     * Payouts/withdrawals to a bank account (T04xx/T20xx) - see PAYOUT_PREFIXES.
+     * These are ledger events (excluded from revenue) but are the money that
+     * left PayPal for the bank, so the reconciliation needs them explicitly.
+     */
+    public function scopePayouts(Builder $query): Builder
+    {
+        return $query->where(function (Builder $q) {
+            foreach (self::PAYOUT_PREFIXES as $prefix) {
+                $q->orWhere('transaction_event_code', 'like', $prefix.'%');
+            }
+        });
     }
 
     /**

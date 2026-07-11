@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.27.0] - 2026-07-11
+
+### Neu
+
+- **Finanzabschluss & Auszahlungs-Abgleich** (Berichte → Finanzabschluss): Neue Seite mit Zeitraumfilter.
+  - **Auszahlungs-Abgleich**: Bilanzbrücke PayPal → Bank. Zeigt Eingang (brutto), Gebühren, Netto-Eingang
+    (nach Gebühren & Erstattungen), ausgezahlte Beträge (T04xx/T20xx) und den rechnerischen PayPal-Saldo,
+    plus die Liste der einzelnen Auszahlungen. Reserven/Holds (T21xx) sind bewusst ausgenommen.
+  - **Monatsabschluss (Steuerberater)**: Pro Monat Umsatz, Gebühren, Erstattungen und Umsatzsteuer (echte
+    pretix-Steuer, wo verknüpft, sonst Fallback-Satz), als **CSV herunterladbar** (Semikolon, UTF-8-BOM für
+    Excel).
+- Neuer `Transaction::scopePayouts()` (T04xx/T20xx) und `PAYOUT_PREFIXES`-Konstante.
+
 ## [0.26.0] - 2026-07-11
 
 ### Neu

@@ -58,6 +58,7 @@ class AdminPagesSmokeTest extends TestCase
         PaypalCsvImport::class,
         TwoFactorAuthSettings::class,
         \App\Filament\Pages\MailSettingsPage::class,
+        \App\Filament\Pages\FinancialCloseReport::class,
     ];
 
     private function admin(): User

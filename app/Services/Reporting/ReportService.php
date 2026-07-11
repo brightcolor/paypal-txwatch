@@ -158,4 +158,104 @@ class ReportService
         ];
     }
 
+    /**
+     * Balance bridge to the bank account: how much came in (net of fees), how
+     * much was refunded, how much was paid out to the bank, and what should
+     * therefore still sit in the PayPal balance. Payouts (T04xx/T20xx) are
+     * ledger events, so they are queried separately from the revenue figures.
+     *
+     * @return array{
+     *     incoming_gross: float, fees: float, incoming_net: float,
+     *     refunds: float, payouts: float, payout_count: int,
+     *     expected_balance: float
+     * }
+     */
+    public function payoutReconciliation(?Carbon $from = null, ?Carbon $to = null): array
+    {
+        $revenue = $this->baseQuery($from, $to)
+            ->selectRaw('COALESCE(sum(gross_amount), 0) as gross')
+            ->selectRaw('COALESCE(sum(fee_amount), 0) as fee')
+            ->selectRaw('COALESCE(sum(net_amount), 0) as net')
+            ->first();
+
+        $refunds = (float) $this->refundsSummary($from, $to)['total'];
+
+        // Payouts are ledger events -> not in baseQuery(); query them directly.
+        $payoutRow = Transaction::query()
+            ->excludingIrrelevant()
+            ->payouts()
+            ->when($from, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '>=', $from))
+            ->when($to, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '<=', $to))
+            ->selectRaw('count(*) as cnt, COALESCE(sum(gross_amount), 0) as total')
+            ->first();
+
+        $incomingNet = (float) $revenue->net;      // gross - fees, refunds already negative rows in net
+        $payouts = (float) $payoutRow->total;      // negative (money leaving)
+
+        return [
+            'incoming_gross' => (float) $revenue->gross,
+            'fees' => (float) $revenue->fee,
+            'incoming_net' => $incomingNet,
+            'refunds' => $refunds,
+            'payouts' => $payouts,
+            'payout_count' => (int) $payoutRow->cnt,
+            // Net revenue already nets refunds/fees; add payouts (negative) to
+            // get what should remain in the PayPal balance for the period.
+            'expected_balance' => round($incomingNet + $payouts, 2),
+        ];
+    }
+
+    /**
+     * The individual payout/withdrawal transactions in the period, newest first.
+     *
+     * @return Collection<int, Transaction>
+     */
+    public function payouts(?Carbon $from = null, ?Carbon $to = null): Collection
+    {
+        return Transaction::query()
+            ->excludingIrrelevant()
+            ->payouts()
+            ->when($from, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '>=', $from))
+            ->when($to, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '<=', $to))
+            ->orderByDesc('transaction_initiation_date')
+            ->get(['id', 'transaction_initiation_date', 'transaction_event_code', 'gross_amount', 'currency', 'transaction_id', 'paypal_account_id']);
+    }
+
+    /**
+     * Per-month tax summary for the accountant: revenue, fees, refunds and the
+     * real VAT (from pretix where linked, else the fallback rate). One row per
+     * calendar month in the period.
+     *
+     * @return Collection<int, array{month: string, count: int, gross: float, fee: float, refunds: float, vat: float, net_excl_vat: float}>
+     */
+    public function monthlyTaxSummary(?Carbon $from = null, ?Carbon $to = null, float $fallbackRate = 19.0): Collection
+    {
+        // VAT needs per-row logic (real pretix tax vs fallback), so we stream
+        // the rows once and bucket in PHP. Bounded by the selected period.
+        $rows = $this->baseQuery($from, $to)
+            ->orderBy('transaction_initiation_date')
+            ->get(['transaction_initiation_date', 'gross_amount', 'fee_amount', 'net_amount', 'transaction_event_code', 'instrument_type', 'pretix_order_id']);
+
+        return $rows
+            ->groupBy(fn (Transaction $t) => optional($t->transaction_initiation_date)->format('Y-m') ?? 'Unbekannt')
+            ->map(function (Collection $group, string $month) use ($fallbackRate) {
+                $gross = (float) $group->sum(fn (Transaction $t) => (float) $t->gross_amount);
+                $fee = (float) $group->sum(fn (Transaction $t) => (float) $t->fee_amount);
+                $vat = (float) $group->sum(fn (Transaction $t) => $t->vatAmount($fallbackRate));
+                $refunds = (float) $group->filter(fn (Transaction $t) => $t->isRefundOrReversal())
+                    ->sum(fn (Transaction $t) => (float) $t->gross_amount);
+
+                return [
+                    'month' => $month,
+                    'count' => $group->count(),
+                    'gross' => round($gross, 2),
+                    'fee' => round($fee, 2),
+                    'refunds' => round($refunds, 2),
+                    'vat' => round($vat, 2),
+                    'net_excl_vat' => round($gross - $vat, 2),
+                ];
+            })
+            ->sortKeys()
+            ->values();
+    }
 }
