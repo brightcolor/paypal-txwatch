@@ -1,27 +1,31 @@
-<div class="overflow-x-auto">
-    <table class="w-full text-sm">
+{{-- Shared report table. Styling lives in the adminlte-theme (.rpt) as real CSS
+     because this app has no Tailwind build step - so no arbitrary utility
+     classes here. min-width (inline) lets the wrapper scroll horizontally on
+     mobile instead of squeezing money values onto two lines. --}}
+<div class="rpt-wrap">
+    <table class="rpt" style="min-width: 42rem;">
         <thead>
-            <tr class="text-left text-gray-500">
-                <th class="py-1.5 pr-4">{{ $labelHeading }}</th>
-                <th class="py-1.5 pr-4 text-right">Anzahl</th>
-                <th class="py-1.5 pr-4 text-right">Umsatz</th>
-                <th class="py-1.5 pr-4 text-right">Gebühr</th>
-                <th class="py-1.5 pr-4 text-right">Nach Gebühren</th>
-                <th class="py-1.5 pr-4 text-right">Gebührenquote</th>
+            <tr>
+                <th>{{ $labelHeading }}</th>
+                <th class="num">Anzahl</th>
+                <th class="num">Umsatz</th>
+                <th class="num">Gebühr</th>
+                <th class="num">Nach Gebühren</th>
+                <th class="num">Gebührenquote</th>
             </tr>
         </thead>
         <tbody>
             @forelse ($rows as $row)
-                <tr class="border-t border-gray-100 dark:border-gray-800">
-                    <td class="py-1.5 pr-4 font-medium">{{ $row['label'] }}</td>
-                    <td class="py-1.5 pr-4 text-right">{{ $row['count'] }}</td>
-                    <td class="py-1.5 pr-4 text-right">{{ number_format($row['gross'], 2, ',', '.') }} €</td>
-                    <td class="py-1.5 pr-4 text-right">{{ number_format($row['fee'], 2, ',', '.') }} €</td>
-                    <td class="py-1.5 pr-4 text-right">{{ number_format($row['net'], 2, ',', '.') }} €</td>
-                    <td class="py-1.5 pr-4 text-right">{{ $row['fee_ratio'] }}%</td>
+                <tr>
+                    <td class="lbl">{{ $row['label'] }}</td>
+                    <td class="num">{{ $row['count'] }}</td>
+                    <td class="num">{{ number_format($row['gross'], 2, ',', '.') }}&nbsp;€</td>
+                    <td class="num @if($row['fee'] < 0) neg @endif">{{ number_format($row['fee'], 2, ',', '.') }}&nbsp;€</td>
+                    <td class="num strong">{{ number_format($row['net'], 2, ',', '.') }}&nbsp;€</td>
+                    <td class="num muted">{{ $row['fee_ratio'] }}&nbsp;%</td>
                 </tr>
             @empty
-                <tr><td colspan="6" class="py-3 text-gray-400">Keine Daten im gewählten Zeitraum.</td></tr>
+                <tr><td colspan="6" class="rpt-empty">Keine Daten im gewählten Zeitraum.</td></tr>
             @endforelse
         </tbody>
     </table>

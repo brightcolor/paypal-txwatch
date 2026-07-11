@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.25.3] - 2026-07-11
+
+### Behoben
+
+- **Berichte-Tabellen auf dem Handy aufgeräumt.** Geldwerte brachen um (Zahl und „€" auf getrennten Zeilen)
+  und Überschriften wie „Nach Gebühren" überlappten, weil die Tabellen auf Handybreite zusammengequetscht
+  wurden. Jetzt: eigene, umbruchfreie Spalten mit gleicher Ziffernbreite (tabular), Zebra-Zeilen, negative
+  Gebühren rot, und die Tabelle scrollt bei Bedarf horizontal statt zu quetschen. Styling als echtes CSS im
+  Theme (die App hat keinen Tailwind-Build, daher keine Utility-Klassen).
+
 ## [0.25.2] - 2026-07-11
 
 ### Behoben

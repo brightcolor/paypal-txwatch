@@ -35,24 +35,24 @@
     </x-filament::section>
 
     <x-filament::section heading="Event-Kürzel-Analyse (aus Bestellnummer)">
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+        <div class="rpt-wrap">
+            <table class="rpt" style="min-width: 22rem;">
                 <thead>
-                    <tr class="text-left text-gray-500">
-                        <th class="py-1.5 pr-4">Event-Kürzel</th>
-                        <th class="py-1.5 pr-4 text-right">Anzahl</th>
-                        <th class="py-1.5 pr-4 text-right">Umsatz</th>
+                    <tr>
+                        <th>Event-Kürzel</th>
+                        <th class="num">Anzahl</th>
+                        <th class="num">Umsatz</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($this->customFieldPrefixes as $row)
-                        <tr class="border-t border-gray-100 dark:border-gray-800">
-                            <td class="py-1.5 pr-4 font-medium">{{ $row['prefix'] }}</td>
-                            <td class="py-1.5 pr-4 text-right">{{ $row['count'] }}</td>
-                            <td class="py-1.5 pr-4 text-right">{{ number_format($row['gross'], 2, ',', '.') }} €</td>
+                        <tr>
+                            <td class="lbl">{{ $row['prefix'] }}</td>
+                            <td class="num">{{ $row['count'] }}</td>
+                            <td class="num">{{ number_format($row['gross'], 2, ',', '.') }}&nbsp;€</td>
                         </tr>
                     @empty
-                        <tr><td colspan="3" class="py-3 text-gray-400">Keine Daten im gewählten Zeitraum.</td></tr>
+                        <tr><td colspan="3" class="rpt-empty">Keine Daten im gewählten Zeitraum.</td></tr>
                     @endforelse
                 </tbody>
             </table>

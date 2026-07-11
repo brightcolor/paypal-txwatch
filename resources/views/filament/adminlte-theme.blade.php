@@ -165,6 +165,30 @@
     .lte-small-box .inner { padding: .7rem .9rem .5rem; }
     .lte-small-box .value { font-size: 1.5rem; }
 
+    /* ===== Report tables (Berichte-Seite) =====
+       Plain CSS (no Tailwind build here). The wrapper scrolls horizontally on
+       mobile; numeric cells never wrap ("1.436,46 €" stays on one line) and use
+       tabular figures so columns line up. */
+    .rpt-wrap { overflow-x: auto; margin: 0 -.25rem; padding: 0 .25rem; -webkit-overflow-scrolling: touch; }
+    .rpt { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    .rpt th, .rpt td { padding: .4rem .55rem; }
+    .rpt thead th {
+        text-align: left; font-weight: 600; white-space: nowrap;
+        color: #5f6b7a; border-bottom: 2px solid #dee2e6;
+        font-size: .72rem; text-transform: uppercase; letter-spacing: .03em;
+    }
+    .dark .rpt thead th { color: #9aa4b2; border-bottom-color: rgba(255,255,255,.12); }
+    .rpt tbody tr { border-top: 1px solid #edf0f3; }
+    .dark .rpt tbody tr { border-top-color: rgba(255,255,255,.06); }
+    html:not(.dark) .rpt tbody tr:nth-child(even) { background: #fafbfd; }
+    .rpt td.num, .rpt th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .rpt td.lbl { font-weight: 500; white-space: nowrap; }
+    .rpt td.strong { font-weight: 600; }
+    .rpt td.muted { color: #6c757d; }
+    .rpt td.neg { color: #dc3545; }
+    .dark .rpt td.neg { color: #f28b95; }
+    .rpt-empty { padding: .75rem .55rem; color: #9aa0a6; }
+
     /* ===== Login card ===== */
     html:not(.dark) .fi-simple-layout { background: var(--lte-body) !important; }
     .fi-simple-main {
