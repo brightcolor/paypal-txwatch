@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.23.0] - 2026-07-11
+
+### Neu
+
+- **Fehler-Benachrichtigungen** über das Glocken-Symbol im Panel (kein SMTP nötig, alle 30 s aktualisiert):
+  Admins werden bei **fehlgeschlagenem PayPal-Sync**, **fehlgeschlagenem pretix-Import** und bei **neuen
+  pretix-Abgleich-Abweichungen** benachrichtigt (jeweils mit Direkt-Link). Abweichungs-Meldungen kommen nur
+  bei *neuen* Abweichungen, damit der 30-Minuten-Takt nicht spammt. Jede Meldung landet zusätzlich im Log;
+  E-Mail lässt sich nachrüsten, sobald SMTP konfiguriert ist.
+
 ## [0.22.0] - 2026-07-11
 
 ### Neu

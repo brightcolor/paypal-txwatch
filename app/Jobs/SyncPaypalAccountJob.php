@@ -54,6 +54,13 @@ class SyncPaypalAccountJob implements ShouldQueue
 
     public function failed(Throwable $exception): void
     {
-        // Already recorded on the SyncRun/ImportError by SyncService; nothing else to do.
+        // Recorded on the SyncRun/ImportError by SyncService; also alert admins.
+        $name = \App\Models\PaypalAccount::find($this->paypalAccountId)?->name ?? "#{$this->paypalAccountId}";
+
+        \App\Support\AdminNotifier::warn(
+            'PayPal-Sync fehlgeschlagen',
+            "Konto „{$name}“: " . $exception->getMessage(),
+            \App\Filament\Resources\SyncRunResource::getUrl('index'),
+        );
     }
 }

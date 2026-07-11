@@ -42,6 +42,10 @@ class AdminPanelProvider extends PanelProvider
             // Livewire-navigate page switches: no full reload per menu click,
             // which is most of the perceived sluggishness when navigating.
             ->spa()
+            // Bell-icon notifications (sync/import failures, reconciliation
+            // mismatches), polled every 30s. See App\Support\AdminNotifier.
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('30s')
             ->login()
             ->passwordReset()
             ->profile()

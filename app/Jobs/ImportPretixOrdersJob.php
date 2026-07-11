@@ -72,6 +72,13 @@ class ImportPretixOrdersJob implements ShouldQueue
                 fn (string $message, array $patch = []) => $run->pushLog($message, $patch),
             );
 
+            // Mismatch count of the previous finished run (for "new discrepancies").
+            $previousMismatch = (int) PretixImportRun::query()
+                ->where('pretix_connection_id', $connection->id)
+                ->whereKeyNot($run->id)
+                ->where('status', PretixImportRun::STATUS_SUCCESS)
+                ->latest('id')->value('mismatch');
+
             $run->forceFill([
                 'status' => PretixImportRun::STATUS_SUCCESS,
                 'finished_at' => now(),
@@ -81,6 +88,15 @@ class ImportPretixOrdersJob implements ShouldQueue
                 'import_running' => false,
                 'last_import_summary' => "{$r['orders']} Bestellungen / {$r['events']} Event(s) · {$r['booked']} Nicht-PayPal verbucht · abgeglichen {$r['matched']}, Abweichung {$r['mismatch']}, nicht in pretix {$r['unmatched']}",
             ])->save();
+
+            // Only alert on NEW discrepancies, so the 30-min schedule doesn't spam.
+            if ($r['mismatch'] > $previousMismatch) {
+                \App\Support\AdminNotifier::warn(
+                    'pretix-Abgleich: neue Abweichungen',
+                    "{$r['mismatch']} Transaktion(en) mit abweichendem Betrag zur pretix-Bestellung (Verbindung „{$connection->name}“).",
+                    \App\Filament\Resources\TransactionResource::getUrl('index', ['tableFilters' => ['reconciliation_status' => ['value' => \App\Models\Transaction::RECONCILIATION_MISMATCH]]]),
+                );
+            }
         } catch (Throwable $e) {
             $run->pushLog('Fehler: ' . $e->getMessage());
             $run->forceFill([
@@ -103,5 +119,11 @@ class ImportPretixOrdersJob implements ShouldQueue
             'import_running' => false,
             'last_error' => $e->getMessage(),
         ])->save();
+
+        \App\Support\AdminNotifier::warn(
+            'pretix-Import fehlgeschlagen',
+            ($connection?->name ? "Verbindung „{$connection->name}“: " : '') . $e->getMessage(),
+            \App\Filament\Resources\PretixImportRunResource::getUrl('index'),
+        );
     }
 }
