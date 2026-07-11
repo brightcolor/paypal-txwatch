@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.17.1] - 2026-07-11
+
+### Tests / Qualität
+
+- **Gesundheitscheck der Anwendung** (Log, alle Routen, CRUD): Authentifizierter Crawl über alle 39
+  Admin-Routen auf Produktion – inkl. View-/Edit-Seiten mit echten Datensätzen – ergab **0 defekte Routen**;
+  seit v0.17.0 keine Fehler im Log. Neuer dauerhafter **CRUD-Smoke-Test** deckt jetzt auch die Schreibseite
+  ab (Anlegen + Speichern für Kunden, Export-Vorlagen, Events inkl. Deaktivieren-Aktion,
+  pretix-Verbindungen inkl. Verschlüsselungs-Roundtrip des API-Tokens, Benutzer inkl. Rollenzuweisung) –
+  kaputte Formulare oder Validierungsregeln fallen damit künftig in CI auf statt in Produktion.
+
 ## [0.17.0] - 2026-07-11
 
 ### Neu
