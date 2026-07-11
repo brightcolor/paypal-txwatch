@@ -60,6 +60,19 @@ class TransactionTypeTest extends TestCase
         $this->assertNotContains('T2107', $kept);
     }
 
+    public function test_is_ledger_column_is_kept_in_sync_by_the_saving_hook(): void
+    {
+        $ledger = $this->tx('T0400', -100);
+        $sale = $this->tx('T0006');
+
+        $this->assertTrue($ledger->fresh()->is_ledger);
+        $this->assertFalse($sale->fresh()->is_ledger);
+
+        // Changing the code updates the flag on save.
+        $sale->update(['transaction_event_code' => 'T2101']);
+        $this->assertTrue($sale->fresh()->is_ledger);
+    }
+
     public function test_of_type_scope_filters_by_group(): void
     {
         $this->tx('T0400', -10);

@@ -22,9 +22,13 @@ class PretixTransactionBooker
 {
     /**
      * @param  callable(string, array<string, int|string>): void|null  $onProgress
-     * @return array{booked: int, updated: int, skipped_paypal: int, skipped_unpaid: int}
+     * @param  \DateTimeInterface|null  $since  only (re-)book orders whose local
+     *         record changed after this moment - unchanged orders are already
+     *         booked correctly (idempotent upsert), so skipping them keeps the
+     *         run O(changes) instead of O(all orders)
+     * @return array{booked: int, updated: int, refunds: int, skipped_paypal: int, skipped_unpaid: int}
      */
-    public function book(PretixConnection $connection, ?callable $onProgress = null): array
+    public function book(PretixConnection $connection, ?callable $onProgress = null, ?\DateTimeInterface $since = null): array
     {
         $progress = $onProgress ?? fn (string $m, array $p = []) => null;
 
@@ -36,6 +40,7 @@ class PretixTransactionBooker
 
         $orders = PretixOrder::query()
             ->where('pretix_connection_id', $connection->id)
+            ->when($since, fn ($q) => $q->where('updated_at', '>=', $since))
             ->get();
 
         foreach ($orders as $order) {

@@ -116,6 +116,7 @@ class Transaction extends Model
             'net_amount' => 'decimal:2',
             'item_info' => 'array',
             'raw_payload' => 'array',
+            'is_ledger' => 'boolean',
         ];
     }
 
@@ -261,18 +262,22 @@ class Transaction extends Model
         return in_array($this->eventCodeGroup(), self::LEDGER_ONLY_PREFIXES, true);
     }
 
+    /**
+     * is_ledger materializes isLedgerEvent() so hot queries can use an indexed
+     * boolean instead of NOT LIKE chains. The saving hook is the single point
+     * keeping it in sync for every write path (PayPal upsert, CSV import,
+     * pretix booking, tests).
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (self $transaction) {
+            $transaction->is_ledger = $transaction->isLedgerEvent();
+        });
+    }
+
     public function scopeExcludingLedgerEvents(Builder $query): Builder
     {
-        // Keep rows whose code is NULL (e.g. CSV imports - can't be classified,
-        // so must not be dropped) OR whose code is in no ledger-only group.
-        return $query->where(function (Builder $q) {
-            $q->whereNull('transaction_event_code')
-                ->orWhere(function (Builder $q2) {
-                    foreach (self::LEDGER_ONLY_PREFIXES as $prefix) {
-                        $q2->where('transaction_event_code', 'not like', $prefix.'%');
-                    }
-                });
-        });
+        return $query->where('is_ledger', false);
     }
 
     /**

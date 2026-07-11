@@ -181,6 +181,34 @@ class PretixImportReconcileTest extends TestCase
         $this->assertNotNull($hold->fresh()->pretix_order_id);
     }
 
+    public function test_incremental_import_passes_modified_since_and_skips_unchanged_bookings(): void
+    {
+        $this->fakePretix();
+        $connection = $this->connection();
+
+        // Full first run.
+        app(PretixOrderImporter::class)->import($connection);
+        $firstBookingCount = Transaction::where('instrument_type', 'pretix')->count();
+
+        // Second run: connection has a last_successful_sync_at now, so the
+        // orders request must carry modified_since and unchanged orders are
+        // not re-booked (their transactions keep their timestamps).
+        Http::fake([
+            '*/events/sportfest/orders/*' => Http::response(['results' => [], 'next' => null]),
+            '*/events/*' => Http::response(['results' => [['slug' => 'sportfest', 'name' => 'S']], 'next' => null]),
+        ]);
+        $summary = app(PretixOrderImporter::class)->import($connection->fresh());
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/orders/')
+            && str_contains($request->url(), 'modified_since='));
+
+        $this->assertSame(0, $summary['booked']);
+        $this->assertSame(
+            $firstBookingCount,
+            Transaction::where('instrument_type', 'pretix')->count(),
+        );
+    }
+
     public function test_reimport_is_idempotent(): void
     {
         $this->fakePretix();

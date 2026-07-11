@@ -4,6 +4,31 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.19.0] - 2026-07-11
+
+### Performance / Skalierung
+
+Audit auf Wachstums-Tauglichkeit (was passiert bei 100k+ Transaktionen?) mit acht Befunden, alle behoben:
+
+- **Indexierbarer Umsatz-Filter**: Der Ausschluss interner Kontobewegungen lief über `NOT LIKE`-Ketten
+  (nie indexbar). Neue Spalte `is_ledger` (per Saving-Hook automatisch synchron, Bestand per Migration
+  befüllt) macht Dashboard, Chart, Berichte und Transaktionsliste index-fähig.
+- **Fehlende FK-Indexe ergänzt** (`event_id`, `pretix_order_id`, `instrument_type`) – Postgres legt bei
+  Fremdschlüsseln keine Indexe an; diese Spalten werden ständig gefiltert.
+- **Berichte aggregieren in SQL** statt alle Transaktionen (inkl. Roh-Payloads!) nach PHP zu laden und dort
+  zu gruppieren – vorher O(Tabellengröße) an RAM und Zeit pro Berichtsaufruf.
+- **Abgleich ohne RAM-Falle**: Der pretix-Abgleich lud jede Transaktion samt mehrerer KB Roh-Payload in den
+  Speicher (~1 GB bei 100k Zeilen); jetzt nur noch die 9 benötigten Spalten. Unveränderte Zeilen erzeugen
+  weiterhin kein UPDATE (Dirty-Check).
+- **Inkrementeller pretix-Import**: Folgeläufe holen per `modified_since` nur noch seit dem letzten Erfolg
+  geänderte Bestellungen (1h Sicherheits-Überlappung) und verbuchen nur diese neu – der 30-Minuten-Takt
+  bleibt damit O(Änderungen) statt O(alle Bestellungen), auch API-seitig.
+- **Dashboard-Kacheln gecacht** (60 s) statt 8 Aggregat-Queries pro Aufruf.
+- **Import-Log gedeckelt** (letzte 300 Zeilen): jedes Log-Update schreibt die ganze JSON-Spalte – ungedeckelt
+  wächst das quadratisch mit der Lauflänge.
+- **SPA-Modus aktiviert**: Menüwechsel laufen über Livewire-Navigation statt Full-Page-Reloads – der größte
+  Hebel für die *gefühlte* Trägheit beim Navigieren.
+
 ## [0.18.0] - 2026-07-11
 
 ### UI-Überarbeitung im AdminLTE-Stil

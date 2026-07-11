@@ -54,6 +54,13 @@ class PretixImportRun extends Model
         $log = $this->log ?? [];
         $log[] = ['t' => now()->format('H:i:s'), 'm' => $message];
 
+        // Cap the live log: every push rewrites the whole JSON column, so an
+        // unbounded log makes long imports write O(n²) bytes. The tail is what
+        // matters for "what is it doing right now".
+        if (count($log) > 300) {
+            $log = array_slice($log, -300);
+        }
+
         $this->forceFill(array_merge($patch, ['log' => $log]))->save();
     }
 }

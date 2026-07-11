@@ -96,10 +96,11 @@ class PretixClient
      * forever on page 1, which is exactly the bug this replaced.
      *
      * @param  callable(array<int, array<string, mixed>>): void  $handlePage
+     * @param  array<string, string>  $query  extra first-request query params
      */
-    private function paginate(string $path, callable $handlePage): void
+    private function paginate(string $path, callable $handlePage, array $query = []): void
     {
-        $response = $this->http()->get($path, ['page_size' => 50]);
+        $response = $this->http()->get($path, $query + ['page_size' => 50]);
 
         // Hard safety cap (250k rows at 50/page) so a misbehaving "next" can never
         // hammer the pretix API in an unbounded loop again.
@@ -122,14 +123,18 @@ class PretixClient
     /**
      * All orders of one event (paged). When $onPage is given it is invoked with
      * each page's orders as they arrive, so callers can report live progress.
+     * With $modifiedSince only orders changed after that moment are fetched
+     * (pretix' modified_since filter) - the basis for incremental imports.
      *
      * @param  callable(array<int, array<string, mixed>>): void|null  $onPage
      * @return array<int, array<string, mixed>>
      */
-    public function ordersForEvent(string $eventSlug, ?callable $onPage = null): array
+    public function ordersForEvent(string $eventSlug, ?callable $onPage = null, ?\DateTimeInterface $modifiedSince = null): array
     {
         $organizer = $this->connection->organizer_slug;
         $orders = [];
+
+        $query = $modifiedSince ? ['modified_since' => $modifiedSince->format(DATE_ATOM)] : [];
 
         $this->paginate("/organizers/{$organizer}/events/{$eventSlug}/orders/", function (array $page) use (&$orders, $onPage) {
             $orders = array_merge($orders, $page);
@@ -137,7 +142,7 @@ class PretixClient
             if ($onPage) {
                 $onPage($page);
             }
-        });
+        }, $query);
 
         return $orders;
     }

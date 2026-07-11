@@ -29,14 +29,14 @@ class ReportService
      */
     public function feesByEvent(?Carbon $from = null, ?Carbon $to = null): Collection
     {
-        return $this->baseQuery($from, $to)
-            ->with('event')
-            ->get()
-            ->groupBy(fn (Transaction $t) => $t->event?->displayName() ?? 'Ohne Event')
-            ->map(fn (Collection $rows, string $label) => $this->summarize($label, $rows))
-            ->values()
-            ->sortByDesc('gross')
-            ->values();
+        // Aggregated in SQL: the previous ->get()->groupBy() loaded every
+        // transaction (incl. raw payloads) into PHP, which does not scale.
+        return $this->aggregate(
+            $this->baseQuery($from, $to)
+                ->leftJoin('events', 'events.id', '=', 'transactions.event_id')
+                ->selectRaw("COALESCE(NULLIF(events.display_name, ''), events.name, 'Ohne Event') as label")
+                ->groupBy('label'),
+        )->sortByDesc('gross')->values();
     }
 
     /**
@@ -44,13 +44,12 @@ class ReportService
      */
     public function feesByMonth(?Carbon $from = null, ?Carbon $to = null): Collection
     {
-        return $this->baseQuery($from, $to)
-            ->get()
-            ->groupBy(fn (Transaction $t) => $t->transaction_initiation_date?->format('Y-m') ?? 'Unbekannt')
-            ->map(fn (Collection $rows, string $label) => $this->summarize($label, $rows))
-            ->values()
-            ->sortBy('label')
-            ->values();
+        return $this->aggregate(
+            $this->baseQuery($from, $to)
+                ->selectRaw("COALESCE(to_char(transaction_initiation_date, 'YYYY-MM'), 'Unbekannt') as label")
+                ->groupBy('label'),
+            sqliteLabel: "COALESCE(strftime('%Y-%m', transaction_initiation_date), 'Unbekannt')",
+        )->sortBy('label')->values();
     }
 
     /**
@@ -58,14 +57,43 @@ class ReportService
      */
     public function accountComparison(?Carbon $from = null, ?Carbon $to = null): Collection
     {
-        return $this->baseQuery($from, $to)
-            ->with('paypalAccount')
+        return $this->aggregate(
+            $this->baseQuery($from, $to)
+                ->leftJoin('paypal_accounts', 'paypal_accounts.id', '=', 'transactions.paypal_account_id')
+                ->selectRaw("COALESCE(paypal_accounts.name, 'Unbekannt') as label")
+                ->groupBy('label'),
+        )->sortByDesc('gross')->values();
+    }
+
+    /**
+     * Runs the shared count/sum aggregation on a query that already selected
+     * and grouped a "label" expression. $sqliteLabel swaps a Postgres-only
+     * label expression for the SQLite test database.
+     *
+     * @return Collection<int, array{label: string, count: int, gross: float, fee: float, net: float, fee_ratio: float}>
+     */
+    private function aggregate(Builder $query, ?string $sqliteLabel = null): Collection
+    {
+        if ($sqliteLabel !== null && $query->getConnection()->getDriverName() === 'sqlite') {
+            $query->getQuery()->columns = [];
+            $query->getQuery()->groups = [];
+            $query->selectRaw("{$sqliteLabel} as label")->groupBy('label');
+        }
+
+        return $query
+            ->selectRaw('count(*) as cnt')
+            ->selectRaw('COALESCE(sum(gross_amount), 0) as gross')
+            ->selectRaw('COALESCE(sum(fee_amount), 0) as fee')
+            ->selectRaw('COALESCE(sum(net_amount), 0) as net')
             ->get()
-            ->groupBy(fn (Transaction $t) => $t->paypalAccount?->name ?? 'Unbekannt')
-            ->map(fn (Collection $rows, string $label) => $this->summarize($label, $rows))
-            ->values()
-            ->sortByDesc('gross')
-            ->values();
+            ->map(fn ($row) => [
+                'label' => $row->label,
+                'count' => (int) $row->cnt,
+                'gross' => (float) $row->gross,
+                'fee' => (float) $row->fee,
+                'net' => (float) $row->net,
+                'fee_ratio' => (float) $row->gross != 0.0 ? round(abs($row->fee / $row->gross) * 100, 2) : 0.0,
+            ]);
     }
 
     /**
@@ -119,32 +147,15 @@ class ReportService
      */
     public function refundsSummary(?Carbon $from = null, ?Carbon $to = null): array
     {
-        $refunds = $this->baseQuery($from, $to)
+        $row = $this->baseQuery($from, $to)
             ->refunds()
-            ->get();
+            ->selectRaw('count(*) as cnt, COALESCE(sum(gross_amount), 0) as total')
+            ->first();
 
         return [
-            'count' => $refunds->count(),
-            'total' => (float) $refunds->sum(fn (Transaction $t) => (float) $t->gross_amount),
+            'count' => (int) $row->cnt,
+            'total' => (float) $row->total,
         ];
     }
 
-    /**
-     * @return array{label: string, count: int, gross: float, fee: float, net: float, fee_ratio: float}
-     */
-    private function summarize(string $label, Collection $rows): array
-    {
-        $gross = (float) $rows->sum(fn (Transaction $t) => (float) $t->gross_amount);
-        $fee = (float) $rows->sum(fn (Transaction $t) => (float) $t->fee_amount);
-        $net = (float) $rows->sum(fn (Transaction $t) => (float) $t->net_amount);
-
-        return [
-            'label' => $label,
-            'count' => $rows->count(),
-            'gross' => $gross,
-            'fee' => $fee,
-            'net' => $net,
-            'fee_ratio' => $gross != 0 ? round(abs($fee / $gross) * 100, 2) : 0.0,
-        ];
-    }
 }

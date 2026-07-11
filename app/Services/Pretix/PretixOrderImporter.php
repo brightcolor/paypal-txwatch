@@ -34,8 +34,13 @@ class PretixOrderImporter
         $orderCount = 0;
         $progress = $onProgress ?? fn (string $m, array $p = []) => null;
 
+        // Incremental: only fetch orders pretix modified since the last
+        // successful run (1h safety overlap). Unchanged orders are already
+        // correctly booked, so the booker skips them too. First run: full.
+        $since = $connection->last_successful_sync_at?->clone()->subHour();
+
         try {
-            $progress('Lade Events aus pretix …');
+            $progress($since ? "Lade Events aus pretix (Änderungen seit {$since->format('d.m.Y H:i')}) …" : 'Lade Events aus pretix (Vollimport) …');
             $events = $client->events();
             $total = count($events);
             $progress("{$total} Event(s) gefunden.", ['events_total' => $total]);
@@ -58,13 +63,13 @@ class PretixOrderImporter
                         $eventOrders++;
                     }
                     $progress("… {$slug}: {$eventOrders} Bestellungen geladen", ['orders_imported' => $orderCount]);
-                });
+                }, $since);
 
                 $progress("Event {$index}/{$total}: {$slug} – {$eventOrders} Bestellungen.", ['events_done' => $index, 'orders_imported' => $orderCount]);
             }
 
             $progress('Verbuche Nicht-PayPal-Zahlungen (Überweisung etc.) …');
-            $booking = $this->booker->book($connection, $progress);
+            $booking = $this->booker->book($connection, $progress, $since);
 
             $progress('Weise Transaktionen den Events zu (per pretix-Slug) …');
             $assigned = $this->assignEvents();

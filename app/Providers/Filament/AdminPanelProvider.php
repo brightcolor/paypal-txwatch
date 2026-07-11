@@ -40,6 +40,9 @@ class AdminPanelProvider extends PanelProvider
             // column that leaves large unused margins on wide screens, which matters here
             // because the transactions table has many columns).
             ->maxContentWidth(MaxWidth::Full)
+            // Livewire-navigate page switches: no full reload per menu click,
+            // which is most of the perceived sluggishness when navigating.
+            ->spa()
             ->login()
             ->passwordReset()
             ->profile()

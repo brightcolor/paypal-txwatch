@@ -22,6 +22,17 @@ class DashboardStatsOverview extends Widget
 
     protected function getViewData(): array
     {
+        // 8 aggregate queries per dashboard hit adds up once the table grows;
+        // 60s staleness is irrelevant for these KPIs.
+        return \Illuminate\Support\Facades\Cache::remember(
+            'dashboard_small_boxes',
+            now()->addSeconds(60),
+            fn () => $this->computeViewData(),
+        );
+    }
+
+    private function computeViewData(): array
+    {
         $since = Carbon::now()->subDays(30);
 
         $base = Transaction::query()->excludingLedgerEvents()->excludingIrrelevant()->where('transaction_initiation_date', '>=', $since);

@@ -28,14 +28,23 @@ class PretixReconciler
     {
         $ordersByKey = PretixOrder::query()
             ->where('pretix_connection_id', $connection->id)
-            ->get()
+            // Only the matching-relevant columns - never the multi-KB raw_payload.
+            ->get(['id', 'event_slug', 'order_code', 'total'])
             ->filter(fn (PretixOrder $o) => $o->ownMatchKey() !== null)
             ->keyBy(fn (PretixOrder $o) => $o->ownMatchKey());
 
+        // Same here: loading every transaction's raw PayPal payload into memory
+        // scales at ~10KB/row; the reconciliation only needs these columns.
+        // save() below only issues an UPDATE for rows whose link/status actually
+        // changed (Eloquent dirty check), so re-runs are read-mostly.
         $groups = Transaction::query()
             ->whereNotNull('custom_field')
             ->where('custom_field', '<>', '')
-            ->get()
+            ->get([
+                'id', 'custom_field', 'transaction_id', 'transaction_event_code',
+                'is_ledger', 'instrument_type', 'gross_amount',
+                'pretix_order_id', 'reconciliation_status',
+            ])
             ->groupBy(fn (Transaction $t) => $t->pretixMatchKey());
 
         $matched = 0;
