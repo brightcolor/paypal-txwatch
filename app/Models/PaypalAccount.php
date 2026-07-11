@@ -9,6 +9,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class PaypalAccount extends Model
 {
     use HasFactory;
+    use \App\Models\Concerns\Auditable;
+
+    /** Audited attributes (client_secret deliberately excluded - never log secrets). */
+    protected static array $auditAttributes = ['name', 'mode', 'client_id', 'is_active', 'sync_enabled', 'sync_interval_minutes'];
+
+    protected static string $auditLogName = 'paypal';
+
+    protected static function auditLabel(): string
+    {
+        return 'PayPal-Konto';
+    }
 
     protected $fillable = [
         'name',

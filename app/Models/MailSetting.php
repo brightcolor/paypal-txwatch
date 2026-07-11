@@ -13,6 +13,18 @@ use Illuminate\Support\Facades\Config;
  */
 class MailSetting extends Model
 {
+    use \App\Models\Concerns\Auditable;
+
+    /** Audited attributes (password excluded - never log secrets). */
+    protected static array $auditAttributes = ['enabled', 'host', 'port', 'encryption', 'username', 'from_address', 'from_name', 'alert_recipients'];
+
+    protected static string $auditLogName = 'einstellungen';
+
+    protected static function auditLabel(): string
+    {
+        return 'E-Mail-Einstellungen';
+    }
+
     protected $fillable = [
         'enabled', 'host', 'port', 'encryption', 'username', 'password',
         'from_address', 'from_name', 'alert_recipients',

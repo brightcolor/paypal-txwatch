@@ -9,6 +9,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Customer extends Model
 {
     use HasFactory;
+    use \App\Models\Concerns\Auditable;
+
+    protected static array $auditAttributes = ['name', 'contact_name', 'contact_email', 'is_active'];
+
+    protected static string $auditLogName = 'kunde';
+
+    protected static function auditLabel(): string
+    {
+        return 'Kunde';
+    }
 
     protected $fillable = [
         'name',

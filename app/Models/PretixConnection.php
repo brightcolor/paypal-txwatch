@@ -9,6 +9,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class PretixConnection extends Model
 {
     use HasFactory;
+    use \App\Models\Concerns\Auditable;
+
+    /** Audited attributes (api_token/webhook_secret excluded - never log secrets). */
+    protected static array $auditAttributes = ['name', 'base_url', 'organizer_slug', 'is_active', 'sync_enabled', 'bank_transfer_fee_cents', 'import_paypal_orders'];
+
+    protected static string $auditLogName = 'pretix';
+
+    protected static function auditLabel(): string
+    {
+        return 'pretix-Verbindung';
+    }
 
     protected $fillable = [
         'name',

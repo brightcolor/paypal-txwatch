@@ -10,6 +10,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Event extends Model
 {
     use HasFactory;
+    use \App\Models\Concerns\Auditable;
+
+    protected static array $auditAttributes = ['customer_id', 'name', 'display_name', 'pretix_event_slug', 'event_date', 'venue', 'is_active'];
+
+    protected static string $auditLogName = 'event';
+
+    protected static function auditLabel(): string
+    {
+        return 'Event';
+    }
 
     protected $fillable = [
         'customer_id',

@@ -20,6 +20,17 @@ class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, Notifiable;
+    use \App\Models\Concerns\Auditable;
+
+    /** Audited attributes (password/2FA secrets excluded). */
+    protected static array $auditAttributes = ['name', 'email', 'is_active', 'customer_id'];
+
+    protected static string $auditLogName = 'benutzer';
+
+    protected static function auditLabel(): string
+    {
+        return 'Benutzer';
+    }
 
     /**
      * Get the attributes that should be cast.

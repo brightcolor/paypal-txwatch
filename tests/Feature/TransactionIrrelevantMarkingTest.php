@@ -70,7 +70,12 @@ class TransactionIrrelevantMarkingTest extends TestCase
         $this->assertFalse($tx->fresh()->isIrrelevant());
         $this->assertNull($tx->fresh()->marked_irrelevant_at);
         $this->assertNull($tx->fresh()->irrelevant_marked_by_user_id);
-        $this->assertSame(2, AuditLogEntry::query()->count());
+        // Scope to this transaction's entries - other models (account, user) now
+        // also write audit entries, so a global count would include their setup.
+        $this->assertSame(2, AuditLogEntry::query()
+            ->where('subject_type', Transaction::class)
+            ->where('subject_id', $tx->id)
+            ->count());
     }
 
     public function test_irrelevant_transactions_are_excluded_from_reports(): void

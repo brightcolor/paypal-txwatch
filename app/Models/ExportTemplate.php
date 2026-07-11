@@ -9,6 +9,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ExportTemplate extends Model
 {
     use HasFactory;
+    use \App\Models\Concerns\Auditable;
+
+    protected static array $auditAttributes = ['name', 'columns', 'group_by', 'mode', 'mask_pii', 'vat_rate', 'title'];
+
+    protected static string $auditLogName = 'export-vorlage';
+
+    protected static function auditLabel(): string
+    {
+        return 'Export-Vorlage';
+    }
 
     public const MODE_CUSTOMER = 'customer';
     public const MODE_INTERNAL = 'internal';

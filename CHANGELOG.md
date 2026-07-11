@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.33.0] - 2026-07-11
+
+### Behoben / Neu
+
+- **Audit-Log war praktisch leer**, weil bisher *nur* das „Transaktion als (nicht) relevant markieren"
+  überhaupt einen Eintrag schrieb. Jetzt werden **alle wesentlichen, benutzergetriebenen Änderungen**
+  protokolliert (anlegen/ändern/löschen, mit Verursacher): **PayPal-Konten, pretix-Verbindungen, Events,
+  Kunden, Abrechnungen** (inkl. Statuswechsel „ausgezahlt"/„versendet"), **Benutzer**, **Export-Vorlagen**
+  und **E-Mail-Einstellungen**.
+  - Umgesetzt über einen gemeinsamen `Auditable`-Trait (Spatie Activitylog) mit **eng gefasster
+    Attributliste** pro Modell: Maschinen-Schreibvorgänge (z. B. Sync-/Import-Zeitstempel) fluten das Log
+    **nicht**, und **Secrets** (Client-Secret, API-Token, Mail-Passwort) werden **nie** protokolliert.
+  - Audit-Einträge bleiben append-only (nicht löschbar).
+
 ## [0.32.0] - 2026-07-11
 
 ### Neu

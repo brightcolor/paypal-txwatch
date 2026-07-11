@@ -9,6 +9,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Settlement extends Model
 {
     use HasFactory;
+    use \App\Models\Concerns\Auditable;
+
+    protected static array $auditAttributes = ['title', 'status', 'paid_at', 'paid_reference', 'sent_at', 'sent_to', 'payout'];
+
+    protected static string $auditLogName = 'abrechnung';
+
+    protected static function auditLabel(): string
+    {
+        return 'Abrechnung';
+    }
 
     public const STATUS_OPEN = 'open';
     public const STATUS_PAID = 'paid';
