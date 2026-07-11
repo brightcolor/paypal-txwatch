@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.34.0] - 2026-07-11
+
+### Neu
+
+- **Zeitraumwähler fürs Dashboard** (Matomo-Stil): Über den KPI-Kacheln lässt sich der Zeitraum wählen –
+  Heute, Gestern, letzte 7/30/90 Tage, dieser/letzter Monat, dieses/letztes Jahr, gesamter Zeitraum oder
+  **benutzerdefiniert** (Von/Bis). Die Auswahl steuert die KPI-Kacheln (Beschriftung zeigt den gewählten
+  Zeitraum) und den Umsatz-Chart. Bei Zeiträumen über ~3 Monaten schaltet der Chart automatisch auf
+  Monats- statt Tagesauflösung, damit Jahresansichten lesbar bleiben; „Gesamt" beginnt bei der ältesten
+  Transaktion. KPI-Cache berücksichtigt Zeitraum und Kunden-Scope.
+
 ## [0.33.2] - 2026-07-11
 
 ### Geändert
