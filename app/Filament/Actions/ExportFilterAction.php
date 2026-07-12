@@ -37,8 +37,11 @@ class ExportFilterAction
 
                 Forms\Components\Select::make('event_id')
                     ->label('Event (Deckblatt mit pretix-Daten)')
-                    ->options(fn () => \App\Models\Event::query()->where('is_active', true)->orderBy('name')
-                        ->get()->mapWithKeys(fn ($e) => [$e->id => $e->displayName()]))
+                    // Customer users only see (and can only cover) their own
+                    // events - the cover carries live revenue/attendance data.
+                    ->options(fn () => \App\Support\CustomerScope::byCustomerId(
+                        \App\Models\Event::query()->where('is_active', true)
+                    )->orderBy('name')->get()->mapWithKeys(fn ($e) => [$e->id => $e->displayName()]))
                     ->searchable()
                     ->helperText('Wenn gewählt, wird der Export auf dieses Event eingegrenzt und das PDF erhält ein Deckblatt mit Event-Bild, Spielinfos und der Gästebilanz (gebucht vs. erschienen) live aus pretix.'),
 
@@ -97,9 +100,10 @@ class ExportFilterAction
                 $query = $livewire->getTableQueryForExport();
 
                 // Explicit event choice narrows the export to that event and
-                // drives the pretix cover page.
+                // drives the pretix cover page. Resolved through CustomerScope
+                // so a tampered request can never cover a foreign event.
                 $coverEvent = filled($data['event_id'] ?? null)
-                    ? \App\Models\Event::find($data['event_id'])
+                    ? \App\Support\CustomerScope::byCustomerId(\App\Models\Event::query())->find($data['event_id'])
                     : null;
 
                 if ($coverEvent) {

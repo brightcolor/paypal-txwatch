@@ -48,7 +48,7 @@ class RevenueByDayChart extends ChartWidget
         $monthly = $from->diffInDays($until) > 92;
 
         $rows = CustomerScope::transactions(
-            Transaction::query()->excludingLedgerEvents()->excludingIrrelevant()
+            Transaction::query()->excludingLedgerEvents()->excludingIrrelevant()->currentRevision()
         )
             ->whereBetween('transaction_initiation_date', [$from, $until])
             ->when(

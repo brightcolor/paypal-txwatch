@@ -19,6 +19,9 @@
                     <tr><td class="lbl">= Eingegangen (netto, nach Gebühren &amp; Erstattungen)</td><td class="num net">{{ number_format($r['incoming_net'], 2, ',', '.') }}&nbsp;€</td></tr>
                     <tr><td class="lbl">davon Erstattungen</td><td class="num @if($r['refunds'] < 0) neg @endif">{{ number_format($r['refunds'], 2, ',', '.') }}&nbsp;€</td></tr>
                     <tr><td class="lbl">Ausgezahlt an Bank ({{ $r['payout_count'] }} Auszahlungen)</td><td class="num @if($r['payouts'] < 0) neg @endif">{{ number_format($r['payouts'], 2, ',', '.') }}&nbsp;€</td></tr>
+                    @if (($r['pretix_direct'] ?? 0) != 0)
+                        <tr><td class="lbl muted">Zusätzlich direkt aufs Bankkonto (pretix, nicht über PayPal)</td><td class="num muted">{{ number_format($r['pretix_direct'], 2, ',', '.') }}&nbsp;€</td></tr>
+                    @endif
                     <tr style="border-top:2px solid #dee2e6;"><td class="lbl strong">= rechnerischer PayPal-Saldo (Verbleib)</td><td class="num net">{{ number_format($r['expected_balance'], 2, ',', '.') }}&nbsp;€</td></tr>
                 </tbody>
             </table>

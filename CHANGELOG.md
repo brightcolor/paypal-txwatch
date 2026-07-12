@@ -4,6 +4,59 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.37.0] - 2026-07-12 — Korrektheits-Audit
+
+Intensiver Audit aller Berechnungen und Zuordnungen (drei unabhängige Prüfläufe, jeder Befund am Code
+verifiziert). Behoben:
+
+### KRITISCH behoben
+
+- **Revisions-Doppelzählung**: PayPal liefert dieselbe Zahlung bei Änderungen (Statuswechsel P→S,
+  Gebühren-Korrektur) erneut; die App speichert bewusst eine neue Revisions-Zeile mit derselben
+  Transaktions-ID. Bisher summierten **alle** Umsatz-Auswertungen (Dashboard, Berichte, Monatsabschluss,
+  Exporte und sogar persistierte **Abrechnungen**) beide Zeilen – eine aktualisierte 100-€-Zahlung zählte
+  200 €. Jetzt markiert der Import ältere Revisionen als `superseded` (inkl. Backfill bestehender
+  Duplikate), und überall zählt nur die **aktuelle** Revision. Verspätet nachgelieferte ALTE Revisionen
+  können neuere Daten nie verdrängen. Die Transaktionsliste zeigt standardmäßig nur aktuelle Revisionen
+  (Filter „Revisionen → Alle" blendet den Verlauf ein); die Historie bleibt vollständig erhalten.
+- **Manuelle Event-Zuordnung überlebt jetzt Revisionen**: Bisher verlor die neue Revisions-Zeile eine von
+  Hand gesetzte Event-Zuordnung. Jetzt wird sie vererbt.
+- **pretix-Verbuchung nach Bestell-Änderungen**: Der gebuchte Betrag kam aus dem *aktuellen* Bestellwert
+  (`total`), den pretix bei Teilstornos nachträglich senkt – zusammen mit der Erstattungs-Zeile wurde das
+  Geld doppelt abgezogen (100 € bezahlt, 20 € erstattet → 59,80 € statt 79,80 €). Jetzt kommt der Betrag
+  aus den **bestätigten Zahlungen** (Geld, das wirklich einging).
+- **Gemischt bezahlte pretix-Bestellungen** (z. B. PayPal + Überweisung): Bisher entschied der *letzte*
+  Zahlungseintrag (auch gescheiterte!) pauschal über die ganze Bestellung – volle Doppelzählung oder ganz
+  fehlender Umsatz möglich. Jetzt zählt nur der **bestätigte Nicht-PayPal-Anteil**; PayPal-Anteile kommen
+  über den PayPal-Sync. **PayPal-Erstattungen aus pretix** werden nicht mehr zusätzlich gebucht (kämen
+  sonst doppelt, da der PayPal-Sync sie als T1107 liefert).
+- **Abrechnung**: Abgelehnte (D) und noch schwebende (P) Zahlungen – Geld, das nie ankam – zählen nicht
+  mehr in die Auszahlung.
+- **Auszahlungs-Abgleich**: pretix-Überweisungen (Geld, das direkt aufs Bankkonto ging und nie im
+  PayPal-Saldo war) verfälschten den rechnerischen PayPal-Saldo. Sie werden jetzt separat als „direkt aufs
+  Bankkonto" ausgewiesen.
+- **Berechtigung**: Die Aktionen „Event zuweisen" (einzeln + Sammel) standen auch Kunden/Auditoren offen –
+  ein Kunde hätte Umsatz auf fremde Events umbuchen können. Jetzt nur noch mit `manage-transactions`.
+- **Deckblatt-Leak**: Die Event-Auswahl im Export zeigte Kunden **alle** Events und hätte fremde
+  Gästebilanzen/Umsätze aufs Deckblatt geholt. Jetzt kundengescoped (Optionen + Recheck bei Ausführung).
+
+### Ebenfalls behoben
+
+- **Slug-Kollision bei der Event-Zuordnung**: `sommerfest` konnte Bestellungen von `sommerfest-2`
+  schlucken. Jetzt längster Slug zuerst plus Guard (Ordercodes sind bindestrichfrei).
+- **Abgleich bei mehreren pretix-Verbindungen**: Der Import von Verbindung A setzte korrekt gematchte
+  Transaktionen von Verbindung B auf „nicht in pretix" zurück; Freitext-Verwendungszwecke wurden fälschlich
+  als unmatched markiert. Der Abgleich fasst jetzt nur noch Transaktionen im Slug-Raum der eigenen
+  Verbindung an.
+- **Einzahlungen/Währungsumrechnungen (T03xx/T02xx) zählten als Umsatz**: Eine 1.000-€-Einzahlung vom
+  eigenen Bankkonto erhöhte den „Umsatz". Beide Gruppen sind jetzt Konto-Bewegungen (ledger) wie
+  Auszahlungen (inkl. Backfill).
+- **„Letzte 7/30/90 Tage" umfassten 8/31/91 Kalendertage** (Off-by-one) – jetzt exakt N Tage inkl. heute.
+- **Monatsvergleich verglich den laufenden Teilmonat mit ganzen Monaten** (Mitte des Monats immer tiefrot).
+  Jetzt gleicher Tagesbereich („bis 12." vs. „bis 12.") mit ehrlicher Beschriftung.
+- Gebührenquote bei negativem Brutto (erstattungslastiger Monat) zeigt „–" statt einer sinnlosen Zahl;
+  Event-Kürzel-Analyse gruppiert case-insensitiv.
+
 ## [0.36.0] - 2026-07-12
 
 ### Behoben

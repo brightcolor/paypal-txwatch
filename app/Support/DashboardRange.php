@@ -40,8 +40,10 @@ class DashboardRange
         return match ($preset) {
             'today' => [$now->copy()->startOfDay(), $now->copy()->endOfDay(), self::PRESETS['today']],
             'yesterday' => [$now->copy()->subDay()->startOfDay(), $now->copy()->subDay()->endOfDay(), self::PRESETS['yesterday']],
-            '7d' => [$now->copy()->subDays(7)->startOfDay(), $now->copy()->endOfDay(), self::PRESETS['7d']],
-            '90d' => [$now->copy()->subDays(90)->startOfDay(), $now->copy()->endOfDay(), self::PRESETS['90d']],
+            // "Last N days" includes today, so go back N-1 (subDays(7) would
+            // span 8 calendar days - audit 2026-07-12).
+            '7d' => [$now->copy()->subDays(6)->startOfDay(), $now->copy()->endOfDay(), self::PRESETS['7d']],
+            '90d' => [$now->copy()->subDays(89)->startOfDay(), $now->copy()->endOfDay(), self::PRESETS['90d']],
             'month' => [$now->copy()->startOfMonth(), $now->copy()->endOfDay(), self::PRESETS['month']],
             'last_month' => [
                 $now->copy()->subMonthNoOverflow()->startOfMonth(),
@@ -56,7 +58,7 @@ class DashboardRange
             ],
             'all' => [null, null, self::PRESETS['all']],
             'custom' => self::custom($filters, $now),
-            default => [$now->copy()->subDays(30)->startOfDay(), $now->copy()->endOfDay(), self::PRESETS['30d']],
+            default => [$now->copy()->subDays(29)->startOfDay(), $now->copy()->endOfDay(), self::PRESETS['30d']],
         };
     }
 
@@ -69,7 +71,7 @@ class DashboardRange
         // Custom without a start date behaves like the default window instead
         // of silently querying everything.
         if (! $from) {
-            return [$now->copy()->subDays(30)->startOfDay(), $until, self::PRESETS['30d']];
+            return [$now->copy()->subDays(29)->startOfDay(), $until, self::PRESETS['30d']];
         }
 
         return [$from, $until, $from->format('d.m.Y') . ' – ' . $until->format('d.m.Y')];

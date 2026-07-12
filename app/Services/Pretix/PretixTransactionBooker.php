@@ -44,12 +44,6 @@ class PretixTransactionBooker
             ->get();
 
         foreach ($orders as $order) {
-            if ($order->isPaypal() && ! $connection->import_paypal_orders) {
-                $skippedPaypal++;
-
-                continue;
-            }
-
             $dedupeKey = hash('sha256', "pretix|{$connection->id}|{$order->event_slug}|{$order->order_code}");
 
             if ($order->status !== 'p') {
@@ -68,13 +62,28 @@ class PretixTransactionBooker
                 continue;
             }
 
+            // The booked amount comes from the CONFIRMED payments, not from the
+            // order total: pretix lowers `total` retroactively on order changes
+            // while the money actually received stays what it was - deriving
+            // gross from `total` double-subtracted partial refunds (audit
+            // 2026-07-12). Mixed orders (PayPal + bank transfer) book only the
+            // non-PayPal share; the PayPal share arrives via the PayPal sync.
+            $money = $this->receivedMoney($order, (bool) $connection->import_paypal_orders);
+
+            if ($money === null) {
+                // Fully PayPal-paid -> nothing to book here.
+                $skippedPaypal++;
+
+                continue;
+            }
+
+            $gross = $money['gross'];
+            $providerLabel = $money['provider'];
+
             // Per user decision (2026-07-11): "manual" orders are hand-confirmed
             // bank-transfer receipts at HSP, so they carry the transfer fee too.
             // Never charge the fee on zero-total orders (free tickets).
-            $provider = strtolower((string) $order->payment_provider);
-            $isBankTransfer = str_contains($provider, 'banktransfer') || $provider === 'manual';
-            $gross = (float) $order->total;
-            $fee = ($isBankTransfer && $gross > 0) ? -$connection->bankTransferFee() : 0.0;
+            $fee = ($money['is_bank_transfer'] && $gross > 0) ? -$connection->bankTransferFee() : 0.0;
 
             $transaction = Transaction::updateOrCreate(
                 ['dedupe_key' => $dedupeKey],
@@ -88,9 +97,9 @@ class PretixTransactionBooker
                     'net_amount' => round($gross + $fee, 2),
                     'currency' => $order->currency,
                     'payer_email' => $order->email,
-                    'payment_method_type' => $order->payment_provider ?: 'unbekannt',
+                    'payment_method_type' => $providerLabel,
                     'instrument_type' => 'pretix',
-                    'subject' => "pretix-Bestellung {$order->order_code} ({$order->payment_provider})",
+                    'subject' => "pretix-Bestellung {$order->order_code} ({$providerLabel})",
                     // Same scheme as PayPal's custom field so parsing, filters and
                     // event-assignment rules work identically for these rows.
                     'custom_field' => 'Order ' . strtoupper($order->event_slug) . '-' . $order->order_code,
@@ -120,6 +129,58 @@ class PretixTransactionBooker
     }
 
     /**
+     * What money this order actually brought in OUTSIDE of PayPal, derived
+     * from the confirmed payments (state missing = confirmed, for older
+     * payloads). Returns null when the order is fully PayPal-paid (booked via
+     * the PayPal sync instead), or the non-PayPal share for mixed orders.
+     * Falls back to the order-level provider/total for payloads without a
+     * payments list or without per-payment amounts.
+     *
+     * @return array{gross: float, provider: string, is_bank_transfer: bool}|null
+     */
+    private function receivedMoney(PretixOrder $order, bool $importPaypalOrders): ?array
+    {
+        $isPaypal = fn (?string $p) => str_contains(strtolower((string) $p), 'paypal');
+        $isBank = fn (?string $p) => str_contains(strtolower((string) $p), 'banktransfer')
+            || strtolower((string) $p) === 'manual';
+
+        $payments = collect($order->raw_payload['payments'] ?? [])
+            ->filter(fn ($p) => (($p['state'] ?? 'confirmed') === 'confirmed'));
+
+        // No usable payments list, or amounts missing -> legacy order-level path.
+        if ($payments->isEmpty() || ! $payments->every(fn ($p) => isset($p['amount']))) {
+            if ($order->isPaypal() && ! $importPaypalOrders) {
+                return null;
+            }
+
+            return [
+                'gross' => (float) $order->total,
+                'provider' => $order->payment_provider ?: 'unbekannt',
+                'is_bank_transfer' => $isBank($order->payment_provider),
+            ];
+        }
+
+        $eligible = $importPaypalOrders
+            ? $payments
+            : $payments->reject(fn ($p) => $isPaypal($p['provider'] ?? null));
+
+        $gross = round((float) $eligible->sum(fn ($p) => (float) $p['amount']), 2);
+
+        // Everything confirmed was PayPal -> not booked here.
+        if ($eligible->isEmpty() || ($gross <= 0 && $payments->contains(fn ($p) => $isPaypal($p['provider'] ?? null)))) {
+            return null;
+        }
+
+        $providers = $eligible->pluck('provider')->filter()->unique()->values();
+
+        return [
+            'gross' => $gross,
+            'provider' => $providers->implode('+') ?: ($order->payment_provider ?: 'unbekannt'),
+            'is_bank_transfer' => $providers->contains(fn ($p) => $isBank($p)),
+        ];
+    }
+
+    /**
      * Books every completed ("done") pretix refund of the order as its own
      * negative transaction, so refunded bank-transfer money leaves the billing
      * figures again. Only called when the order's payment itself is booked -
@@ -134,6 +195,13 @@ class PretixTransactionBooker
 
         foreach ($order->raw_payload['refunds'] ?? [] as $refund) {
             if (($refund['state'] ?? null) !== 'done') {
+                continue;
+            }
+
+            // PayPal refunds arrive via the PayPal sync as T1107 rows - booking
+            // them here as well would subtract the money twice (audit 2026-07-12).
+            $refundProvider = strtolower((string) ($refund['provider'] ?? ''));
+            if (str_contains($refundProvider, 'paypal') && ! $connection->import_paypal_orders) {
                 continue;
             }
 

@@ -37,7 +37,7 @@ class NeedsReviewWidget extends BaseWidget
     protected static function baseQuery(): Builder
     {
         return \App\Support\CustomerScope::transactions(
-            Transaction::query()->excludingIrrelevant()
+            Transaction::query()->excludingIrrelevant()->currentRevision()
         )
             ->whereIn('reconciliation_status', [
                 Transaction::RECONCILIATION_MISMATCH,

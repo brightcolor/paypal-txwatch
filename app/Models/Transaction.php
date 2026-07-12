@@ -56,7 +56,11 @@ class Transaction extends Model
      * than a hand-maintained code list) also caught codes like T2107 that an
      * explicit list had missed.
      */
-    public const LEDGER_ONLY_PREFIXES = ['T04', 'T20', 'T21'];
+    public const LEDGER_ONLY_PREFIXES = ['T02', 'T03', 'T04', 'T20', 'T21'];
+    // T02xx currency-conversion legs come in PAIRS whose amounts are in two
+    // different currencies; T03xx are bank deposits INTO the balance. Both are
+    // account movements, not sales - counting them corrupted revenue (audit
+    // 2026-07-12). T01xx fee rows stay IN revenue: they are real costs.
 
     /**
      * The subset of ledger movements that are actual payouts/withdrawals to a
@@ -100,6 +104,7 @@ class Transaction extends Model
         'imported_at',
         'last_seen_at',
         'marked_irrelevant_at',
+        'superseded_at',
         'irrelevant_reason',
         'irrelevant_marked_by_user_id',
         'pretix_order_id',
@@ -119,6 +124,7 @@ class Transaction extends Model
             'imported_at' => 'datetime',
             'last_seen_at' => 'datetime',
             'marked_irrelevant_at' => 'datetime',
+            'superseded_at' => 'datetime',
             'gross_amount' => 'decimal:2',
             'fee_amount' => 'decimal:2',
             'net_amount' => 'decimal:2',
@@ -302,6 +308,17 @@ class Transaction extends Model
     public function scopeExcludingLedgerEvents(Builder $query): Builder
     {
         return $query->where('is_ledger', false);
+    }
+
+    /**
+     * Only the latest revision of each PayPal transaction. Revisions of the
+     * same transaction_id are kept as history rows, but exactly one of them is
+     * "current" (superseded_at null) - every revenue aggregation MUST use this
+     * scope or amounts double-count (audit 2026-07-12).
+     */
+    public function scopeCurrentRevision(Builder $query): Builder
+    {
+        return $query->whereNull('superseded_at');
     }
 
     /**

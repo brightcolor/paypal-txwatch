@@ -47,6 +47,15 @@ class PretixReconciler
             ])
             ->groupBy(fn (Transaction $t) => $t->pretixMatchKey());
 
+        // Slugs this connection actually owns. Only keys within that slug
+        // space may be touched: reconciling connection A must neither wipe
+        // connection B's matches nor mark free-text custom fields (whose
+        // parsed "slug" belongs to no connection) as unmatched (audit 2026-07-12).
+        $ownSlugs = $ordersByKey->keys()
+            ->map(fn (string $key) => explode('/', $key, 2)[0])
+            ->unique()
+            ->flip();
+
         $matched = 0;
         $mismatch = 0;
         $unmatched = 0;
@@ -54,6 +63,12 @@ class PretixReconciler
         foreach ($groups as $key => $group) {
             if (blank($key)) {
                 continue;
+            }
+
+            $slugPart = explode('/', (string) $key, 2)[0];
+
+            if (! $ownSlugs->has($slugPart)) {
+                continue; // not this connection's event - leave untouched
             }
 
             // Only real payments count towards the amount paid. Ledger events

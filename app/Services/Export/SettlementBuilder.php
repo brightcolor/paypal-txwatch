@@ -43,7 +43,8 @@ class SettlementBuilder
         // Per-event breakdown on top of the payment-source blocks.
         $data['events'] = Transaction::query()
             ->whereHas('event', fn (Builder $q) => $q->where('customer_id', $customer->id))
-            ->excludingLedgerEvents()->excludingIrrelevant()
+            ->excludingLedgerEvents()->excludingIrrelevant()->currentRevision()
+            ->where(fn (Builder $q) => $q->whereNull('transaction_status')->orWhereNotIn('transaction_status', ['D', 'P']))
             ->leftJoin('events', 'events.id', '=', 'transactions.event_id')
             ->selectRaw("COALESCE(NULLIF(events.display_name, ''), events.name, 'Ohne Event') as label")
             ->selectRaw('count(*) as cnt, COALESCE(sum(gross_amount),0) as amount, COALESCE(sum(net_amount),0) as payout')
@@ -62,6 +63,14 @@ class SettlementBuilder
         $transactions = (clone $query)
             ->excludingLedgerEvents()
             ->excludingIrrelevant()
+            // Only the latest revision per PayPal transaction - a status update
+            // creates a new row sharing the transaction_id, and summing both
+            // would pay the customer twice (audit 2026-07-12).
+            ->currentRevision()
+            // Money that never arrived must not be settled: Denied (D) and
+            // still-Pending (P) payments are excluded. V (reversed) stays in -
+            // its reversal is a separate T11xx row that nets it out.
+            ->where(fn (Builder $q) => $q->whereNull('transaction_status')->orWhereNotIn('transaction_status', ['D', 'P']))
             ->with('pretixOrder')
             ->get();
 

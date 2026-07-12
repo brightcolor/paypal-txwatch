@@ -22,6 +22,9 @@ class ReportService
             Transaction::query()
                 ->excludingLedgerEvents()
                 ->excludingIrrelevant()
+                // Only the latest revision per PayPal transaction - revisions
+                // share the transaction_id and would double-count otherwise.
+                ->currentRevision()
         )
             ->when($from, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '>=', $from))
             ->when($to, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '<=', $to));
@@ -95,7 +98,10 @@ class ReportService
                 'gross' => (float) $row->gross,
                 'fee' => (float) $row->fee,
                 'net' => (float) $row->net,
-                'fee_ratio' => (float) $row->gross != 0.0 ? round(abs($row->fee / $row->gross) * 100, 2) : 0.0,
+                // Only meaningful for positive gross: in a refund-heavy bucket
+                // (gross <= 0) a "fee ratio" relative to the refund overhang is
+                // noise, and near-zero gross makes it explode.
+                'fee_ratio' => (float) $row->gross > 0.0 ? round(abs($row->fee / $row->gross) * 100, 2) : null,
             ]);
     }
 
@@ -112,7 +118,9 @@ class ReportService
             ->whereNotNull('custom_field')
             ->where('custom_field', '<>', '')
             ->get(['custom_field', 'gross_amount'])
-            ->groupBy(fn (Transaction $t) => self::extractPrefix($t->custom_field))
+            // Case-insensitive: PayPal writes the slug uppercase, pretix rows
+            // may differ - one event must not split into two report rows.
+            ->groupBy(fn (Transaction $t) => mb_strtoupper(self::extractPrefix($t->custom_field)))
             ->map(fn (Collection $rows, string $prefix) => [
                 'prefix' => $prefix,
                 'count' => $rows->count(),
@@ -175,17 +183,28 @@ class ReportService
      */
     public function payoutReconciliation(?Carbon $from = null, ?Carbon $to = null): array
     {
+        // The balance bridge is a PAYPAL view: pretix-booked bank transfers
+        // went straight to the bank account and were never in the PayPal
+        // balance, so they must not inflate the expected balance (audit
+        // 2026-07-12). They are reported separately as pretix_direct.
         $revenue = $this->baseQuery($from, $to)
+            ->where(fn (Builder $q) => $q->whereNull('instrument_type')->orWhere('instrument_type', '<>', 'pretix'))
             ->selectRaw('COALESCE(sum(gross_amount), 0) as gross')
             ->selectRaw('COALESCE(sum(fee_amount), 0) as fee')
             ->selectRaw('COALESCE(sum(net_amount), 0) as net')
             ->first();
 
+        $pretixDirect = (float) $this->baseQuery($from, $to)
+            ->where('instrument_type', 'pretix')
+            ->sum('net_amount');
+
         $refunds = (float) $this->refundsSummary($from, $to)['total'];
 
         // Payouts are ledger events -> not in baseQuery(); query them directly.
         // Customer-scoped too: payouts carry no event, so customers see none.
-        $payoutRow = CustomerScope::transactions(Transaction::query()->excludingIrrelevant())
+        $payoutRow = CustomerScope::transactions(
+            Transaction::query()->excludingIrrelevant()->currentRevision()
+        )
             ->payouts()
             ->when($from, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '>=', $from))
             ->when($to, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '<=', $to))
@@ -200,10 +219,11 @@ class ReportService
             'fees' => (float) $revenue->fee,
             'incoming_net' => $incomingNet,
             'refunds' => $refunds,
+            'pretix_direct' => round($pretixDirect, 2),
             'payouts' => $payouts,
             'payout_count' => (int) $payoutRow->cnt,
-            // Net revenue already nets refunds/fees; add payouts (negative) to
-            // get what should remain in the PayPal balance for the period.
+            // PayPal net revenue already nets refunds/fees; add payouts
+            // (negative) to get what should remain in the PayPal balance.
             'expected_balance' => round($incomingNet + $payouts, 2),
         ];
     }
@@ -215,7 +235,7 @@ class ReportService
      */
     public function payouts(?Carbon $from = null, ?Carbon $to = null): Collection
     {
-        return CustomerScope::transactions(Transaction::query()->excludingIrrelevant())
+        return CustomerScope::transactions(Transaction::query()->excludingIrrelevant()->currentRevision())
             ->payouts()
             ->when($from, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '>=', $from))
             ->when($to, fn (Builder $q) => $q->whereDate('transaction_initiation_date', '<=', $to))

@@ -25,8 +25,10 @@ class ExportDataBuilder
         $config = $this->resolveConfig($template, $overrides);
         // Exports are customer-facing reports, so transactions marked "not relevant"
         // must never appear in them - regardless of the table's current filter state.
-        // pretixOrder is needed per row for the real VAT (Transaction::vatAmount).
-        $transactions = $query->excludingIrrelevant()->with(['event', 'pretixOrder'])->get();
+        // Only the latest revision per PayPal transaction (revisions share the
+        // transaction_id and would double-count). pretixOrder is needed per row
+        // for the real VAT (Transaction::vatAmount).
+        $transactions = $query->excludingIrrelevant()->currentRevision()->with(['event', 'pretixOrder'])->get();
 
         $columns = $this->visibleColumns($config['columns'], $config['mode']);
         $vatRate = (float) $config['vat_rate'];

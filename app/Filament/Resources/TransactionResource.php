@@ -264,6 +264,9 @@ class TransactionResource extends Resource
                 Tables\Actions\Action::make('assignEvent')
                     ->label('Event zuweisen')
                     ->icon('heroicon-o-tag')
+                    // Write action: viewers (customer/auditor) must not reassign
+                    // revenue between events (audit 2026-07-12).
+                    ->visible(fn () => auth()->user()?->can('manage-transactions') ?? false)
                     ->form([
                         Forms\Components\Select::make('event_id')
                             ->label('Event')
@@ -327,6 +330,7 @@ class TransactionResource extends Resource
                     Tables\Actions\BulkAction::make('assignEventBulk')
                         ->label('Event zuweisen')
                         ->icon('heroicon-o-tag')
+                        ->visible(fn () => auth()->user()?->can('manage-transactions') ?? false)
                         ->form([
                             Forms\Components\Select::make('event_id')
                                 ->label('Event')
@@ -471,7 +475,21 @@ class TransactionResource extends Resource
 
             Tables\Filters\SelectFilter::make('event_id')
                 ->label('Event')
-                ->relationship('event', 'name', fn ($query) => $query->where('is_active', true)),
+                // Customers only see their own events in the dropdown.
+                ->relationship('event', 'name', fn ($query) => \App\Support\CustomerScope::byCustomerId($query->where('is_active', true))),
+
+            Tables\Filters\TernaryFilter::make('revisions')
+                ->label('Revisionen')
+                ->placeholder('Nur aktuelle (Standard)')
+                ->trueLabel('Alle Revisionen anzeigen')
+                ->falseLabel('Nur aktuelle')
+                // Default: hide superseded revisions - they are history rows and
+                // would visually double every updated payment.
+                ->queries(
+                    true: fn (Builder $query) => $query,
+                    false: fn (Builder $query) => $query->whereNull('superseded_at'),
+                    blank: fn (Builder $query) => $query->whereNull('superseded_at'),
+                ),
 
             Tables\Filters\TernaryFilter::make('has_fee')
                 ->label('Gebühren')

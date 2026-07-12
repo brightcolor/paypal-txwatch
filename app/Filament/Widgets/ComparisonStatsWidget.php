@@ -25,17 +25,31 @@ class ComparisonStatsWidget extends BaseWidget
     {
         $now = Carbon::now();
 
-        $thisMonth = $this->revenue($now->copy()->startOfMonth(), $now->copy()->endOfMonth());
-        $prevMonth = $this->revenue($now->copy()->subMonthNoOverflow()->startOfMonth(), $now->copy()->subMonthNoOverflow()->endOfMonth());
-        $lastYear = $this->revenue($now->copy()->subYear()->startOfMonth(), $now->copy()->subYear()->endOfMonth());
+        // Fair comparison: the running month is only partial, so the baseline
+        // periods are cut to the SAME day span (1st .. same day-of-month) -
+        // otherwise a month on track always shows deep red mid-month.
+        $thisFrom = $now->copy()->startOfMonth();
+        $thisTo = $now->copy()->endOfDay();
 
-        $countThis = $this->count($now->copy()->startOfMonth(), $now->copy()->endOfMonth());
-        $countPrev = $this->count($now->copy()->subMonthNoOverflow()->startOfMonth(), $now->copy()->subMonthNoOverflow()->endOfMonth());
+        $prevFrom = $now->copy()->subMonthNoOverflow()->startOfMonth();
+        $prevTo = $now->copy()->subMonthNoOverflow()->endOfDay();
+
+        $lastYearFrom = $now->copy()->subYear()->startOfMonth();
+        $lastYearTo = $now->copy()->subYear()->endOfDay();
+
+        $thisMonth = $this->revenue($thisFrom, $thisTo);
+        $prevMonth = $this->revenue($prevFrom, $prevTo);
+        $lastYear = $this->revenue($lastYearFrom, $lastYearTo);
+
+        $countThis = $this->count($thisFrom, $thisTo);
+        $countPrev = $this->count($prevFrom, $prevTo);
+
+        $span = 'bis ' . $now->format('d.');
 
         return [
-            $this->stat('Umsatz diesen Monat', $this->eur($thisMonth), $thisMonth, $prevMonth, 'zum Vormonat'),
-            $this->stat('Umsatz ' . $now->translatedFormat('F'), $this->eur($thisMonth), $thisMonth, $lastYear, 'zum Vorjahresmonat'),
-            $this->stat('Transaktionen diesen Monat', number_format($countThis, 0, ',', '.'), $countThis, $countPrev, 'zum Vormonat', money: false),
+            $this->stat('Umsatz diesen Monat', $this->eur($thisMonth), $thisMonth, $prevMonth, "zum Vormonat ({$span})"),
+            $this->stat('Umsatz ' . $now->translatedFormat('F'), $this->eur($thisMonth), $thisMonth, $lastYear, "zum Vorjahresmonat ({$span})"),
+            $this->stat('Transaktionen diesen Monat', number_format($countThis, 0, ',', '.'), $countThis, $countPrev, "zum Vormonat ({$span})", money: false),
         ];
     }
 
@@ -58,7 +72,7 @@ class ComparisonStatsWidget extends BaseWidget
     private function base(): Builder
     {
         return CustomerScope::transactions(
-            Transaction::query()->excludingLedgerEvents()->excludingIrrelevant()
+            Transaction::query()->excludingLedgerEvents()->excludingIrrelevant()->currentRevision()
         );
     }
 

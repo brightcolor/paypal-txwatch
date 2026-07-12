@@ -44,9 +44,10 @@ class DashboardStatsOverview extends Widget
     {
         [$from, $until, $rangeLabel] = DashboardRange::resolve($this->filters);
 
-        // Customer users see only their own customer's figures.
+        // Customer users see only their own customer's figures; only the
+        // latest revision per PayPal transaction counts.
         $base = \App\Support\CustomerScope::transactions(
-            Transaction::query()->excludingLedgerEvents()->excludingIrrelevant()
+            Transaction::query()->excludingLedgerEvents()->excludingIrrelevant()->currentRevision()
         )
             ->when($from, fn ($q) => $q->where('transaction_initiation_date', '>=', $from))
             ->when($until, fn ($q) => $q->where('transaction_initiation_date', '<=', $until));
@@ -59,7 +60,7 @@ class DashboardStatsOverview extends Widget
         $avgBasket = $count > 0 ? $gross / $count : 0;
         $feeRatio = $gross != 0 ? abs($fees / $gross) * 100 : 0;
         $unassigned = (clone $base)->whereNull('event_id')->count();
-        $mismatch = \App\Support\CustomerScope::transactions(Transaction::query())
+        $mismatch = \App\Support\CustomerScope::transactions(Transaction::query()->currentRevision())
             ->where('reconciliation_status', Transaction::RECONCILIATION_MISMATCH)->count();
 
         $eur = fn ($v) => number_format($v, 2, ',', '.') . ' €';

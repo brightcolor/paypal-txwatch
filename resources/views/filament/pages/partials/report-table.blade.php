@@ -22,7 +22,7 @@
                     <td class="num amt">{{ number_format($row['gross'], 2, ',', '.') }}&nbsp;€</td>
                     <td class="num @if($row['fee'] < 0) neg @endif">{{ number_format($row['fee'], 2, ',', '.') }}&nbsp;€</td>
                     <td class="num net @if($row['net'] < 0) neg @endif">{{ number_format($row['net'], 2, ',', '.') }}&nbsp;€</td>
-                    <td class="num muted">{{ $row['fee_ratio'] }}&nbsp;%</td>
+                    <td class="num muted">{{ $row['fee_ratio'] !== null ? number_format($row['fee_ratio'], 2, ',', '.') . ' %' : '–' }}</td>
                 </tr>
             @empty
                 <tr><td colspan="6" class="rpt-empty">Keine Daten im gewählten Zeitraum.</td></tr>

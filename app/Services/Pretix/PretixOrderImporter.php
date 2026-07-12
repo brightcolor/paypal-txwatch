@@ -183,8 +183,15 @@ class PretixOrderImporter
         $assigned = 0;
 
         // Deactivated events are retired: no new assignments happen for them
-        // (existing assignments stay untouched).
-        foreach (Event::query()->whereNotNull('pretix_event_slug')->where('is_active', true)->get() as $event) {
+        // (existing assignments stay untouched). Longest slug first plus a
+        // no-further-dash guard so 'sommerfest' can never swallow
+        // 'sommerfest-2' orders: pretix order codes are dash-free, so after
+        // "{slug}-" exactly ONE dash-free segment must follow (audit 2026-07-12).
+        $events = Event::query()->whereNotNull('pretix_event_slug')->where('is_active', true)
+            ->get()
+            ->sortByDesc(fn (Event $e) => mb_strlen($e->pretix_event_slug));
+
+        foreach ($events as $event) {
             // Escape LIKE wildcards in the slug; matching is case-insensitive
             // (pretix slugs are lowercase, PayPal custom fields are uppercase).
             $slug = addcslashes(strtolower($event->pretix_event_slug), '%_');
@@ -192,8 +199,13 @@ class PretixOrderImporter
             $assigned += Transaction::query()
                 ->whereNull('event_id')
                 ->where(function ($q) use ($slug) {
-                    $q->whereRaw('LOWER(custom_field) LIKE ?', ["order {$slug}-%"])
-                        ->orWhereRaw('LOWER(custom_field) LIKE ?', ["{$slug}-%"]);
+                    $q->where(function ($q2) use ($slug) {
+                        $q2->whereRaw('LOWER(custom_field) LIKE ?', ["order {$slug}-%"])
+                            ->whereRaw('LOWER(custom_field) NOT LIKE ?', ["order {$slug}-%-%"]);
+                    })->orWhere(function ($q2) use ($slug) {
+                        $q2->whereRaw('LOWER(custom_field) LIKE ?', ["{$slug}-%"])
+                            ->whereRaw('LOWER(custom_field) NOT LIKE ?', ["{$slug}-%-%"]);
+                    });
                 })
                 ->update([
                     'event_id' => $event->id,
@@ -236,9 +248,15 @@ class PretixOrderImporter
             return $raw['payment_provider'];
         }
 
-        // Newer pretix API nests payments; take the most recent one's provider.
-        $payments = $raw['payments'] ?? [];
+        // Newer pretix API nests payments. Only CONFIRMED payments say how the
+        // order was actually paid - a trailing failed/canceled attempt must not
+        // relabel the order (audit 2026-07-12). Missing state = confirmed, for
+        // older payloads.
+        $confirmed = array_values(array_filter(
+            $raw['payments'] ?? [],
+            fn ($p) => (($p['state'] ?? 'confirmed') === 'confirmed'),
+        ));
 
-        return filled($payments) ? Arr::get(Arr::last($payments), 'provider') : null;
+        return filled($confirmed) ? Arr::get(Arr::last($confirmed), 'provider') : null;
     }
 }

@@ -31,7 +31,7 @@ class TopEventsWidget extends BaseWidget
         $since = now()->subDays(90);
 
         return CustomerScope::transactions(
-            Transaction::query()->excludingLedgerEvents()->excludingIrrelevant()
+            Transaction::query()->excludingLedgerEvents()->excludingIrrelevant()->currentRevision()
         )
             ->whereNotNull('event_id')
             ->where('transaction_initiation_date', '>=', $since)

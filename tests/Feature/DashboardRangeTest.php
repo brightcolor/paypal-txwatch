@@ -44,9 +44,14 @@ class DashboardRangeTest extends TestCase
         $this->assertSame('2026-05-15', $until->toDateString());
         $this->assertSame('01.05.2026 – 15.05.2026', $label);
 
-        // Default / unknown -> 30 days.
+        // Default / unknown -> 30 days INCLUDING today (30 buckets, not 31).
         [$from, $until] = DashboardRange::resolve(null);
-        $this->assertSame('2026-06-11', $from->toDateString());
+        $this->assertSame('2026-06-12', $from->toDateString());
+
+        // "Letzte 7 Tage" = exactly 7 calendar days including today.
+        [$from, $until] = DashboardRange::resolve(['range' => '7d']);
+        $this->assertSame('2026-07-05', $from->toDateString());
+        $this->assertSame(7.0, (float) $from->diffInDays($until->copy()->addSecond()->startOfDay()));
 
         Carbon::setTestNow();
     }
