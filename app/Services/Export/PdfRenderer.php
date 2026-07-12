@@ -23,7 +23,9 @@ class PdfRenderer
         try {
             $browsershot = Browsershot::html($html)
                 ->format('A4')
-                ->margins(15, 10, 20, 10)
+                // DIN A4 with proper print margins - 10mm at the sides sat too
+                // close to the paper edge.
+                ->margins(18, 16, 20, 16)
                 ->showBackground()
                 ->showBrowserHeaderAndFooter()
                 ->hideHeader()

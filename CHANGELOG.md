@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.35.1] - 2026-07-11
+
+### Geändert
+
+- **PDF-Layout**: Ordentliche DIN-A4-Seitenränder (16 mm seitlich statt 10 mm – Inhalt saß zu nah an der
+  Kante); Deckblatt-Höhe an die neuen Ränder angepasst. **Logo aus den Kopfzeilen entfernt** (Export- und
+  Abrechnungs-PDF – das Deckblatt trägt das Event-Bild, in der Kopfzeile wirkte es unruhig).
+  Deckblatt-Fakten sauber ausgerichtet: feste Beschriftungsspalte, alle Werte (auch „Ort") beginnen jetzt
+  an derselben Position.
+
 ## [0.35.0] - 2026-07-11
 
 ### Neu

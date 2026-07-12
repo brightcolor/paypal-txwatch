@@ -30,9 +30,7 @@
 <div class="content">
     <div class="header">
         <div>
-            @if ($event && $event->logo_path && file_exists(storage_path('app/public/' . $event->logo_path)))
-                <img style="max-height:50px; max-width:160px; object-fit:contain;" src="{{ storage_path('app/public/' . $event->logo_path) }}" alt="Logo">
-            @endif
+            {{-- No logo in the header (matches the export PDF; looked cluttered). --}}
             <h1>{{ $title }}</h1>
             <h2>
                 @if (($customer ?? null)) für {{ $customer->name }}

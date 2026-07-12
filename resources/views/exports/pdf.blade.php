@@ -20,7 +20,6 @@
             padding-bottom: 10px;
             margin-bottom: 14px;
         }
-        .header img.logo { max-height: 50px; max-width: 160px; object-fit: contain; }
         h1 { font-size: 18px; margin: 0 0 2px 0; color: #1d4ed8; }
         h2 { font-size: 12px; margin: 0; font-weight: normal; color: #52606d; }
         .meta { text-align: right; font-size: 10px; color: #52606d; }
@@ -84,7 +83,9 @@
         }
         .content { padding: 15mm 10mm; }
         /* Event cover page */
-        .cover { height: 267mm; display: flex; flex-direction: column; page-break-after: always; }
+        /* Height = printable area (297mm - 18mm top - 20mm bottom margin) with
+           a little slack, so the cover fills exactly one page. */
+        .cover { height: 255mm; display: flex; flex-direction: column; page-break-after: always; }
         .cover-hero { text-align: center; padding-top: 14mm; }
         .cover-hero img {
             max-width: 150mm; max-height: 80mm; object-fit: contain;
@@ -103,9 +104,13 @@
         .cover-title { margin-top: 12mm; text-align: center; }
         .cover-title h1 { font-size: 30px; color: #1d4ed8; margin: 0 0 6px 0; }
         .cover-title .cust { font-size: 14px; color: #52606d; }
-        .cover-facts { margin: 12mm auto 0; width: 130mm; }
-        .cover-facts .fact { display: flex; padding: 7px 0; border-bottom: 1px solid #e2e8f0; font-size: 12.5px; }
-        .cover-facts .fact .k { width: 42mm; color: #64748b; font-weight: bold; }
+        .cover-facts { margin: 10mm auto 0; width: 140mm; }
+        .cover-facts .fact { display: flex; padding: 6px 0; border-bottom: 1px solid #e2e8f0; font-size: 12.5px; }
+        /* Fixed, non-shrinking label column so every value starts at the same
+           x-position regardless of label length (long labels like
+           "Veranstaltungsdatum" used to push their value further right). */
+        .cover-facts .fact .k { flex: 0 0 52mm; color: #64748b; font-weight: bold; }
+        .cover-facts .fact span:last-child { flex: 1; text-align: left; }
         .cover-desc { margin: 8mm auto 0; width: 130mm; font-size: 11.5px; color: #334155; line-height: 1.5; }
         .cover-foot { margin-top: auto; text-align: center; font-size: 10px; color: #94a3b8; }
     </style>
@@ -198,9 +203,8 @@
 <div class="content">
     <div class="header">
         <div>
-            @if ($event?->logo_path)
-                <img class="logo" src="{{ storage_path('app/public/' . $event->logo_path) }}" alt="Logo">
-            @endif
+            {{-- No logo in the running header - the cover page carries the
+                 event image; repeating it here looked cluttered. --}}
             <h1>{{ $title }}</h1>
             @if ($subtitle)
                 <h2>{{ $subtitle }}</h2>
