@@ -209,6 +209,98 @@ class PretixClient
     }
 
     /**
+     * Core facts of one event straight from the pretix event endpoint:
+     * dates, admission time, location, presale window, currency.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function eventDetails(string $eventSlug): ?array
+    {
+        $organizer = $this->connection->organizer_slug;
+
+        try {
+            $response = $this->http()->get("/organizers/{$organizer}/events/{$eventSlug}/");
+
+            if (! $response->successful()) {
+                return null;
+            }
+
+            $json = $response->json();
+
+            return [
+                'name' => self::localized($json['name'] ?? null),
+                'location' => self::localized($json['location'] ?? null),
+                'date_from' => $json['date_from'] ?? null,
+                'date_to' => $json['date_to'] ?? null,
+                'date_admission' => $json['date_admission'] ?? null,
+                'presale_start' => $json['presale_start'] ?? null,
+                'presale_end' => $json['presale_end'] ?? null,
+                'currency' => $json['currency'] ?? null,
+                'live' => (bool) ($json['live'] ?? false),
+            ];
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Item (ticket category) id => German name map for an event.
+     *
+     * @return array<int, string>
+     */
+    public function items(string $eventSlug): array
+    {
+        $organizer = $this->connection->organizer_slug;
+        $items = [];
+
+        try {
+            $this->paginate("/organizers/{$organizer}/events/{$eventSlug}/items/", function (array $page) use (&$items) {
+                foreach ($page as $item) {
+                    $items[(int) $item['id']] = self::localized($item['name'] ?? null) ?? ('Kategorie #' . $item['id']);
+                }
+            });
+        } catch (Throwable) {
+            return [];
+        }
+
+        return $items;
+    }
+
+    /**
+     * The guest ledger of an event: per ticket category (item) how many seats
+     * were booked (positions of PAID orders) and how many guests actually
+     * showed up (positions with at least one check-in). One sweep over the
+     * order-position endpoint, which embeds each position's checkins.
+     *
+     * @return array<int, array{item: int, booked: int, attended: int, revenue: float}> keyed by item id
+     */
+    public function attendanceByItem(string $eventSlug): array
+    {
+        $organizer = $this->connection->organizer_slug;
+        $stats = [];
+
+        $this->paginate(
+            "/organizers/{$organizer}/events/{$eventSlug}/orderpositions/",
+            function (array $page) use (&$stats) {
+                foreach ($page as $position) {
+                    $item = (int) ($position['item'] ?? 0);
+
+                    $stats[$item] ??= ['item' => $item, 'booked' => 0, 'attended' => 0, 'revenue' => 0.0];
+                    $stats[$item]['booked']++;
+                    $stats[$item]['revenue'] += (float) ($position['price'] ?? 0);
+
+                    if (! empty($position['checkins'])) {
+                        $stats[$item]['attended']++;
+                    }
+                }
+            },
+            ['order__status' => 'p'],
+        );
+
+        return $stats;
+    }
+
+    /**
      * Ticket capacity/availability for an event, aggregated across its quotas.
      * pretix' quota endpoint with ?with_availability=true returns each quota's
      * total size and remaining available_number; sold/blocked = size - available.

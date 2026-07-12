@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.35.0] - 2026-07-11
+
+### Neu
+
+- **Event-Deckblatt mit Live-pretix-Daten im Export**: Im Export-Dialog lässt sich jetzt ein **Event
+  auswählen** – der Export wird auf dieses Event eingegrenzt und das PDF erhält ein aufgewertetes Deckblatt:
+  - **Event-Bild** stilvoll eingebunden (Rahmen, Schatten, abgerundet)
+  - **Spielinfos live aus pretix**: Beginn (mit Uhrzeit), Einlass, Ort, Vorverkaufszeitraum sowie
+    **Kapazität & Auslastung** aus den Kontingenten
+  - **Gästebilanz** pro Ticketkategorie: wie viele Gäste **gebucht** haben und wie viele tatsächlich
+    **erschienen** sind (Check-ins aus pretix), mit **Erscheinungsquote** je Kategorie, Gesamtzeile und
+    No-Show-Hinweis
+  - Fehlertolerant: Ist pretix nicht erreichbar oder das Event nicht verknüpft, rendert das PDF das
+    bisherige einfache Deckblatt.
+- Neue pretix-Client-Methoden: `eventDetails()`, `items()`, `attendanceByItem()` (Order-Positionen inkl.
+  Check-ins, bezahlte Bestellungen).
+
 ## [0.34.0] - 2026-07-11
 
 ### Neu

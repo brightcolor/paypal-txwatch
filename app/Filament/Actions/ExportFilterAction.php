@@ -35,6 +35,13 @@ class ExportFilterAction
                     ->default('pdf')
                     ->required(),
 
+                Forms\Components\Select::make('event_id')
+                    ->label('Event (Deckblatt mit pretix-Daten)')
+                    ->options(fn () => \App\Models\Event::query()->where('is_active', true)->orderBy('name')
+                        ->get()->mapWithKeys(fn ($e) => [$e->id => $e->displayName()]))
+                    ->searchable()
+                    ->helperText('Wenn gewählt, wird der Export auf dieses Event eingegrenzt und das PDF erhält ein Deckblatt mit Event-Bild, Spielinfos und der Gästebilanz (gebucht vs. erschienen) live aus pretix.'),
+
                 Forms\Components\Select::make('export_template_id')
                     ->label('Export-Vorlage (optional)')
                     ->options(fn () => ExportTemplate::query()->pluck('name', 'id'))
@@ -88,6 +95,17 @@ class ExportFilterAction
             ])
             ->action(function (array $data, $livewire) {
                 $query = $livewire->getTableQueryForExport();
+
+                // Explicit event choice narrows the export to that event and
+                // drives the pretix cover page.
+                $coverEvent = filled($data['event_id'] ?? null)
+                    ? \App\Models\Event::find($data['event_id'])
+                    : null;
+
+                if ($coverEvent) {
+                    $query->where('event_id', $coverEvent->id);
+                }
+
                 $template = filled($data['export_template_id'] ?? null)
                     ? ExportTemplate::find($data['export_template_id'])
                     : null;
@@ -105,6 +123,15 @@ class ExportFilterAction
                 ]) + ['vat_rate' => (float) ($data['vat_rate'] ?? 19)];
 
                 $built = app(ExportDataBuilder::class)->build($query, $template, $overrides);
+
+                // Live pretix cover data (image + Spielinfos + Gästebilanz).
+                // Fault-tolerant: on API problems the PDF just renders the
+                // plain local cover.
+                if ($coverEvent) {
+                    $built['event'] = $coverEvent;
+                    $built['pretix_cover'] = app(\App\Services\Pretix\PretixEventCover::class)->forEvent($coverEvent);
+                }
+
                 $format = $data['format'];
                 $filename = 'export-' . now()->format('Ymd-His') . '-' . uniqid() . '.' . $format;
                 $path = 'exports/' . $filename;

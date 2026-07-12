@@ -85,8 +85,21 @@
         .content { padding: 15mm 10mm; }
         /* Event cover page */
         .cover { height: 267mm; display: flex; flex-direction: column; page-break-after: always; }
-        .cover-hero { text-align: center; padding-top: 22mm; }
-        .cover-hero img { max-width: 150mm; max-height: 95mm; object-fit: contain; border-radius: 6px; }
+        .cover-hero { text-align: center; padding-top: 14mm; }
+        .cover-hero img {
+            max-width: 150mm; max-height: 80mm; object-fit: contain;
+            border-radius: 8px; box-shadow: 0 6px 18px rgba(15, 23, 42, .22);
+            border: 1px solid #e2e8f0; background: #fff; padding: 3mm;
+        }
+        .cover-guests { margin: 8mm auto 0; width: 150mm; }
+        .cover-guests h3 { font-size: 13px; color: #1d4ed8; margin: 0 0 3px 0; text-transform: uppercase; letter-spacing: .05em; }
+        .cover-guests table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+        .cover-guests th { text-align: left; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; border-bottom: 2px solid #dbe3ec; padding: 3px 6px; }
+        .cover-guests th.num, .cover-guests td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .cover-guests td { padding: 3.5px 6px; border-bottom: 1px solid #eef2f7; }
+        .cover-guests tr.total td { border-top: 2px solid #dbe3ec; border-bottom: none; font-weight: bold; }
+        .cover-guests .quote-good { color: #16a34a; }
+        .cover-guests .quote-bad { color: #dc2626; }
         .cover-title { margin-top: 12mm; text-align: center; }
         .cover-title h1 { font-size: 30px; color: #1d4ed8; margin: 0 0 6px 0; }
         .cover-title .cust { font-size: 14px; color: #52606d; }
@@ -109,12 +122,25 @@
             <h1>{{ $event->displayName() }}</h1>
             @if ($event->customer)<div class="cust">Abrechnung für {{ $event->customer->name }}</div>@endif
         </div>
+        @php($pc = $pretix_cover ?? null)
+        @php($pcd = $pc['details'] ?? [])
         <div class="cover-facts">
-            @if ($event->event_date)
+            @if (($pcd['date_from'] ?? null))
+                <div class="fact"><span class="k">Beginn</span><span>{{ \Illuminate\Support\Carbon::parse($pcd['date_from'])->timezone(config('app.timezone'))->translatedFormat('l, d. F Y, H:i') }} Uhr</span></div>
+            @elseif ($event->event_date)
                 <div class="fact"><span class="k">Veranstaltungsdatum</span><span>{{ $event->event_date->translatedFormat('l, d. F Y') }}</span></div>
             @endif
-            @if ($event->venue)
-                <div class="fact"><span class="k">Ort</span><span>{{ $event->venue }}</span></div>
+            @if (($pcd['date_admission'] ?? null))
+                <div class="fact"><span class="k">Einlass</span><span>{{ \Illuminate\Support\Carbon::parse($pcd['date_admission'])->timezone(config('app.timezone'))->format('H:i') }} Uhr</span></div>
+            @endif
+            @if (($pcd['location'] ?? null) || $event->venue)
+                <div class="fact"><span class="k">Ort</span><span>{{ $pcd['location'] ?? $event->venue }}</span></div>
+            @endif
+            @if (($pcd['presale_start'] ?? null) || ($pcd['presale_end'] ?? null))
+                <div class="fact"><span class="k">Vorverkauf</span><span>{{ ($pcd['presale_start'] ?? null) ? \Illuminate\Support\Carbon::parse($pcd['presale_start'])->format('d.m.Y') : '–' }} – {{ ($pcd['presale_end'] ?? null) ? \Illuminate\Support\Carbon::parse($pcd['presale_end'])->format('d.m.Y') : 'offen' }}</span></div>
+            @endif
+            @if ($pc && ($pc['capacity']['capacity'] ?? null))
+                <div class="fact"><span class="k">Kapazität</span><span>{{ number_format($pc['capacity']['sold'], 0, ',', '.') }} von {{ number_format($pc['capacity']['capacity'], 0, ',', '.') }} Plätzen ({{ number_format($pc['capacity']['sold'] / max($pc['capacity']['capacity'], 1) * 100, 1, ',', '.') }} % Auslastung)</span></div>
             @endif
             @if ($event->contact_person)
                 <div class="fact"><span class="k">Ansprechpartner</span><span>{{ $event->contact_person }}</span></div>
@@ -122,6 +148,47 @@
             <div class="fact"><span class="k">Zahlungszeitraum</span><span>{{ optional($period['from'])->format('d.m.Y') ?? '–' }} – {{ optional($period['to'])->format('d.m.Y') ?? '–' }}</span></div>
             <div class="fact"><span class="k">Transaktionen</span><span>{{ $grand_total['count'] ?? 0 }}</span></div>
         </div>
+
+        @if ($pc && ! empty($pc['categories']))
+            <div class="cover-guests">
+                <h3>Gästebilanz</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Kategorie</th>
+                            <th class="num">Gebucht</th>
+                            <th class="num">Erschienen</th>
+                            <th class="num">Erscheinungsquote</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($pc['categories'] as $cat)
+                            <tr>
+                                <td>{{ $cat['name'] }}</td>
+                                <td class="num">{{ number_format($cat['booked'], 0, ',', '.') }}</td>
+                                <td class="num">{{ number_format($cat['attended'], 0, ',', '.') }}</td>
+                                <td class="num">{{ $cat['ratio'] !== null ? number_format($cat['ratio'], 1, ',', '.') . ' %' : '–' }}</td>
+                            </tr>
+                        @endforeach
+                        <tr class="total">
+                            <td>Gesamt</td>
+                            <td class="num">{{ number_format($pc['totals']['booked'], 0, ',', '.') }}</td>
+                            <td class="num">{{ number_format($pc['totals']['attended'], 0, ',', '.') }}</td>
+                            <td class="num {{ ($pc['totals']['show_up_ratio'] ?? 0) >= 80 ? 'quote-good' : 'quote-bad' }}">
+                                {{ $pc['totals']['show_up_ratio'] !== null ? number_format($pc['totals']['show_up_ratio'], 1, ',', '.') . ' %' : '–' }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                @if (($pc['totals']['no_shows'] ?? 0) > 0)
+                    <div style="font-size: 10px; color: #94a3b8; margin-top: 2mm;">
+                        {{ number_format($pc['totals']['no_shows'], 0, ',', '.') }} gebuchte Gäste sind nicht erschienen (No-Shows).
+                        Stand: Check-in-Daten aus pretix zum Erstellungszeitpunkt.
+                    </div>
+                @endif
+            </div>
+        @endif
+
         @if ($event->short_description)
             <div class="cover-desc">{{ $event->short_description }}</div>
         @endif
