@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.39.0] - 2026-07-12
+
+### Neu
+
+- **Platzhalter in Export-Vorlagen**: Titel, Untertitel, Beschreibung und Fußzeile dürfen jetzt Platzhalter
+  enthalten, z. B. `{{ event.name }}`, `{{ event.date }}`, `{{ customer.name }}`, `{{ period.to }}`,
+  `{{ count }}`, `{{ date }}`. Alle Event-Daten (lokal **und** live aus pretix, wenn ein Event gewählt ist:
+  Beginn, Einlass, Ort, Kapazität, verkauft, erschienen) stehen als Platzhalter zur Verfügung; die komplette
+  Liste wird direkt im Formular angezeigt.
+- **Frei definierbarer Dateiname**: Pro Vorlage (und ad-hoc im Export-Dialog) lässt sich ein Dateiname-Muster
+  mit denselben Platzhaltern festlegen, z. B. `Abrechnung {{ event.name }} {{ period.to }}`. Der Name wird
+  bereinigt (keine ungültigen Zeichen), die Endung (.pdf/.csv/.xlsx) automatisch angehängt; leer = wie bisher
+  ein automatischer Name.
+
 ## [0.38.0] - 2026-07-12
 
 ### Neu

@@ -94,17 +94,39 @@ class ExportTemplateResource extends Resource
                 ]),
 
             Forms\Components\Section::make('Kundenwirksame Darstellung')
+                ->description('In Titel, Untertitel, Beschreibung, Fußzeile und Dateiname sind Platzhalter erlaubt, z. B. {{ event.name }} oder {{ period.to }}. Siehe Liste unten.')
                 ->columns(2)
                 ->schema([
-                    Forms\Components\TextInput::make('title')->label('Titel'),
-                    Forms\Components\TextInput::make('subtitle')->label('Untertitel'),
+                    Forms\Components\TextInput::make('title')->label('Titel')
+                        ->placeholder('Abrechnung {{ event.name }}'),
+                    Forms\Components\TextInput::make('subtitle')->label('Untertitel')
+                        ->placeholder('Spieltag {{ event.date }}'),
                     Forms\Components\Textarea::make('description')->label('Beschreibung')->columnSpanFull(),
+                    Forms\Components\TextInput::make('filename_pattern')->label('Dateiname (ohne Endung)')
+                        ->placeholder('Abrechnung {{ event.name }} {{ period.to }}')
+                        ->helperText('Leer = automatischer Name. Die Dateiendung (.pdf/.csv/.xlsx) wird automatisch angehängt.')
+                        ->columnSpanFull(),
                     Forms\Components\Toggle::make('show_event_info')->label('Eventinformationen anzeigen')->default(true),
                     Forms\Components\Toggle::make('mask_pii')->label('Namen/E-Mails maskieren'),
                     Forms\Components\Textarea::make('footer_note')->label('Fußzeilen-Hinweis')->columnSpanFull()
                         ->default('Diese Auswertung basiert auf den zum Exportzeitpunkt lokal synchronisierten Zahlungsdaten (PayPal & pretix).'),
+                    static::placeholderHelp()->columnSpanFull(),
                 ]),
         ]);
+    }
+
+    /** Renders the list of available placeholders as read-only help. */
+    protected static function placeholderHelp(): Forms\Components\Placeholder
+    {
+        $rows = collect(\App\Services\Export\ExportPlaceholders::available())
+            ->map(fn (string $desc, string $key) => '<code>{{ ' . $key . ' }}</code> – ' . e($desc))
+            ->implode('<br>');
+
+        return Forms\Components\Placeholder::make('placeholder_help')
+            ->label('Verfügbare Platzhalter')
+            ->content(new \Illuminate\Support\HtmlString(
+                '<div style="font-size:.8rem; line-height:1.7; columns:2; column-gap:2rem;">' . $rows . '</div>'
+            ));
     }
 
     public static function table(Table $table): Table

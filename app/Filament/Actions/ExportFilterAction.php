@@ -97,10 +97,24 @@ class ExportFilterAction
                                 'currency' => 'Währung',
                             ]),
                         Forms\Components\Toggle::make('mask_pii')->label('Namen/E-Mails maskieren'),
-                        Forms\Components\TextInput::make('title')->label('Titel'),
+                        Forms\Components\TextInput::make('title')->label('Titel')->placeholder('Abrechnung {{ event.name }}'),
                         Forms\Components\TextInput::make('subtitle')->label('Untertitel'),
                         Forms\Components\Textarea::make('description')->label('Beschreibung'),
                     ]),
+
+                Forms\Components\TextInput::make('filename_pattern')
+                    ->label('Dateiname (optional)')
+                    ->placeholder('Abrechnung {{ event.name }} {{ period.to }}')
+                    ->helperText('Platzhalter erlaubt, z. B. {{ event.name }}, {{ period.to }}, {{ date }}. Endung wird automatisch angehängt. Bei gewählter Vorlage gilt deren Dateiname, falls hier leer.'),
+
+                Forms\Components\Placeholder::make('placeholder_help')
+                    ->label('Verfügbare Platzhalter')
+                    ->content(fn () => new \Illuminate\Support\HtmlString(
+                        '<div style="font-size:.78rem; line-height:1.6; columns:2; column-gap:1.5rem;">'
+                        . collect(\App\Services\Export\ExportPlaceholders::available())
+                            ->map(fn (string $d, string $k) => '<code>{{ ' . $k . ' }}</code> – ' . e($d))->implode('<br>')
+                        . '</div>'
+                    )),
             ])
             ->action(function (array $data, $livewire) {
                 $query = $livewire->getTableQueryForExport();
@@ -120,6 +134,14 @@ class ExportFilterAction
                     ? ExportTemplate::find($data['export_template_id'])
                     : null;
 
+                // Live pretix cover data (image + Spielinfos + Gästebilanz),
+                // resolved BEFORE the build so its figures are also available as
+                // placeholders. Fault-tolerant: on API problems the PDF just
+                // renders the plain local cover.
+                $pretixCover = $coverEvent
+                    ? app(\App\Services\Pretix\PretixEventCover::class)->forEvent($coverEvent)
+                    : null;
+
                 // vat_rate is always taken from the dialog (default 19) so the rate is
                 // definable per export and overrides any rate stored on the template.
                 $overrides = ($template ? [] : [
@@ -130,22 +152,24 @@ class ExportFilterAction
                     'title' => $data['title'] ?? null,
                     'subtitle' => $data['subtitle'] ?? null,
                     'description' => $data['description'] ?? null,
+                    'filename_pattern' => $data['filename_pattern'] ?? null,
                 ]) + ['vat_rate' => (float) ($data['vat_rate'] ?? 19)]
-                    + (filled($data['accent_color'] ?? null) ? ['accent_color' => $data['accent_color']] : []);
+                    + (filled($data['accent_color'] ?? null) ? ['accent_color' => $data['accent_color']] : [])
+                    + ($coverEvent ? ['event' => $coverEvent, 'pretix_cover' => $pretixCover] : []);
 
                 $built = app(ExportDataBuilder::class)->build($query, $template, $overrides);
 
-                // Live pretix cover data (image + Spielinfos + Gästebilanz).
-                // Fault-tolerant: on API problems the PDF just renders the
-                // plain local cover.
-                if ($coverEvent) {
-                    $built['event'] = $coverEvent;
-                    $built['pretix_cover'] = app(\App\Services\Pretix\PretixEventCover::class)->forEvent($coverEvent);
-                }
-
                 $format = $data['format'];
-                $filename = 'export-' . now()->format('Ymd-His') . '-' . uniqid() . '.' . $format;
-                $path = 'exports/' . $filename;
+
+                // Storage path stays unique; the download name honours the
+                // template's/ad-hoc filename pattern (with placeholders).
+                $path = 'exports/export-' . now()->format('Ymd-His') . '-' . uniqid() . '.' . $format;
+                $downloadName = \App\Services\Export\ExportPlaceholders::filename(
+                    $built['filename_pattern'] ?? ($data['filename_pattern'] ?? null),
+                    $built['placeholder_context'] ?? [],
+                    $format,
+                    'Export ' . now()->format('Y-m-d'),
+                );
 
                 if ($format === 'pdf') {
                     $content = app(PdfRenderer::class)->render($built);
@@ -171,7 +195,7 @@ class ExportFilterAction
                     ->success()
                     ->send();
 
-                return response()->streamDownload(fn () => print ($content), $filename);
+                return response()->streamDownload(fn () => print ($content), $downloadName);
             })
             ->modalHeading('Aktuellen Filter exportieren')
             ->modalSubmitActionLabel('Exportieren');

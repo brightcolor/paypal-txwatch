@@ -11,7 +11,7 @@ class ExportTemplate extends Model
     use HasFactory;
     use \App\Models\Concerns\Auditable;
 
-    protected static array $auditAttributes = ['name', 'columns', 'group_by', 'mode', 'mask_pii', 'vat_rate', 'title', 'is_default', 'accent_color'];
+    protected static array $auditAttributes = ['name', 'columns', 'group_by', 'mode', 'mask_pii', 'vat_rate', 'title', 'is_default', 'accent_color', 'filename_pattern'];
 
     protected static string $auditLogName = 'export-vorlage';
 
@@ -45,6 +45,7 @@ class ExportTemplate extends Model
         'vat_rate',
         'is_default',
         'accent_color',
+        'filename_pattern',
     ];
 
     protected function casts(): array

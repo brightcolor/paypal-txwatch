@@ -45,27 +45,44 @@ class ExportDataBuilder
             ];
         })->values()->all();
 
+        // An explicit event (chosen in the export dialog) wins; otherwise use
+        // the single shared event of the result set, if any.
         $sharedEvent = $transactions->pluck('event_id')->unique()->filter();
-        $event = ($config['show_event_info'] && $sharedEvent->count() === 1)
-            ? $transactions->first(fn (Transaction $t) => $t->event_id !== null)?->event
-            : null;
+        $event = $overrides['event']
+            ?? (($config['show_event_info'] && $sharedEvent->count() === 1)
+                ? $transactions->first(fn (Transaction $t) => $t->event_id !== null)?->event
+                : null);
+
+        $pretixCover = $overrides['pretix_cover'] ?? null;
+        $period = $this->period($transactions);
+        $generatedAt = now();
+
+        // Placeholder context so {{ event.name }} etc. work in every text field
+        // and in the download filename.
+        $placeholderContext = ExportPlaceholders::context(
+            $event, $period, $transactions->count(), $generatedAt, $vatRate, $pretixCover,
+        );
+        $ph = fn (?string $t) => ExportPlaceholders::resolve($t, $placeholderContext);
 
         return [
             // No "PayPal" in the default title - exports also contain pretix
             // bank-transfer and refund transactions.
-            'title' => $config['title'] ?: 'Transaktionsauswertung',
-            'subtitle' => $config['subtitle'],
-            'description' => $config['description'],
+            'title' => $ph($config['title']) ?: 'Transaktionsauswertung',
+            'subtitle' => $ph($config['subtitle']),
+            'description' => $ph($config['description']),
             'mode' => $config['mode'],
             'mask_pii' => $config['mask_pii'],
-            'footer_note' => $config['footer_note'],
+            'footer_note' => $ph($config['footer_note']),
             'accent_color' => $config['accent_color'] ?: '#1d4ed8',
             'vat_rate' => $vatRate,
             'columns' => $columns,
             'column_labels' => $this->columnLabels($columns, $vatRate),
             'event' => $event,
-            'period' => $this->period($transactions),
-            'generated_at' => now(),
+            'pretix_cover' => $pretixCover,
+            'placeholder_context' => $placeholderContext,
+            'filename_pattern' => $config['filename_pattern'] ?? null,
+            'period' => $period,
+            'generated_at' => $generatedAt,
             'groups' => $renderedGroups,
             'grand_total' => $config['show_grand_total'] ? $this->sum($transactions, $vatRate) : null,
         ];
@@ -105,6 +122,7 @@ class ExportDataBuilder
             'footer_note' => 'Diese Auswertung basiert auf den zum Exportzeitpunkt lokal synchronisierten Zahlungsdaten (PayPal & pretix).',
             'vat_rate' => 19.0,
             'accent_color' => '#1d4ed8',
+            'filename_pattern' => null,
         ];
 
         $fromTemplate = $template
