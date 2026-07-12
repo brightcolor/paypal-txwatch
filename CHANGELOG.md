@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.35.2] - 2026-07-11
+
+### Geändert
+
+- **PDF: Kopf- und Fußzeile auf jeder Seite** (Export- und Abrechnungs-PDF): oben Titel + Erstellungsdatum
+  mit feiner Trennlinie, unten Titel + „Seite X / Y" – dezent grau, bündig mit den Seitenrändern. Gilt auch
+  für alle Folgeseiten.
+
 ## [0.35.1] - 2026-07-11
 
 ### Geändert
