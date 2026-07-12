@@ -4,6 +4,24 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.38.0] - 2026-07-12
+
+### Neu
+
+- **Standard-Export-Vorlage**: Eine Export-Vorlage kann als **Standard** markiert werden (Toggle in der
+  Vorlage; es kann nur eine geben) – sie ist im Export-Dialog vorausgewählt.
+- **Akzentfarbe pro Vorlage**: Die PDF-Farbe (Überschriften, Tabellenkopf, Linien, Deckblatt-Titel) ist je
+  Export-Vorlage einstellbar (Farbwähler) und pro Export ad-hoc überschreibbar. Leer = bisheriges Blau.
+- **Branding auf Exporten** (Einstellungen → Branding, nur Admin): Eigenes **Logo** (Upload) und **Claim**
+  („Bericht & Ticketing: …") erscheinen dezent in der **Fußzeile jeder PDF-Seite** und auf dem Deckblatt –
+  sichtbar, aber nicht aufdringlich.
+
+### Geändert
+
+- **PDF-Seitenkopf**: Der kleine graue Kopfstreifen oben ist weg. Stattdessen wiederholt sich der **große
+  Dokumentkopf** (Titel, Zeitraum, Erstellt-am, farbige Linie) ab Seite 2 auf **allen Folgeseiten**; das
+  Deckblatt bleibt kopffrei.
+
 ## [0.37.0] - 2026-07-12 — Korrektheits-Audit
 
 Intensiver Audit aller Berechnungen und Zuordnungen (drei unabhängige Prüfläufe, jeder Befund am Code

@@ -48,8 +48,14 @@ class ExportFilterAction
                 Forms\Components\Select::make('export_template_id')
                     ->label('Export-Vorlage (optional)')
                     ->options(fn () => ExportTemplate::query()->pluck('name', 'id'))
-                    ->helperText('Wenn gewählt, werden Spalten/Layout der Vorlage verwendet.')
+                    // The template flagged as default is preselected.
+                    ->default(fn () => ExportTemplate::defaultTemplate()?->id)
+                    ->helperText('Wenn gewählt, werden Spalten/Layout/Farbe der Vorlage verwendet. Die Standard-Vorlage ist vorausgewählt.')
                     ->live(),
+
+                Forms\Components\ColorPicker::make('accent_color')
+                    ->label('Akzentfarbe (optional)')
+                    ->helperText('Überschreibt die Farbe der Vorlage nur für diesen Export. Leer = Vorlagen-/Standardfarbe.'),
 
                 Forms\Components\TextInput::make('vat_rate')
                     ->label('MwSt-Satz')
@@ -124,7 +130,8 @@ class ExportFilterAction
                     'title' => $data['title'] ?? null,
                     'subtitle' => $data['subtitle'] ?? null,
                     'description' => $data['description'] ?? null,
-                ]) + ['vat_rate' => (float) ($data['vat_rate'] ?? 19)];
+                ]) + ['vat_rate' => (float) ($data['vat_rate'] ?? 19)]
+                    + (filled($data['accent_color'] ?? null) ? ['accent_color' => $data['accent_color']] : []);
 
                 $built = app(ExportDataBuilder::class)->build($query, $template, $overrides);
 

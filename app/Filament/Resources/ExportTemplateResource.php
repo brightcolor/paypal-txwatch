@@ -43,6 +43,12 @@ class ExportTemplateResource extends Resource
                         ])
                         ->default(ExportTemplate::MODE_CUSTOMER)
                         ->required(),
+                    Forms\Components\Toggle::make('is_default')
+                        ->label('Standard-Vorlage')
+                        ->helperText('Wird im Export-Dialog vorausgewählt. Es kann nur eine Standard-Vorlage geben.'),
+                    Forms\Components\ColorPicker::make('accent_color')
+                        ->label('Akzentfarbe')
+                        ->helperText('Farbe für Überschriften/Tabellenkopf/Linien im PDF. Leer = Standardblau.'),
                 ]),
 
             Forms\Components\Section::make('Spalten')
@@ -106,6 +112,8 @@ class ExportTemplateResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')->label('Name')->searchable(),
+                Tables\Columns\IconColumn::make('is_default')->label('Standard')->boolean(),
+                Tables\Columns\ColorColumn::make('accent_color')->label('Farbe')->placeholder('–'),
                 Tables\Columns\BadgeColumn::make('mode')->label('Modus'),
                 Tables\Columns\TextColumn::make('group_by')->label('Gruppierung'),
                 Tables\Columns\TextColumn::make('user.name')->label('Erstellt von'),

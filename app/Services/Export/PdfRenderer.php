@@ -17,36 +17,40 @@ class PdfRenderer
     {
         $html = view($view, $data)->render();
 
-        // Repeating print header/footer on EVERY page (Chromium print
-        // templates). Font styles must be set explicitly - the templates
-        // inherit nothing from the page. Padding matches the 16mm margins.
+        // No Chromium print HEADER: the document header repeats via the
+        // page-frame <thead> in the blade (pages 2+ carry the full styled
+        // header, the cover stays clean). The FOOTER repeats on every page and
+        // carries the operator branding: small logo + claim, page numbers
+        // right - "made by us", visible but not pushy.
         $title = e($data['title'] ?? 'TxWatch');
-        $subtitle = e($data['subtitle'] ?? '');
-        $generated = ($data['generated_at'] ?? now())->format('d.m.Y H:i');
 
-        $headerHtml = '<div style="font-family: Arial, sans-serif; width:100%; padding:5mm 16mm 1.5mm;'
-            . ' display:flex; justify-content:space-between; align-items:flex-end;'
-            . ' border-bottom:2px solid #1d4ed8;">'
-            . '<span style="font-size:12px; font-weight:bold; color:#1d4ed8;">' . $title
-            . ($subtitle !== '' ? ' <span style="font-weight:normal; color:#64748b; font-size:10px;">· ' . $subtitle . '</span>' : '')
-            . '</span>'
-            . "<span style=\"font-size:9px; color:#94a3b8;\">erstellt am {$generated}</span></div>";
+        $brandBits = '';
+        try {
+            $brand = \App\Models\BrandSetting::current();
+            if ($logo = $brand->logoDataUri()) {
+                $brandBits .= "<img src=\"{$logo}\" style=\"height:11px; vertical-align:middle; margin-right:4px;\">";
+            }
+            if (filled($brand->claim)) {
+                $brandBits .= '<span>' . e($brand->claim) . '</span>';
+            }
+        } catch (Throwable) {
+            // Branding is optional decoration - never block a PDF on it.
+        }
 
         $footerHtml = '<div style="font-family: Arial, sans-serif; font-size:9px; width:100%; color:#94a3b8;'
-            . ' padding:0 16mm 4mm; display:flex; justify-content:space-between;">'
-            . "<span>{$title}</span>"
+            . ' padding:0 16mm 4mm; display:flex; justify-content:space-between; align-items:center;">'
+            . '<span style="display:flex; align-items:center; gap:4px;">' . ($brandBits !== '' ? $brandBits : "<span>{$title}</span>") . '</span>'
             . '<span>Seite <span class="pageNumber"></span> / <span class="totalPages"></span></span></div>';
 
         try {
             $browsershot = Browsershot::html($html)
                 ->format('A4')
                 // DIN A4 with proper print margins - 10mm at the sides sat too
-                // close to the paper edge. Top margin leaves room for the
-                // repeating header bar.
-                ->margins(22, 16, 20, 16)
+                // close to the paper edge.
+                ->margins(16, 16, 20, 16)
                 ->showBackground()
                 ->showBrowserHeaderAndFooter()
-                ->headerHtml($headerHtml)
+                ->hideHeader()
                 ->footerHtml($footerHtml)
                 ->noSandbox() // required: Chromium's sandbox needs privileges containers don't grant
                 // Without this, the distro Chromium package fails to launch entirely in this

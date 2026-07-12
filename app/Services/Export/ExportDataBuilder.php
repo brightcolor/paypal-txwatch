@@ -59,6 +59,7 @@ class ExportDataBuilder
             'mode' => $config['mode'],
             'mask_pii' => $config['mask_pii'],
             'footer_note' => $config['footer_note'],
+            'accent_color' => $config['accent_color'] ?: '#1d4ed8',
             'vat_rate' => $vatRate,
             'columns' => $columns,
             'column_labels' => $this->columnLabels($columns, $vatRate),
@@ -103,6 +104,7 @@ class ExportDataBuilder
             'show_event_info' => true,
             'footer_note' => 'Diese Auswertung basiert auf den zum Exportzeitpunkt lokal synchronisierten Zahlungsdaten (PayPal & pretix).',
             'vat_rate' => 19.0,
+            'accent_color' => '#1d4ed8',
         ];
 
         $fromTemplate = $template

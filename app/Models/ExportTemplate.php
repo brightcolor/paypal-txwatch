@@ -11,7 +11,7 @@ class ExportTemplate extends Model
     use HasFactory;
     use \App\Models\Concerns\Auditable;
 
-    protected static array $auditAttributes = ['name', 'columns', 'group_by', 'mode', 'mask_pii', 'vat_rate', 'title'];
+    protected static array $auditAttributes = ['name', 'columns', 'group_by', 'mode', 'mask_pii', 'vat_rate', 'title', 'is_default', 'accent_color'];
 
     protected static string $auditLogName = 'export-vorlage';
 
@@ -43,6 +43,8 @@ class ExportTemplate extends Model
         'show_event_info',
         'footer_note',
         'vat_rate',
+        'is_default',
+        'accent_color',
     ];
 
     protected function casts(): array
@@ -54,7 +56,24 @@ class ExportTemplate extends Model
             'mask_pii' => 'boolean',
             'show_event_info' => 'boolean',
             'vat_rate' => 'decimal:2',
+            'is_default' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Exactly one default template: setting the flag unsets it everywhere else.
+        static::saved(function (ExportTemplate $template) {
+            if ($template->is_default) {
+                static::query()->whereKeyNot($template->getKey())->where('is_default', true)
+                    ->update(['is_default' => false]);
+            }
+        });
+    }
+
+    public static function defaultTemplate(): ?self
+    {
+        return static::query()->where('is_default', true)->first();
     }
 
     public function user(): BelongsTo
