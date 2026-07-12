@@ -4,7 +4,9 @@
     <meta charset="utf-8">
     <title>{{ $title }}</title>
     <style>
-        @page { margin: 0; }
+        /* No @page margin rule here: it fights Chromium's print margins
+           (Browsershot ->margins()), which are the single source of truth so
+           EVERY page - including continuation pages - gets the same frame. */
         * { box-sizing: border-box; }
         body {
             font-family: 'DejaVu Sans', Arial, sans-serif;
@@ -81,11 +83,13 @@
             border-top: 1px solid #e2e8f0;
             padding-top: 6px;
         }
-        .content { padding: 15mm 10mm; }
+        /* Frame comes from the real print margins; padding-emulated margins
+           only ever framed the first/last page of the flow. */
+        .content { padding: 0; }
         /* Event cover page */
-        /* Height = printable area (297mm - 18mm top - 20mm bottom margin) with
+        /* Height = printable area (297mm - 22mm top - 20mm bottom margin) with
            a little slack, so the cover fills exactly one page. */
-        .cover { height: 255mm; display: flex; flex-direction: column; page-break-after: always; }
+        .cover { height: 252mm; display: flex; flex-direction: column; page-break-after: always; }
         .cover-hero { text-align: center; padding-top: 14mm; }
         .cover-hero img {
             max-width: 150mm; max-height: 80mm; object-fit: contain;

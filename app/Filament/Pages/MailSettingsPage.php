@@ -83,7 +83,7 @@ class MailSettingsPage extends Page implements HasForms
                     ->schema([
                         Forms\Components\TextInput::make('from_address')->label('Absender-Adresse')->email()
                             ->requiredIf('enabled', true),
-                        Forms\Components\TextInput::make('from_name')->label('Absender-Name')->placeholder('PayPal TxWatch'),
+                        Forms\Components\TextInput::make('from_name')->label('Absender-Name')->placeholder('TxWatch'),
                         Forms\Components\Textarea::make('alert_recipients')->label('Empfänger für System-Warnungen')
                             ->helperText('Komma-getrennt. Leer = alle aktiven Admins.')->rows(2)->columnSpanFull(),
                     ]),
@@ -131,8 +131,8 @@ class MailSettingsPage extends Page implements HasForms
 
                     try {
                         $setting->apply();
-                        Mail::raw('Dies ist eine Testmail von PayPal TxWatch. Der E-Mail-Versand funktioniert.', function ($m) use ($recipients) {
-                            $m->to($recipients)->subject('PayPal TxWatch – Testmail');
+                        Mail::raw('Dies ist eine Testmail von TxWatch. Der E-Mail-Versand funktioniert.', function ($m) use ($recipients) {
+                            $m->to($recipients)->subject('TxWatch – Testmail');
                         });
 
                         Notification::make()->title('Testmail gesendet an: ' . implode(', ', $recipients))->success()->send();

@@ -49,7 +49,9 @@ class ExportDataBuilder
             : null;
 
         return [
-            'title' => $config['title'] ?: 'PayPal-Transaktionsauswertung',
+            // No "PayPal" in the default title - exports also contain pretix
+            // bank-transfer and refund transactions.
+            'title' => $config['title'] ?: 'Transaktionsauswertung',
             'subtitle' => $config['subtitle'],
             'description' => $config['description'],
             'mode' => $config['mode'],
@@ -97,7 +99,7 @@ class ExportDataBuilder
             'subtitle' => null,
             'description' => null,
             'show_event_info' => true,
-            'footer_note' => 'Diese Auswertung basiert auf den zum Exportzeitpunkt lokal synchronisierten PayPal-Transaktionsdaten.',
+            'footer_note' => 'Diese Auswertung basiert auf den zum Exportzeitpunkt lokal synchronisierten Zahlungsdaten (PayPal & pretix).',
             'vat_rate' => 19.0,
         ];
 

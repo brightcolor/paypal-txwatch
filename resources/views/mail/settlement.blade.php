@@ -12,5 +12,5 @@ anbei erhalten Sie Ihre Abrechnung als PDF.
 Bei Rückfragen antworten Sie einfach auf diese E-Mail.
 
 Mit freundlichen Grüßen
-{{ config('app.name') }}
+TxWatch
 </x-mail::message>

@@ -27,7 +27,8 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->brandName('PayPal TxWatch')
+            // Just "TxWatch": the tool tracks PayPal AND pretix transactions.
+            ->brandName('TxWatch')
             ->brandLogo(fn () => view('filament.brand-logo'))
             ->favicon(asset('favicon.svg'))
             // AdminLTE-style theme (see filament.adminlte-theme). Dark mode is

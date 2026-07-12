@@ -96,7 +96,7 @@ class ExportTemplateResource extends Resource
                     Forms\Components\Toggle::make('show_event_info')->label('Eventinformationen anzeigen')->default(true),
                     Forms\Components\Toggle::make('mask_pii')->label('Namen/E-Mails maskieren'),
                     Forms\Components\Textarea::make('footer_note')->label('Fußzeilen-Hinweis')->columnSpanFull()
-                        ->default('Diese Auswertung basiert auf den zum Exportzeitpunkt lokal synchronisierten PayPal-Transaktionsdaten.'),
+                        ->default('Diese Auswertung basiert auf den zum Exportzeitpunkt lokal synchronisierten Zahlungsdaten (PayPal & pretix).'),
                 ]),
         ]);
     }

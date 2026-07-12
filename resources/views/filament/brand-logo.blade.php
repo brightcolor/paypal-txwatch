@@ -7,6 +7,6 @@
         <circle cx="17" cy="14.5" r="1.4" fill="currentColor" stroke="none"/>
     </svg>
     <span style="font-weight:700; font-size:1.05rem; letter-spacing:.01em;">
-        PayPal&nbsp;<span style="color:#4dabff;">TxWatch</span>
+        Tx<span style="color:#4dabff;">Watch</span>
     </span>
 </span>

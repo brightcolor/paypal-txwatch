@@ -4,6 +4,24 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.36.0] - 2026-07-12
+
+### Behoben
+
+- **PDF-Folgeseiten hatten keinen korrekten Rand**: Die Blades setzten `@page { margin: 0 }` und emulierten
+  die Ränder über Innenabstand des Inhalts – der rahmt aber nur die erste/letzte Seite des Textflusses.
+  Beides entfernt; die echten Chromium-Druckränder (22/16/20/16 mm) sind jetzt die einzige Quelle und
+  rahmen **jede** Seite gleichmäßig (Export- und Abrechnungs-PDF).
+
+### Geändert
+
+- **Ansprechender Kopfbereich auf allen Folgeseiten**: Titel fett in Blau (mit optionalem Untertitel),
+  rechts das Erstellungsdatum, darunter eine blaue Akzentlinie – passend zum Deckblatt-Stil.
+- **„PayPal" aus den Bezeichnungen entfernt** (es sind auch pretix-Transaktionen enthalten):
+  Standard-Exporttitel jetzt „Transaktionsauswertung", Fußzeilen-Hinweis „…Zahlungsdaten (PayPal & pretix)",
+  App-Name/Logo/Fußzeile/Mail-Betreffe jetzt **TxWatch**. PayPal-spezifische Begriffe (PayPal-Konten,
+  PayPal-Abgleich) bleiben unverändert.
+
 ## [0.35.2] - 2026-07-11
 
 ### Geändert

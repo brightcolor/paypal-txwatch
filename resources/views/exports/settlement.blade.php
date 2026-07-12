@@ -4,10 +4,12 @@
     <meta charset="utf-8">
     <title>Abrechnung {{ $event->displayName() }}</title>
     <style>
-        @page { margin: 0; }
+        /* Page frame comes from Chromium's print margins (Browsershot
+           ->margins()) so every page - including continuation pages - gets the
+           same border; no @page rule and no padding-emulated margins here. */
         * { box-sizing: border-box; }
         body { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 11px; color: #1f2933; margin: 0; }
-        .content { padding: 15mm 12mm; }
+        .content { padding: 0; }
         .header { border-bottom: 2px solid #1d4ed8; padding-bottom: 10px; margin-bottom: 16px; display: flex; justify-content: space-between; }
         h1 { font-size: 19px; margin: 0 0 2px 0; color: #1d4ed8; }
         h2 { font-size: 12px; margin: 0; font-weight: normal; color: #52606d; }

@@ -63,7 +63,7 @@ class AdminNotifier
             $text = $body . ($url ? "\n\n{$url}" : '');
 
             Mail::raw($text, function ($m) use ($recipients, $title) {
-                $m->to($recipients)->subject("PayPal TxWatch – {$title}");
+                $m->to($recipients)->subject("TxWatch – {$title}");
             });
         } catch (\Throwable $e) {
             // Email is a best-effort mirror; the bell already carries the alert.

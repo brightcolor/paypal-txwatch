@@ -18,17 +18,22 @@ class PdfRenderer
         $html = view($view, $data)->render();
 
         // Repeating print header/footer on EVERY page (Chromium print
-        // templates). Font-size must be set explicitly - Chromium's default
-        // is unreadably small. Padding matches the 16mm page margins.
-        $title = e($data['title'] ?? config('app.name'));
+        // templates). Font styles must be set explicitly - the templates
+        // inherit nothing from the page. Padding matches the 16mm margins.
+        $title = e($data['title'] ?? 'TxWatch');
+        $subtitle = e($data['subtitle'] ?? '');
         $generated = ($data['generated_at'] ?? now())->format('d.m.Y H:i');
 
-        $headerHtml = '<div style="font-size:9px; width:100%; color:#94a3b8; padding:6mm 16mm 0;'
-            . ' display:flex; justify-content:space-between; border-bottom:0.5px solid #e2e8f0;">'
-            . "<span>{$title}</span><span>erstellt am {$generated}</span></div>";
+        $headerHtml = '<div style="font-family: Arial, sans-serif; width:100%; padding:5mm 16mm 1.5mm;'
+            . ' display:flex; justify-content:space-between; align-items:flex-end;'
+            . ' border-bottom:2px solid #1d4ed8;">'
+            . '<span style="font-size:12px; font-weight:bold; color:#1d4ed8;">' . $title
+            . ($subtitle !== '' ? ' <span style="font-weight:normal; color:#64748b; font-size:10px;">· ' . $subtitle . '</span>' : '')
+            . '</span>'
+            . "<span style=\"font-size:9px; color:#94a3b8;\">erstellt am {$generated}</span></div>";
 
-        $footerHtml = '<div style="font-size:9px; width:100%; color:#94a3b8; padding:0 16mm 4mm;'
-            . ' display:flex; justify-content:space-between;">'
+        $footerHtml = '<div style="font-family: Arial, sans-serif; font-size:9px; width:100%; color:#94a3b8;'
+            . ' padding:0 16mm 4mm; display:flex; justify-content:space-between;">'
             . "<span>{$title}</span>"
             . '<span>Seite <span class="pageNumber"></span> / <span class="totalPages"></span></span></div>';
 
@@ -37,8 +42,8 @@ class PdfRenderer
                 ->format('A4')
                 // DIN A4 with proper print margins - 10mm at the sides sat too
                 // close to the paper edge. Top margin leaves room for the
-                // repeating header line.
-                ->margins(20, 16, 20, 16)
+                // repeating header bar.
+                ->margins(22, 16, 20, 16)
                 ->showBackground()
                 ->showBrowserHeaderAndFooter()
                 ->headerHtml($headerHtml)
