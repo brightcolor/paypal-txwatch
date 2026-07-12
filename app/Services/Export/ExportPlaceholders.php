@@ -38,6 +38,7 @@ class ExportPlaceholders
             'event.contact' => 'Ansprechpartner',
             'event.description' => 'Event-Kurzbeschreibung',
             'event.begins' => 'Beginn mit Uhrzeit (aus pretix)',
+            'event.begins_time' => 'Beginn-Uhrzeit (aus pretix)',
             'event.admission' => 'Einlasszeit (aus pretix)',
             'event.capacity' => 'Kapazität (aus pretix)',
             'event.sold' => 'Verkaufte/geblockte Plätze (aus pretix)',
@@ -50,7 +51,9 @@ class ExportPlaceholders
             'period.year' => 'Jahr des Zeitraum-Endes',
             'count' => 'Anzahl Transaktionen',
             'date' => 'Erstellungsdatum',
+            'time' => 'Erstellungs-Uhrzeit',
             'datetime' => 'Erstellungsdatum mit Uhrzeit',
+            'timestamp' => 'Zeitstempel für Dateinamen (JJJJ-MM-TT_HH-MM)',
             'vat_rate' => 'MwSt-Satz',
         ];
     }
@@ -80,6 +83,8 @@ class ExportPlaceholders
             'event.description' => (string) ($event?->short_description ?? ''),
             'event.begins' => isset($details['date_from']) && $details['date_from']
                 ? Carbon::parse($details['date_from'])->timezone($tz)->format('d.m.Y H:i') : '',
+            'event.begins_time' => isset($details['date_from']) && $details['date_from']
+                ? Carbon::parse($details['date_from'])->timezone($tz)->format('H:i') : '',
             'event.admission' => isset($details['date_admission']) && $details['date_admission']
                 ? Carbon::parse($details['date_admission'])->timezone($tz)->format('H:i') : '',
             'event.capacity' => isset($pretixCover['capacity']['capacity']) && $pretixCover['capacity']['capacity'] !== null
@@ -89,12 +94,14 @@ class ExportPlaceholders
             'customer.name' => (string) ($customer?->name ?? ''),
             'customer.contact' => (string) ($customer?->contact_name ?? ''),
             'customer.email' => (string) ($customer?->contact_email ?? ''),
-            'period.from' => $period['from']?->format('d.m.Y') ?? '',
-            'period.to' => $period['to']?->format('d.m.Y') ?? '',
-            'period.year' => $period['to']?->format('Y') ?? $generatedAt->format('Y'),
+            'period.from' => ($period['from'] ?? null)?->format('d.m.Y') ?? '',
+            'period.to' => ($period['to'] ?? null)?->format('d.m.Y') ?? '',
+            'period.year' => ($period['to'] ?? null)?->format('Y') ?? $generatedAt->format('Y'),
             'count' => (string) $count,
             'date' => $generatedAt->format('d.m.Y'),
+            'time' => $generatedAt->format('H:i'),
             'datetime' => $generatedAt->format('d.m.Y H:i'),
+            'timestamp' => $generatedAt->format('Y-m-d_H-i'),
             'vat_rate' => rtrim(rtrim(number_format($vatRate, 2, ',', '.'), '0'), ',') . ' %',
         ];
 

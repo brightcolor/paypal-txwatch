@@ -43,6 +43,12 @@ class ExportTemplateResource extends Resource
                         ])
                         ->default(ExportTemplate::MODE_CUSTOMER)
                         ->required(),
+                    Forms\Components\Select::make('applies_to')
+                        ->label('Gilt für')
+                        ->options(ExportTemplate::APPLIES_LABELS)
+                        ->default(ExportTemplate::APPLIES_ALL)
+                        ->required()
+                        ->helperText('Bestimmt, in welchem Tab des Export-Dialogs die Vorlage angeboten wird.'),
                     Forms\Components\Toggle::make('is_default')
                         ->label('Standard-Vorlage')
                         ->helperText('Wird im Export-Dialog vorausgewählt. Es kann nur eine Standard-Vorlage geben.'),
@@ -135,6 +141,8 @@ class ExportTemplateResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')->label('Name')->searchable(),
                 Tables\Columns\IconColumn::make('is_default')->label('Standard')->boolean(),
+                Tables\Columns\TextColumn::make('applies_to')->label('Gilt für')
+                    ->formatStateUsing(fn (?string $state) => ExportTemplate::APPLIES_LABELS[$state] ?? $state)->badge(),
                 Tables\Columns\ColorColumn::make('accent_color')->label('Farbe')->placeholder('–'),
                 Tables\Columns\BadgeColumn::make('mode')->label('Modus'),
                 Tables\Columns\TextColumn::make('group_by')->label('Gruppierung'),

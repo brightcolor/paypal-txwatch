@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.40.0] - 2026-07-12
+
+### Neu / Geändert
+
+- **Export-Dialog mit Tabs**: „PDF" (voller Bericht mit Deckblatt/Farben/Titel) und „CSV / Daten" (reine
+  Transaktionsdaten ohne Event-Infos). Je Tab ein eigener Export-Button (PDF, CSV, Excel).
+- **Einstellungen auch mit gewählter Vorlage anpassbar**: Alle Felder bleiben im Dialog editierbar; eine
+  gewählte Vorlage füllt sie nur vor. Änderungen gelten für diesen einen Export.
+- **Vorlagen-Geltungsbereich**: Jede Export-Vorlage legt fest, ob sie für **alle Formate, nur PDF oder nur
+  CSV/Excel** angeboten wird; der jeweilige Tab zeigt nur passende Vorlagen.
+- **Dateiname frei zusammenbaubar** – auch pro Tab – über Platzhalter, jetzt mit **Uhrzeit/Zeitstempel**:
+  `{{ time }}`, `{{ timestamp }}` (dateinamen-sicher, JJJJ-MM-TT_HH-MM), `{{ event.begins_time }}`.
+
 ## [0.39.0] - 2026-07-12
 
 ### Neu

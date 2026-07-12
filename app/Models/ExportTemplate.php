@@ -11,7 +11,7 @@ class ExportTemplate extends Model
     use HasFactory;
     use \App\Models\Concerns\Auditable;
 
-    protected static array $auditAttributes = ['name', 'columns', 'group_by', 'mode', 'mask_pii', 'vat_rate', 'title', 'is_default', 'accent_color', 'filename_pattern'];
+    protected static array $auditAttributes = ['name', 'columns', 'group_by', 'mode', 'mask_pii', 'vat_rate', 'title', 'is_default', 'accent_color', 'filename_pattern', 'applies_to'];
 
     protected static string $auditLogName = 'export-vorlage';
 
@@ -22,6 +22,16 @@ class ExportTemplate extends Model
 
     public const MODE_CUSTOMER = 'customer';
     public const MODE_INTERNAL = 'internal';
+
+    public const APPLIES_ALL = 'all';
+    public const APPLIES_PDF = 'pdf';
+    public const APPLIES_CSV = 'csv';
+
+    public const APPLIES_LABELS = [
+        self::APPLIES_ALL => 'Alle Formate',
+        self::APPLIES_PDF => 'Nur PDF',
+        self::APPLIES_CSV => 'Nur CSV/Excel',
+    ];
 
     public const DEFAULT_COLUMNS = [
         'date', 'transaction_id', 'name', 'email', 'event_ref', 'custom_field',
@@ -46,6 +56,7 @@ class ExportTemplate extends Model
         'is_default',
         'accent_color',
         'filename_pattern',
+        'applies_to',
     ];
 
     protected function casts(): array
@@ -75,6 +86,20 @@ class ExportTemplate extends Model
     public static function defaultTemplate(): ?self
     {
         return static::query()->where('is_default', true)->first();
+    }
+
+    /** Templates offered for the given export kind ('pdf' | 'csv'/'xlsx'). */
+    public function scopeForFormat($query, string $format)
+    {
+        $kind = $format === 'pdf' ? self::APPLIES_PDF : self::APPLIES_CSV;
+
+        return $query->whereIn('applies_to', [self::APPLIES_ALL, $kind]);
+    }
+
+    /** The default template, but only if it applies to the given format. */
+    public static function defaultForFormat(string $format): ?self
+    {
+        return static::query()->where('is_default', true)->forFormat($format)->first();
     }
 
     public function user(): BelongsTo
