@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.42.0] - 2026-07-12
+
+### Neu
+
+- **Automatischer Bankabruf via GoCardless (PSD2)** – Bank → Auto-Abruf (nur Admin): Zugangsdaten
+  (`secret_id`/`secret_key`, verschlüsselt) hinterlegen, Bank wählen, einmalig per TAN freigeben – danach
+  zieht ein **täglicher Job** (`bank:sync`, 06:30) die Umsätze automatisch, schreibt sie in „Kontoumsätze"
+  und lässt den bestehenden **Auto-Abgleich** (PayPal-Auszahlungen + pretix-Überweisungen) laufen. Nur
+  lesend. Consent gilt 90 Tage; TxWatch **warnt** rechtzeitig (Glocke/Mail) und markiert abgelaufene Zugänge.
+  „Jetzt abrufen"/„Trennen" jederzeit möglich. Neuer `GoCardlessClient`/`GoCardlessSync` + Consent-Callback;
+  Umsätze werden über dieselbe Import-/Abgleich-Pipeline wie der CAMT/MT940-Import verarbeitet.
+  - **Voraussetzungen**: GoCardless-Konto (Registrierung durch den Betreiber, kostenloses Kontingent) und –
+    für den Consent-Rücksprung – **HTTPS** für die App (siehe Betriebshinweise).
+
 ## [0.41.0] - 2026-07-12
 
 ### Neu

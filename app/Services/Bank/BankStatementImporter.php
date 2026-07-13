@@ -22,8 +22,18 @@ class BankStatementImporter
      */
     public function import(string $content): array
     {
-        $entries = $this->parser->parse($content);
+        return $this->importEntries($this->parser->parse($content));
+    }
 
+    /**
+     * Inserts already-parsed/normalized entries (from a file OR the GoCardless
+     * API), deduping by import hash, then runs the auto-reconciliation.
+     *
+     * @param  array<int, array<string, mixed>>  $entries
+     * @return array{parsed: int, imported: int, skipped: int, matched: int}
+     */
+    public function importEntries(array $entries): array
+    {
         $imported = 0;
         $skipped = 0;
 

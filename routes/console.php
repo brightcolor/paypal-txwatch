@@ -25,6 +25,10 @@ Schedule::command('backup:check')->dailyAt('09:00');
 // can respond before the buyer window closes (chargeback prevention).
 Schedule::command('disputes:check')->everySixHours()->withoutOverlapping();
 
+// Daily bank pull via GoCardless (+ consent-expiry warning). No-op unless a
+// bank connection is set up.
+Schedule::command('bank:sync')->dailyAt('06:30')->withoutOverlapping();
+
 // Keep the error log from growing forever: drop resolved errors last seen more
 // than 30 days ago (unresolved ones stay until handled).
 Schedule::call(function () {
