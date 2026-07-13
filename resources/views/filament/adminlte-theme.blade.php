@@ -127,8 +127,11 @@
     .fi-btn { border-radius: .3rem !important; box-shadow: 0 1px 2px rgba(0,0,0,.1) !important; }
 
     /* ===== Widgets grid ===== */
-    .fi-wi { gap: .7rem !important; }
-    .fi-wi-stats-overview-stat { padding: .7rem .9rem !important; }
+    .fi-wi { gap: .5rem !important; }
+    .fi-wi-stats-overview-stat { padding: .5rem .8rem !important; }
+    .fi-wi-stats-overview-stat-value { font-size: 1.15rem !important; }
+    /* Compact widget section headers (e.g. "Umsatz (Letzte 30 Tage)"). */
+    .fi-wi .fi-section-header { padding: .4rem .8rem !important; }
 
     /* ===== AdminLTE small boxes (dashboard) ===== */
     .lte-small-boxes { display: grid; gap: .9rem; grid-template-columns: repeat(1, 1fr); }
@@ -163,17 +166,36 @@
     .lte-bg-secondary { background: linear-gradient(180deg, #78828b, #6c757d); }
 
     /* ===== Forms: tighter field stacks + polished inputs ===== */
-    .fi-fo-component-ctn { gap: .6rem !important; }
-    .fi-fo-field-wrp-label { font-size: .8rem !important; font-weight: 600 !important; }
+    .fi-fo-component-ctn { gap: .5rem !important; }
+    .fi-fo-field-wrp-label { font-size: .78rem !important; font-weight: 600 !important; }
+    .fi-fo-field-wrp-label { margin-bottom: .1rem !important; }
     .fi-input-wrp { border-radius: .3rem !important; }
     .fi-input-wrp:focus-within { box-shadow: 0 0 0 3px rgba(0,123,255,.15) !important; }
+    /* Compact control height globally - inputs/selects were too tall. */
+    .fi-input, .fi-select-input, .fi-fo-field-wrp .fi-input { font-size: .85rem !important; }
+    .fi-input-wrp .fi-input { padding-top: .35rem !important; padding-bottom: .35rem !important; }
     /* modals a touch tighter */
     .fi-modal-content { gap: .7rem !important; }
 
-    /* small-boxes: a little more compact */
-    .lte-small-boxes { gap: .7rem; }
-    .lte-small-box .inner { padding: .7rem .9rem .5rem; }
-    .lte-small-box .value { font-size: 1.5rem; }
+    /* ===== Dashboard period picker: a slim inline bar, not a big card ===== */
+    .fi-page > form.fi-form,
+    .fi-page > .fi-form { margin-bottom: .1rem !important; }
+    .fi-page > form .fi-section,
+    .fi-page > .fi-form .fi-section { border-top-width: 2px !important; box-shadow: none !important; }
+    .fi-page > form .fi-section-content,
+    .fi-page > .fi-form .fi-section-content { padding: .5rem .75rem !important; }
+
+    /* ===== Chart widget: cap the height so it stays fully on screen ===== */
+    .fi-wi-chart canvas { max-height: 230px !important; }
+
+    /* small-boxes: compact - what matters must be visible at a glance without
+       scrolling, so keep the tiles short. */
+    .lte-small-boxes { gap: .5rem; }
+    .lte-small-box .inner { padding: .5rem .75rem .3rem; }
+    .lte-small-box .value { font-size: 1.3rem; line-height: 1.1; }
+    .lte-small-box .label { font-size: .75rem; margin-top: .05rem; }
+    .lte-small-box .icon { width: 2.6rem; height: 2.6rem; top: .3rem; right: .45rem; }
+    .lte-small-box .more { font-size: .68rem; padding: .18rem 0; }
 
     /* ===== Report tables (Berichte-Seite) =====
        Plain CSS (no Tailwind build here). The wrapper scrolls horizontally on

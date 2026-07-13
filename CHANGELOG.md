@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.40.2] - 2026-07-12
+
+### Geändert
+
+- **Dashboard kompakter**: KPI-Kacheln flacher (kleinere Werte/Icons, weniger Innenabstand), Zeitraumwähler
+  als schlanke Leiste statt großer Karte, Eingabefelder/Selects niedriger, engere Abstände zwischen den
+  Widgets und der Umsatz-Chart auf max. 230 px begrenzt – so ist das Wichtige auf einen Blick sichtbar und
+  der Graph vollständig im Bild.
+
 ## [0.40.1] - 2026-07-12
 
 ### Geändert

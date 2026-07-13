@@ -23,6 +23,9 @@ class RevenueByDayChart extends ChartWidget
 
     protected static bool $isLazy = false;
 
+    // Keep the chart short so the whole dashboard stays on one screen.
+    protected static ?string $maxHeight = '230px';
+
     // Directly under the KPI tiles.
     protected static ?int $sort = 2;
 
