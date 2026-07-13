@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.41.0] - 2026-07-12
+
+### Neu
+
+- **Bank-Kontoabgleich (Sparkasse)** – Grundstein (Bank → Kontoumsätze): Kontoauszug als **CAMT.053 (XML)**
+  oder **MT940** hochladen; TxWatch importiert die Umsätze deduplizert und gleicht Eingänge **automatisch**
+  ab:
+  - gegen **PayPal-Auszahlungen** (T04xx/T20xx) – Betrag ±0,01 € und Wertstellung ±6 Tage – „kam die
+    Auszahlung tatsächlich aufs Konto an?"
+  - gegen **pretix-Überweisungen** – wenn der Bestellcode im Verwendungszweck steht.
+  Ein Umsatz wird nie zwei Bankzeilen zugeordnet; offene Eingänge als Navigations-Badge; manuelles
+  Ignorieren/Zurücksetzen und „Erneut abgleichen". Eigener Parser (namespace-tolerantes CAMT, deutsches
+  MT940 mit ?-Subfeldern), keine externen Abhängigkeiten.
+  - **Automatischer Bankabruf** (GoCardless/FinTS, PSD2) kann später darauf aufgesetzt werden.
+
 ## [0.40.2] - 2026-07-12
 
 ### Geändert

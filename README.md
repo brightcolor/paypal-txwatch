@@ -338,6 +338,12 @@ DB-Fehler nicht zurück in die DB, damit das Logging nie den Request killt oder 
   Testmail). Ist er aktiv, kommen System-Warnungen zusätzlich per Mail, und **Abrechnungen lassen sich direkt
   als PDF an den Kunden mailen** (Status „Versendet"). Ohne SMTP bleibt die Glocke der Kanal.
 - **Login-Historie** (System → Login-Historie): erfolgreiche/fehlgeschlagene Anmeldungen mit IP und Gerät.
+- **Bank-Kontoabgleich** (Bank → Kontoumsätze): Sparkassen-Kontoauszug als **CAMT.053 (XML)** oder **MT940**
+  hochladen. TxWatch importiert die Umsätze (dedupliziert) und gleicht Eingänge **automatisch** ab: gegen
+  **PayPal-Auszahlungen** (kam die Auszahlung aufs Konto an?) und gegen **pretix-Überweisungen** (Bestellcode
+  im Verwendungszweck). Offene Eingänge sind als Badge sichtbar; manuelles Ignorieren/Zurücksetzen und ein
+  „Erneut abgleichen" sind möglich. Ein automatischer Bankabruf (GoCardless/FinTS) lässt sich später
+  nachrüsten.
 - **Export-Vorschau**: Auf der Transaktionsliste zeigt „Vorschau" die ersten Zeilen samt Summe, bevor
   exportiert wird. **Dashboard**: Umsatz-Vergleiche (Vormonat/Vorjahr) und Top-Events.
 
