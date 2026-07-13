@@ -59,6 +59,13 @@
         }
         table.data tr:nth-child(even) td { background: #f8fafc; }
         td.numeric, th.numeric { text-align: right; }
+        /* Money colour scheme (matches the app): Betrag/Brutto = accent,
+           Nach Gebühren = green, charged fees / negatives = red. Applies to
+           table cells, the group-sum spans and the grand-total boxes. */
+        td.money-amt, .grand-total .value.money-amt { color: var(--accent); font-weight: 600; }
+        td.money-net, .grand-total .value.money-net, .group-sum .s-net { color: #16a34a; font-weight: 600; }
+        td.money-neg, .grand-total .value.money-neg, .group-sum .s-neg { color: #dc2626; font-weight: 600; }
+        .group-sum .s-amt { color: var(--accent); }
         .group-heading {
             font-size: 11px;
             font-weight: bold;
@@ -289,8 +296,10 @@
             @foreach ($group['rows'] as $row)
                 <tr>
                     @foreach ($row as $col => $value)
-                        <td @class(['numeric' => \App\Services\Export\ExportColumns::isNumeric($col)])>
-                            {{ \App\Services\Export\ExportColumns::isNumeric($col) ? number_format((float) $value, 2, ',', '.') : $value }}
+                        @php($isNum = \App\Services\Export\ExportColumns::isNumeric($col))
+                        @php($money = $isNum ? \App\Services\Export\ExportColumns::moneyClass($col, (float) $value) : null)
+                        <td class="{{ trim(($isNum ? 'numeric' : '') . ' ' . ($money ?? '')) }}">
+                            {{ $isNum ? number_format((float) $value, 2, ',', '.') : $value }}
                         </td>
                     @endforeach
                 </tr>
@@ -300,11 +309,11 @@
                 <tr class="group-sum">
                     <td colspan="{{ count($columns) }}">
                         Summe ({{ $group['sum']['count'] }} Transaktionen)
-                        &nbsp;&middot;&nbsp; Brutto: {{ number_format($group['sum']['gross'], 2, ',', '.') }}
+                        &nbsp;&middot;&nbsp; Brutto: <span class="s-amt">{{ number_format($group['sum']['gross'], 2, ',', '.') }}</span>
                         &nbsp;&middot;&nbsp; Netto (o. MwSt): {{ number_format($group['sum']['net_excl_vat'], 2, ',', '.') }}
                         &nbsp;&middot;&nbsp; MwSt: {{ number_format($group['sum']['vat'], 2, ',', '.') }}
-                        &nbsp;&middot;&nbsp; Gebühr: {{ number_format($group['sum']['fee'], 2, ',', '.') }}
-                        &nbsp;&middot;&nbsp; Nach Gebühren: {{ number_format($group['sum']['net'], 2, ',', '.') }}
+                        &nbsp;&middot;&nbsp; Gebühr: <span @class(['s-neg' => $group['sum']['fee'] < 0])>{{ number_format($group['sum']['fee'], 2, ',', '.') }}</span>
+                        &nbsp;&middot;&nbsp; Nach Gebühren: <span @class(['s-net' => $group['sum']['net'] >= 0, 's-neg' => $group['sum']['net'] < 0])>{{ number_format($group['sum']['net'], 2, ',', '.') }}</span>
                     </td>
                 </tr>
             @endif
@@ -315,11 +324,11 @@
     @if ($grand_total)
         <div class="grand-total">
             <div class="box"><div class="label">Transaktionen</div><div class="value">{{ $grand_total['count'] }}</div></div>
-            <div class="box"><div class="label">Brutto</div><div class="value">{{ number_format($grand_total['gross'], 2, ',', '.') }}</div></div>
+            <div class="box"><div class="label">Brutto</div><div class="value money-amt">{{ number_format($grand_total['gross'], 2, ',', '.') }}</div></div>
             <div class="box"><div class="label">Netto (o. MwSt)</div><div class="value">{{ number_format($grand_total['net_excl_vat'], 2, ',', '.') }}</div></div>
             <div class="box"><div class="label">MwSt</div><div class="value">{{ number_format($grand_total['vat'], 2, ',', '.') }}</div></div>
-            <div class="box"><div class="label">Gebühren</div><div class="value">{{ number_format($grand_total['fee'], 2, ',', '.') }}</div></div>
-            <div class="box"><div class="label">Nach Gebühren</div><div class="value">{{ number_format($grand_total['net'], 2, ',', '.') }}</div></div>
+            <div class="box"><div class="label">Gebühren</div><div class="value {{ $grand_total['fee'] < 0 ? 'money-neg' : '' }}">{{ number_format($grand_total['fee'], 2, ',', '.') }}</div></div>
+            <div class="box"><div class="label">Nach Gebühren</div><div class="value {{ $grand_total['net'] < 0 ? 'money-neg' : 'money-net' }}">{{ number_format($grand_total['net'], 2, ',', '.') }}</div></div>
         </div>
     @endif
 

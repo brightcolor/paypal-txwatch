@@ -108,6 +108,28 @@ class ExportColumns
         return in_array($key, ['gross', 'vat', 'net_excl_vat', 'fee', 'net'], true);
     }
 
+    /**
+     * CSS class for the money colour scheme in the PDF export, matching the
+     * app: Betrag/Brutto = accent, Nach Gebühren = green, charged fees and any
+     * negative value = red. Returns null for neutral cells (VAT, positive fee).
+     */
+    public static function moneyClass(string $key, float $value): ?string
+    {
+        if (! self::isNumeric($key)) {
+            return null;
+        }
+
+        if ($value < 0) {
+            return 'money-neg';
+        }
+
+        return match ($key) {
+            'gross' => 'money-amt',
+            'net', 'net_excl_vat' => 'money-net',
+            default => null,
+        };
+    }
+
     private static function mask(?string $value): ?string
     {
         if (blank($value)) {
