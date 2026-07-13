@@ -4,6 +4,27 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.43.0] - 2026-07-12
+
+### Neu
+
+- **Banküberweisungen als bezahlt an pretix melden**: Ein eingehender Kontoumsatz, der zu einer **offenen**
+  pretix-Überweisungs-Bestellung passt (Zahlart Überweisung/„manual", **Betrag exakt**, **Bestellcode im
+  Verwendungszweck**), wird von TxWatch erkannt und kann **in pretix als bezahlt bestätigt** werden (löst
+  Ticket-Versand aus).
+  - **Standard: Vorschlag + 1-Klick** – in Bank → Kontoumsätze erscheinen Vorschläge (Filter „pretix-Meldung");
+    per Klick „Als bezahlt an pretix melden" wird die Zahlung bestätigt. Verwerfen möglich.
+  - **Vollautomatik pro pretix-Verbindung** (Schalter „Banküberweisungen automatisch in pretix bestätigen"):
+    eindeutige Treffer werden beim Bankabruf sofort gemeldet.
+  - **Sicherheitsnetz**: nur exakter Betrag + eindeutiger Bestellcode, nur offene Überweisungs-Bestellungen,
+    ein Kontoeingang je Bestellung; vor dem Bestätigen prüft TxWatch die offene pretix-Zahlung live. Der
+    API-Token braucht das Recht **„Bestellungen ändern"** (sonst klare Fehlermeldung).
+
+### Behoben
+
+- Beträge beim Bank-Abgleich werden jetzt **strikt in PHP** verglichen (SQLite-`ABS()`-Toleranz war
+  unzuverlässig – ein 24-€-Eingang hätte sonst eine 25-€-Position treffen können).
+
 ## [0.42.0] - 2026-07-12
 
 ### Neu

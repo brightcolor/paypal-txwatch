@@ -63,13 +63,14 @@ class BankReconciler
             ->payouts()
             ->currentRevision()
             ->excludingIrrelevant()
-            ->whereRaw('ABS(ABS(gross_amount) - ?) <= ?', [$amount, self::TOLERANCE])
             ->when($ref, fn ($q) => $q->whereBetween('transaction_initiation_date', [
                 Carbon::parse($ref)->subDays(self::PAYOUT_WINDOW_DAYS)->startOfDay(),
                 Carbon::parse($ref)->addDays(self::PAYOUT_WINDOW_DAYS)->endOfDay(),
             ]))
             ->get()
-            ->first(fn (Transaction $t) => ! $claimed->has($t->id));
+            // Strict amount check in PHP (a payout leaves as negative gross).
+            ->first(fn (Transaction $t) => ! $claimed->has($t->id)
+                && abs(abs((float) $t->gross_amount) - $amount) <= self::TOLERANCE);
 
         return $payout ? ['transaction' => $payout, 'method' => BankTransaction::METHOD_PAYOUT] : null;
     }
@@ -92,10 +93,9 @@ class BankReconciler
             ->currentRevision()
             ->excludingIrrelevant()
             ->where('gross_amount', '>', 0)
-            ->whereRaw('ABS(gross_amount - ?) <= ?', [$amount, self::TOLERANCE])
             ->get()
-            ->first(function (Transaction $t) use ($claimed, $haystack) {
-                if ($claimed->has($t->id)) {
+            ->first(function (Transaction $t) use ($amount, $claimed, $haystack) {
+                if ($claimed->has($t->id) || abs((float) $t->gross_amount - $amount) > self::TOLERANCE) {
                     return false;
                 }
                 $code = CustomFieldParser::orderNumber($t->custom_field);

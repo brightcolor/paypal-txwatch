@@ -12,7 +12,7 @@ class PretixConnection extends Model
     use \App\Models\Concerns\Auditable;
 
     /** Audited attributes (api_token/webhook_secret excluded - never log secrets). */
-    protected static array $auditAttributes = ['name', 'base_url', 'organizer_slug', 'is_active', 'sync_enabled', 'bank_transfer_fee_cents', 'import_paypal_orders'];
+    protected static array $auditAttributes = ['name', 'base_url', 'organizer_slug', 'is_active', 'sync_enabled', 'bank_transfer_fee_cents', 'import_paypal_orders', 'auto_confirm_bank_transfers'];
 
     protected static string $auditLogName = 'pretix';
 
@@ -31,6 +31,7 @@ class PretixConnection extends Model
         'sync_enabled',
         'bank_transfer_fee_cents',
         'import_paypal_orders',
+        'auto_confirm_bank_transfers',
         'last_import_summary',
         'import_running',
     ];
@@ -46,6 +47,7 @@ class PretixConnection extends Model
             'is_active' => 'boolean',
             'sync_enabled' => 'boolean',
             'import_paypal_orders' => 'boolean',
+            'auto_confirm_bank_transfers' => 'boolean',
             'import_running' => 'boolean',
             'bank_transfer_fee_cents' => 'integer',
             'last_synced_at' => 'datetime',

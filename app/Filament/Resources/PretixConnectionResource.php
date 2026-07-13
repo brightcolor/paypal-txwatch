@@ -92,6 +92,10 @@ class PretixConnectionResource extends Resource
                         ->label('Auch PayPal-Bestellungen importieren')
                         ->helperText('Standard: aus – PayPal-Zahlungen kommen bereits über den PayPal-Sync (Doppelzählung vermeiden).')
                         ->default(false),
+                    Forms\Components\Toggle::make('auto_confirm_bank_transfers')
+                        ->label('Banküberweisungen automatisch in pretix bestätigen')
+                        ->helperText('Standard: aus. Wenn an, werden eindeutig zugeordnete Kontoeingänge (Betrag exakt, Bestellcode im Zweck) beim Bankabruf sofort in pretix als bezahlt gemeldet (löst Ticket-Versand aus). Aus = nur Vorschlag mit 1-Klick-Bestätigung. Der API-Token braucht dafür das Recht „Bestellungen ändern".')
+                        ->default(false),
                 ]),
 
             Forms\Components\Section::make('Webhook (near-realtime Import)')

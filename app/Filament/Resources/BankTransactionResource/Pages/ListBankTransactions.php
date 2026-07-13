@@ -35,9 +35,13 @@ class ListBankTransactions extends ListRecords
                         $content = Storage::disk('local')->get($path);
                         $result = app(BankStatementImporter::class)->import($content);
 
+                        $proposed = $result['pretix_proposed'] ?? 0;
+                        $body = "{$result['imported']} neu, {$result['skipped']} bereits vorhanden, {$result['matched']} automatisch zugeordnet."
+                            . ($proposed > 0 ? " {$proposed} Überweisung(en) zur pretix-Meldung vorgeschlagen (Filter pretix-Meldung: vorgeschlagen)." : '');
+
                         Notification::make()
                             ->title('Kontoauszug importiert')
-                            ->body("{$result['imported']} neu, {$result['skipped']} bereits vorhanden, {$result['matched']} automatisch zugeordnet.")
+                            ->body($body)
                             ->success()
                             ->send();
                     } catch (\Throwable $e) {

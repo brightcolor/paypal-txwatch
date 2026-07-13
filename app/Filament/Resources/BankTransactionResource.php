@@ -80,6 +80,22 @@ class BankTransactionResource extends Resource
                         BankTransaction::METHOD_MANUAL => 'manuell',
                         default => '–',
                     })->toggleable(),
+                Tables\Columns\TextColumn::make('pretix_report_status')->label('pretix-Meldung')->badge()
+                    ->formatStateUsing(fn (string $s) => match ($s) {
+                        BankTransaction::REPORT_PROPOSED => 'vorgeschlagen',
+                        BankTransaction::REPORT_REPORTED => 'gemeldet',
+                        BankTransaction::REPORT_FAILED => 'fehlgeschlagen',
+                        BankTransaction::REPORT_DISMISSED => 'verworfen',
+                        default => '–',
+                    })
+                    ->color(fn (string $s) => match ($s) {
+                        BankTransaction::REPORT_PROPOSED => 'warning',
+                        BankTransaction::REPORT_REPORTED => 'success',
+                        BankTransaction::REPORT_FAILED => 'danger',
+                        default => 'gray',
+                    })
+                    ->description(fn (BankTransaction $r) => $r->pretix_order_code ? 'Bestellung ' . $r->pretix_order_code : null)
+                    ->tooltip(fn (BankTransaction $r) => $r->pretix_report_error),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('reconciliation_status')->label('Abgleich')->options([
@@ -93,8 +109,30 @@ class BankTransactionResource extends Resource
                         true: fn ($q) => $q->where('amount', '>', 0),
                         false: fn ($q) => $q->where('amount', '<', 0),
                     ),
+                Tables\Filters\SelectFilter::make('pretix_report_status')->label('pretix-Meldung')->options([
+                    BankTransaction::REPORT_PROPOSED => 'vorgeschlagen',
+                    BankTransaction::REPORT_REPORTED => 'gemeldet',
+                    BankTransaction::REPORT_FAILED => 'fehlgeschlagen',
+                ]),
             ])
             ->actions([
+                Tables\Actions\Action::make('reportPretix')
+                    ->label('Als bezahlt an pretix melden')
+                    ->icon('heroicon-o-check-badge')->color('success')
+                    ->visible(fn (BankTransaction $r) => in_array($r->pretix_report_status, [BankTransaction::REPORT_PROPOSED, BankTransaction::REPORT_FAILED], true))
+                    ->requiresConfirmation()
+                    ->modalDescription(fn (BankTransaction $r) => "Bestellung {$r->pretix_order_code} in pretix als bezahlt bestätigen. Das löst den Ticket-Versand aus.")
+                    ->action(function (BankTransaction $r) {
+                        $res = app(\App\Services\Bank\BankPretixReporter::class)->confirm($r);
+                        \Filament\Notifications\Notification::make()
+                            ->title($res['success'] ? 'An pretix gemeldet' : 'Nicht gemeldet')
+                            ->body($res['message'])
+                            ->{$res['success'] ? 'success' : 'danger'}()
+                            ->send();
+                    }),
+                Tables\Actions\Action::make('dismissProposal')->label('Vorschlag verwerfen')->icon('heroicon-o-x-mark')->color('gray')
+                    ->visible(fn (BankTransaction $r) => $r->pretix_report_status === BankTransaction::REPORT_PROPOSED)
+                    ->action(fn (BankTransaction $r) => $r->update(['pretix_report_status' => BankTransaction::REPORT_DISMISSED])),
                 Tables\Actions\Action::make('view_match')->label('Transaktion')->icon('heroicon-o-arrow-top-right-on-square')
                     ->visible(fn (BankTransaction $r) => $r->matched_transaction_id !== null)
                     ->url(fn (BankTransaction $r) => TransactionResource::getUrl('view', ['record' => $r->matched_transaction_id]))

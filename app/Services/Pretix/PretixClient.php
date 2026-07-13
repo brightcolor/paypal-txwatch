@@ -209,6 +209,74 @@ class PretixClient
     }
 
     /**
+     * The pending payment of a bank-transfer order (state pending/created,
+     * provider banktransfer/manual). Fetched live so we never confirm against
+     * stale data.
+     *
+     * @return array{local_id: int, provider: string, amount: string}|null
+     */
+    public function pendingBankPayment(string $eventSlug, string $orderCode): ?array
+    {
+        $organizer = $this->connection->organizer_slug;
+
+        try {
+            $response = $this->http()->get("/organizers/{$organizer}/events/{$eventSlug}/orders/{$orderCode}/payments/");
+
+            if (! $response->successful()) {
+                return null;
+            }
+
+            foreach ($response->json('results', []) as $payment) {
+                $provider = strtolower((string) ($payment['provider'] ?? ''));
+                $state = strtolower((string) ($payment['state'] ?? ''));
+                $isBank = str_contains($provider, 'banktransfer') || $provider === 'manual';
+
+                if ($isBank && in_array($state, ['pending', 'created'], true)) {
+                    return [
+                        'local_id' => (int) $payment['local_id'],
+                        'provider' => $provider,
+                        'amount' => (string) ($payment['amount'] ?? ''),
+                    ];
+                }
+            }
+
+            return null;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Confirms a pending payment -> the order becomes paid in pretix (triggers
+     * the paid-order email / ticket). Write action; needs "can change orders".
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function confirmPayment(string $eventSlug, string $orderCode, int $localId): array
+    {
+        $organizer = $this->connection->organizer_slug;
+
+        try {
+            $response = $this->http()->post(
+                "/organizers/{$organizer}/events/{$eventSlug}/orders/{$orderCode}/payments/{$localId}/confirm/",
+                ['force' => false],
+            );
+
+            if ($response->successful()) {
+                return ['success' => true, 'message' => 'In pretix als bezahlt bestätigt.'];
+            }
+
+            if ($response->status() === 403) {
+                return ['success' => false, 'message' => 'Keine Berechtigung – der API-Token braucht das Recht „Bestellungen ändern".'];
+            }
+
+            return ['success' => false, 'message' => "pretix lehnte ab (HTTP {$response->status()}): " . $response->body()];
+        } catch (Throwable $e) {
+            return ['success' => false, 'message' => 'Fehler: ' . $e->getMessage()];
+        }
+    }
+
+    /**
      * Core facts of one event straight from the pretix event endpoint:
      * dates, admission time, location, presale window, currency.
      *

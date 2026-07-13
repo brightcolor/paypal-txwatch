@@ -20,11 +20,19 @@ class BankTransaction extends Model
     public const METHOD_PRETIX = 'pretix';
     public const METHOD_MANUAL = 'manual';
 
+    public const REPORT_NONE = 'none';
+    public const REPORT_PROPOSED = 'proposed';
+    public const REPORT_REPORTED = 'reported';
+    public const REPORT_FAILED = 'failed';
+    public const REPORT_DISMISSED = 'dismissed';
+
     protected $fillable = [
         'booked_on', 'valued_on', 'amount', 'currency', 'purpose',
         'counterparty_name', 'counterparty_iban', 'end_to_end_id', 'bank_ref',
         'source_format', 'import_hash', 'reconciliation_status',
         'matched_transaction_id', 'match_method', 'raw',
+        'pretix_connection_id', 'pretix_event_slug', 'pretix_order_code',
+        'pretix_report_status', 'pretix_report_error', 'pretix_reported_at',
     ];
 
     protected function casts(): array
@@ -34,6 +42,7 @@ class BankTransaction extends Model
             'valued_on' => 'date',
             'amount' => 'decimal:2',
             'raw' => 'array',
+            'pretix_reported_at' => 'datetime',
         ];
     }
 

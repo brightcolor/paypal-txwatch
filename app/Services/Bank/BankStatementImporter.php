@@ -14,6 +14,7 @@ class BankStatementImporter
     public function __construct(
         private readonly BankStatementParser $parser,
         private readonly BankReconciler $reconciler,
+        private readonly BankPretixReporter $reporter,
     ) {
     }
 
@@ -53,11 +54,16 @@ class BankStatementImporter
 
         $matched = $this->reconciler->reconcile();
 
+        // Propose (and, per connection, auto-confirm) pretix bank-transfer
+        // payments for the credits that didn't match an already-paid record.
+        $proposed = $this->reporter->propose();
+
         return [
             'parsed' => count($entries),
             'imported' => $imported,
             'skipped' => $skipped,
             'matched' => $matched,
+            'pretix_proposed' => $proposed,
         ];
     }
 

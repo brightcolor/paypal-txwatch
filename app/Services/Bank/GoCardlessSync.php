@@ -41,6 +41,7 @@ class GoCardlessSync
         return [
             'imported' => $result['imported'],
             'matched' => $result['matched'],
+            'pretix_proposed' => $result['pretix_proposed'] ?? 0,
             'accounts' => count((array) $connection->account_ids),
         ];
     }
