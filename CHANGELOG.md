@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.45.3] - 2026-07-14
+
+### Geändert (im Browser verifiziert)
+
+- **Seitentitel auf Höhe der Suche.** „Dashboard" und alle anderen Überschriften sitzen jetzt auf derselben
+  Zeile wie das Suchfeld in der Topbar (Desktop); der Seiteninhalt rückt entsprechend nach oben. Auf Listen-
+  und Bearbeiten-Seiten wandert die rechte Aktionsleiste sauber unter die Topbar (keine Kollision mit der
+  Suche), das Dashboard bleibt ohne Leerraum. Klicks auf Suche/Avatar bleiben erhalten
+  (`pointer-events`-Schutz am hochgezogenen Header).
+
 ## [0.45.2] - 2026-07-14
 
 ### Behoben (im Browser verifiziert)

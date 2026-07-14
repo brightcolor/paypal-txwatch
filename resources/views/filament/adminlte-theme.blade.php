@@ -31,6 +31,30 @@
     .fi-resource-view-record-page .fi-breadcrumbs,
     .fi-resource-create-record-page .fi-breadcrumbs { display: flex !important; }
 
+    /* Page heading on the SAME ROW as the topbar search (desktop only). The
+       whole header is lifted ~84px into the empty left part of the topbar so the
+       title/breadcrumb sits at search height and the page content moves up.
+       Verified live (heading center 30px ≈ search center 32px). Guards:
+       - pointer-events:none on the header + auto on its children: the lifted
+         header spans full width on top of the topbar, so without this it would
+         SWALLOW clicks on the search/avatar (confirmed). Now only the heading &
+         buttons are clickable, empty header area passes clicks through.
+       - the 2nd header child (actions bar) is pushed back down by the same 84px,
+         but ONLY when it actually contains buttons/links (`:has(button, a)`):
+         list/edit action bars then land below the topbar (no collision), while
+         the Dashboard's empty actions container stays collapsed (no gap). */
+    @media (min-width: 1024px) {
+        .fi-main { padding-top: 0 !important; }
+        .fi-header {
+            margin-top: -84px !important;
+            position: relative; z-index: 30;
+            align-items: flex-start !important;
+            pointer-events: none !important;
+        }
+        .fi-header > * { pointer-events: auto !important; }
+        .fi-header > *:nth-child(2):has(button, a) { margin-top: 84px !important; }
+    }
+
     /* ===== Dark sidebar (the AdminLTE signature) ===== */
     .fi-sidebar { background-color: var(--lte-sidebar) !important; }
     .fi-sidebar-header {
