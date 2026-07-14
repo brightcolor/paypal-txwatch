@@ -491,22 +491,43 @@
 </script>
 
 <script>
-/* Drag-to-scroll for wide tables: grab anywhere on a row and drag to pan a
-   horizontally scrollable table sideways (and vertically). A plain click still
-   follows the record link / triggers row actions - only a real drag (moved > a
-   few px) pans, and then the click that would follow is suppressed so you don't
-   accidentally open a record. Form controls and buttons never start a drag. */
+/* Drag-to-scroll for wide tables: grab ANYWHERE on a row (incl. over links and
+   action buttons) and drag to pan a horizontally scrollable table. A precise
+   click still follows the record link / triggers the button; only a real drag
+   (moved > a few px) pans - and then the click that would follow is swallowed,
+   so accidentally starting on a link/button and dragging never opens/triggers
+   it. Only text-entry controls (input/select/textarea) are left untouched so
+   you can still select/type in them. */
 (function () {
     if (window.__akDragScrollInstalled) return;
     window.__akDragScrollInstalled = true;
 
     var SCROLLER = '.fi-ta-content';
-    // Elements where a drag must NOT start (they need their own interaction).
-    var NODRAG = 'input, select, textarea, button, label, [role="button"], [contenteditable], .fi-ta-actions';
+    // Only real text-entry controls block a drag; links & buttons are grabbable.
+    var NODRAG = 'input, select, textarea, [contenteditable]';
     var drag = null;
+    var suppressClick = false, suppressTimer = null;
+
+    // Persistent capture-phase guard: eats the single click that follows a real
+    // drag (before it reaches the link's/button's own handler), then steps
+    // aside. A safety timeout clears the flag if no click ever fires. This is
+    // robust regardless of exact event timing (the old setTimeout(0) cleanup
+    // could miss the click and let the link open).
+    document.addEventListener('click', function (e) {
+        if (suppressClick) {
+            suppressClick = false;
+            clearTimeout(suppressTimer);
+            e.stopPropagation();
+            e.preventDefault();
+        }
+    }, true);
+
+    // Stop the browser's native link/text drag-ghost while we pan.
+    document.addEventListener('dragstart', function (e) { if (drag) e.preventDefault(); }, true);
 
     document.addEventListener('mousedown', function (e) {
         if (e.button !== 0) return; // left button only
+        suppressClick = false;      // fresh interaction
         var el = e.target.closest && e.target.closest(SCROLLER);
         if (! el) return;
         if (el.scrollWidth <= el.clientWidth && el.scrollHeight <= el.clientHeight) return; // nothing to pan
@@ -531,11 +552,9 @@
         if (! drag) return;
         if (drag.moved) {
             document.body.classList.remove('ak-drag-scrolling');
-            // Swallow the click that fires right after a drag, so dragging over a
-            // record link/row doesn't navigate.
-            var supp = function (ev) { ev.stopPropagation(); ev.preventDefault(); };
-            window.addEventListener('click', supp, true);
-            setTimeout(function () { window.removeEventListener('click', supp, true); }, 0);
+            suppressClick = true; // swallow the click that immediately follows
+            clearTimeout(suppressTimer);
+            suppressTimer = setTimeout(function () { suppressClick = false; }, 400);
         }
         drag = null;
     }

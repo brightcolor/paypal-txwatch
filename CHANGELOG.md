@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.50.1] - 2026-07-14
+
+### Behoben
+- **Drag-to-Scroll: Links/Buttons öffnen beim Ziehen nicht mehr aus Versehen.** Wenn man auf einem Link oder
+  Button startet und dann zieht, wird der darauf folgende Klick jetzt zuverlässig unterdrückt – vorher konnte
+  der Link trotz Ziehbewegung noch geöffnet werden (Timing-Problem). Außerdem lässt sich jetzt **auch über
+  Buttons/Aktions-Icons** greifen und ziehen (vorher gesperrt). Nur echte Eingabefelder (Text/Auswahl) starten
+  weiterhin kein Ziehen. Ein präziser Klick ohne Bewegung öffnet den Link/Button wie gewohnt.
+
 ## [0.50.0] - 2026-07-14
 
 ### Neu
