@@ -172,13 +172,34 @@ class ExportFilterAction
             ));
     }
 
+    /**
+     * Wraps a flat column list (['a', 'b']) into the internal shape a
+     * `->simple()` Repeater expects when set programmatically:
+     * [uuid => ['column' => 'a'], ...]. Filament only auto-wraps on
+     * afterStateHydrated (initial/->default), NOT on a later Set::set(), so
+     * setting the flat array directly renders the right number of rows with
+     * EMPTY selects. Mirrors Repeater's own hydration.
+     *
+     * @param  array<int, string>  $columns
+     * @return array<string, array<string, string>>
+     */
+    private static function wrapColumns(array $columns): array
+    {
+        $items = [];
+        foreach ($columns as $column) {
+            $items[(string) \Illuminate\Support\Str::uuid()] = ['column' => $column];
+        }
+
+        return $items;
+    }
+
     /** Pre-fills the editable fields from a chosen template (prefix for CSV tab). */
     private static function applyTemplate(mixed $state, Forms\Set $set, string $prefix = ''): void
     {
         $t = $state ? ExportTemplate::find($state) : null;
 
         if ($prefix === 'csv_') {
-            $set('csv_columns', $t?->columns ?? ExportTemplate::DEFAULT_COLUMNS);
+            $set('csv_columns', static::wrapColumns($t?->columns ?? ExportTemplate::DEFAULT_COLUMNS));
             $set('csv_mask_pii', (bool) $t?->mask_pii);
             $set('csv_vat_rate', (float) ($t?->vat_rate ?? 19));
             $set('csv_filename_pattern', $t?->filename_pattern);
@@ -186,7 +207,7 @@ class ExportFilterAction
             return;
         }
 
-        $set('columns', $t?->columns ?? ExportTemplate::DEFAULT_COLUMNS);
+        $set('columns', static::wrapColumns($t?->columns ?? ExportTemplate::DEFAULT_COLUMNS));
         $set('mode', $t?->mode ?? ExportTemplate::MODE_CUSTOMER);
         $set('group_by', $t?->group_by);
         $set('mask_pii', (bool) $t?->mask_pii);

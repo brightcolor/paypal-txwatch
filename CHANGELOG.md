@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.47.1] - 2026-07-14
+
+### Behoben
+- **Export-Vorlage auswählen ließ die Spalten leer.** Beim Wechsel der Vorlage im Export-Dialog wurden zwar
+  die richtige Anzahl Spalten-Zeilen angelegt, aber alle Auswahlfelder blieben leer („Wählen Sie eine
+  Option"). Ursache: Das `->simple()`-Repeater wurde mit einem flachen Array befüllt; Filament wickelt das nur
+  beim initialen Laden automatisch in seine interne Struktur, nicht bei einem späteren `Set`. Die Spalten
+  werden jetzt in der korrekten Struktur gesetzt und erscheinen wie in der Vorlage gespeichert (PDF- und
+  CSV-Tab).
+
 ## [0.47.0] - 2026-07-14
 
 ### Geändert
