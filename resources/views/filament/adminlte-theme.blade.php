@@ -22,10 +22,14 @@
     /* tighter page header (title + actions) */
     .fi-header { margin-bottom: 0 !important; padding-top: 0 !important; }
     .fi-header-heading { font-size: 1.25rem !important; }
-    /* Breadcrumbs only where you actually drilled through levels: hide them when
-       the trail has a single item (Dashboard, list pages) - keep them on
-       Edit/View/Create where there are >= 2 items and they aid navigation. */
-    .fi-breadcrumbs:not(:has(.fi-breadcrumbs-item + .fi-breadcrumbs-item)) { display: none !important; }
+    /* Breadcrumbs only for real multi-level drill-down (Edit/View/Create record
+       pages). On Dashboard, list/index pages ("Transaktionen > Übersicht") and
+       settings pages the trail is redundant - hide by default, show only on the
+       record pages you actually navigated down into. */
+    .fi-breadcrumbs { display: none !important; }
+    .fi-resource-edit-record-page .fi-breadcrumbs,
+    .fi-resource-view-record-page .fi-breadcrumbs,
+    .fi-resource-create-record-page .fi-breadcrumbs { display: flex !important; }
 
     /* ===== Dark sidebar (the AdminLTE signature) ===== */
     .fi-sidebar { background-color: var(--lte-sidebar) !important; }
@@ -105,11 +109,12 @@
     html:not(.dark) .fi-ta-header-cell { background: #f8fafc !important; border-bottom: 2px solid #dee2e6 !important; }
     .fi-ta-header-cell-label { font-size: .72rem !important; text-transform: uppercase; letter-spacing: .03em; }
     html:not(.dark) .fi-ta-header-cell-label { color: #5f6b7a !important; }
-    /* Rows about half as tall. IMPORTANT: the row height is NOT set on
-       .fi-ta-cell (that ships as `p-0`) - it comes from the inner column wrapper
-       (.fi-ta-text / .fi-ta-icon / ...) which Filament ships with `py-4` (1rem
-       top+bottom). So target the cell's direct child to actually shrink rows. */
-    .fi-ta-cell > * { padding-top: .3rem !important; padding-bottom: .3rem !important; }
+    /* Rows about half as tall (66px -> ~34px). The height comes from the column
+       content wrapper (.fi-ta-text and the actions wrapper) which ships with
+       `py-4` (1rem top+bottom) - several levels BELOW .fi-ta-cell, not on the
+       cell (p-0) or .fi-ta-col-wrp. So target every `py-4` wrapper inside a cell
+       directly (verified live: 901 matches, row 66px -> 34px). */
+    .fi-ta-cell [class~="py-4"] { padding-top: .3rem !important; padding-bottom: .3rem !important; }
     .fi-ta-row, .fi-ta-record { --min-height: 0 !important; min-height: 0 !important; }
     /* tighter toolbar above tables (search + filters) */
     .fi-ta-header-toolbar { padding: .5rem .75rem !important; }

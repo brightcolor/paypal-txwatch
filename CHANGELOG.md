@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.45.2] - 2026-07-14
+
+### Behoben (im Browser verifiziert)
+
+- **Zeilenhöhe jetzt wirklich halbiert (66px → 34px).** Das `py-4` (1rem) sitzt nicht auf `.fi-ta-cell` oder
+  `.fi-ta-col-wrp`, sondern auf dem Spalten-Content-Wrapper `.fi-ta-text` mehrere Ebenen tiefer. Regel auf
+  `.fi-ta-cell [class~="py-4"]` umgestellt (trifft alle Spaltentypen inkl. Aktionen).
+- **Breadcrumbs auf Listenseiten entfernt.** „Transaktionen › Übersicht" ist keine echte Mehr-Ebenen-Navigation.
+  Breadcrumbs werden jetzt global ausgeblendet und nur auf Datensatz-Seiten (Bearbeiten/Ansehen/Anlegen)
+  wieder eingeblendet.
+
 ## [0.45.1] - 2026-07-14
 
 ### Behoben
