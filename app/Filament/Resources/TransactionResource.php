@@ -127,12 +127,14 @@ class TransactionResource extends Resource
                 Tables\Columns\TextColumn::make('transaction_initiation_date')
                     ->label('Datum')
                     ->dateTime('d.m.Y H:i')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('transaction_id')
                     ->label('Transaktions-ID')
                     ->searchable()
-                    ->copyable(),
-                Tables\Columns\TextColumn::make('payer_name')->label('Name')->searchable(),
+                    ->copyable()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('payer_name')->label('Name')->searchable()->toggleable(),
                 Tables\Columns\TextColumn::make('payer_email')->label('E-Mail')->searchable()->toggleable(),
                 Tables\Columns\TextColumn::make('event_ref')
                     ->label('Event')
@@ -190,7 +192,8 @@ class TransactionResource extends Resource
                         'Reserve/Hold' => 'warning',
                         default => 'gray',
                     })
-                    ->tooltip(fn (Transaction $record) => $record->transaction_event_code),
+                    ->tooltip(fn (Transaction $record) => $record->transaction_event_code)
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('transaction_status')
                     ->label('Status')
                     ->badge()
@@ -219,7 +222,8 @@ class TransactionResource extends Resource
                     ->alignEnd()
                     ->weight(\Filament\Support\Enums\FontWeight::SemiBold)
                     ->color(fn ($record) => (float) $record->gross_amount < 0 ? 'danger' : 'primary')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('fee_amount')
                     ->label('Gebühr')
                     ->money(fn ($record) => $record->currency ?? 'EUR')
@@ -233,7 +237,8 @@ class TransactionResource extends Resource
                     ->money(fn ($record) => $record->currency ?? 'EUR')
                     ->alignEnd()
                     ->color(fn ($record) => (float) $record->net_amount < 0 ? 'danger' : 'success')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('currency')->label('Währung')->toggleable(),
                 // Redundant with the combined "Event" column above now that pretix
                 // auto-assignment fills it; kept as an opt-in column for checking the
@@ -254,7 +259,8 @@ class TransactionResource extends Resource
                     ->color(fn (Transaction $record) => $record->isIrrelevant() ? 'danger' : 'success')
                     ->tooltip(fn (Transaction $record) => $record->isIrrelevant()
                         ? "Grund: {$record->irrelevant_reason}\nVon: {$record->irrelevantMarkedBy?->name} am {$record->marked_irrelevant_at?->format('d.m.Y H:i')}"
-                        : null),
+                        : null)
+                    ->toggleable(),
             ])
             ->filters(static::filters(), layout: Tables\Enums\FiltersLayout::AboveContentCollapsible)
             ->filtersFormColumns(3)

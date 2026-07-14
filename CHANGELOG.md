@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.51.0] - 2026-07-14
+
+### Neu
+- **Alle Transaktions-Spalten sind ein-/ausblendbar** (Recherche-Tool): Bisher ließen sich einige Kernspalten
+  (Datum, Transaktions-ID, Name, Art, Betrag, Nach Gebühren, Relevanz) nicht ausblenden. Jetzt lässt sich über
+  das **„Spalten"-Menü** (Symbol oben rechts an der Tabelle) **jede** Spalte zeigen/verbergen; die Auswahl wird
+  pro Benutzer gespeichert.
+
 ## [0.50.1] - 2026-07-14
 
 ### Behoben
