@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.50.0] - 2026-07-14
+
+### Neu
+- **Breite Tabellen per Maus verschieben (Drag-to-Scroll)**: In horizontal scrollbaren Tabellen kann man jetzt
+  **irgendwo in eine Zeile klicken und ziehen**, um die Tabelle seitlich (und vertikal) zu verschieben – wie
+  mit einer Greifhand. Ein normaler **Klick** öffnet weiterhin den Datensatz; nur bei echtem Ziehen wird der
+  Klick unterdrückt (kein versehentliches Öffnen). Über scrollbaren Tabellen zeigt der Cursor eine Greifhand.
+
 ## [0.49.0] - 2026-07-14
 
 ### Neu

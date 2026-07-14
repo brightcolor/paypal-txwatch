@@ -334,6 +334,13 @@
         animation: ak-spin .8s linear infinite; margin-bottom: .35rem;
     }
     @keyframes ak-spin { to { transform: rotate(360deg); } }
+
+    /* ===== Drag-to-scroll for wide (horizontally scrollable) tables =====
+       Grab anywhere on a row and drag to pan a wide table sideways. A plain
+       click still follows the record link; only a real drag pans (and then the
+       click is suppressed). Driven by the theme script. */
+    .fi-ta-content.ak-grabbable { cursor: grab; }
+    body.ak-drag-scrolling, body.ak-drag-scrolling * { cursor: grabbing !important; user-select: none !important; }
 </style>
 
 <script>
@@ -480,5 +487,76 @@
         clearTimeout(barTimer); barTimer = null; hide();
         clearTimeout(longTimer); longTimer = null; hideOverlay();
     });
+})();
+</script>
+
+<script>
+/* Drag-to-scroll for wide tables: grab anywhere on a row and drag to pan a
+   horizontally scrollable table sideways (and vertically). A plain click still
+   follows the record link / triggers row actions - only a real drag (moved > a
+   few px) pans, and then the click that would follow is suppressed so you don't
+   accidentally open a record. Form controls and buttons never start a drag. */
+(function () {
+    if (window.__akDragScrollInstalled) return;
+    window.__akDragScrollInstalled = true;
+
+    var SCROLLER = '.fi-ta-content';
+    // Elements where a drag must NOT start (they need their own interaction).
+    var NODRAG = 'input, select, textarea, button, label, [role="button"], [contenteditable], .fi-ta-actions';
+    var drag = null;
+
+    document.addEventListener('mousedown', function (e) {
+        if (e.button !== 0) return; // left button only
+        var el = e.target.closest && e.target.closest(SCROLLER);
+        if (! el) return;
+        if (el.scrollWidth <= el.clientWidth && el.scrollHeight <= el.clientHeight) return; // nothing to pan
+        if (e.target.closest && e.target.closest(NODRAG)) return;
+        drag = { el: el, x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop, moved: false };
+    });
+
+    document.addEventListener('mousemove', function (e) {
+        if (! drag) return;
+        var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+        if (! drag.moved) {
+            if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return; // threshold: below this it's a click
+            drag.moved = true;
+            document.body.classList.add('ak-drag-scrolling');
+        }
+        e.preventDefault();
+        drag.el.scrollLeft = drag.left - dx;
+        drag.el.scrollTop = drag.top - dy;
+    });
+
+    function end() {
+        if (! drag) return;
+        if (drag.moved) {
+            document.body.classList.remove('ak-drag-scrolling');
+            // Swallow the click that fires right after a drag, so dragging over a
+            // record link/row doesn't navigate.
+            var supp = function (ev) { ev.stopPropagation(); ev.preventDefault(); };
+            window.addEventListener('click', supp, true);
+            setTimeout(function () { window.removeEventListener('click', supp, true); }, 0);
+        }
+        drag = null;
+    }
+    document.addEventListener('mouseup', end);
+    window.addEventListener('blur', end);
+
+    // Grab cursor hint on tables that actually overflow horizontally.
+    function markGrabbable() {
+        document.querySelectorAll(SCROLLER).forEach(function (el) {
+            el.classList.toggle('ak-grabbable', el.scrollWidth > el.clientWidth);
+        });
+    }
+    window.addEventListener('resize', markGrabbable);
+    document.addEventListener('livewire:navigated', function () { setTimeout(markGrabbable, 60); });
+    document.addEventListener('livewire:init', function () {
+        if (window.Livewire && Livewire.hook) {
+            Livewire.hook('commit', function (p) {
+                try { if (typeof p.succeed === 'function') p.succeed(function () { setTimeout(markGrabbable, 60); }); } catch (e) {}
+            });
+        }
+    });
+    setTimeout(markGrabbable, 400);
 })();
 </script>
