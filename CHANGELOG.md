@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.48.0] - 2026-07-14
+
+### Neu
+- **Globale Ladeanimation**: Eine schlanke Fortschrittsleiste oben zeigt sich bei **jeder** länger dauernden
+  Aktion im Panel (Vorlage übernehmen, Filter anwenden, Speichern, Export, Bank-/pretix-Abruf …), sodass
+  „lädt/übernimmt" nie wie ein eingefrorenes UI wirkt. Ergänzt Filaments vorhandene Button-Spinner und
+  Tabellen-Overlays; kurze Requests (unter ~180 ms) lösen sie bewusst nicht aus (kein Flackern).
+
 ## [0.47.1] - 2026-07-14
 
 ### Behoben

@@ -280,6 +280,29 @@
         box-shadow: 0 4px 18px rgba(0,0,0,.12) !important;
         border-radius: .4rem !important;
     }
+
+    /* ===== Global loading bar =====
+       A thin indeterminate top bar shown during ANY Livewire request that runs
+       longer than a moment (actions, "Vorlage übernehmen", filters, saves, …),
+       so slow "loading/applying" is never a silent freeze. Complements
+       Filament's own button spinners + table overlays and Livewire's navigate
+       bar. Driven by #ak-progress in the theme script below. */
+    #ak-progress {
+        position: fixed; top: 0; left: 0; right: 0; height: 3px;
+        z-index: 99999; pointer-events: none; overflow: hidden;
+        opacity: 0; transition: opacity .15s ease;
+    }
+    #ak-progress.ak-progress-active { opacity: 1; }
+    #ak-progress::before {
+        content: ""; position: absolute; top: 0; height: 100%; width: 35%;
+        border-radius: 0 3px 3px 0;
+        background: linear-gradient(90deg, rgba(0,123,255,0), #1a88ff 60%, #007bff);
+        box-shadow: 0 0 8px rgba(0,123,255,.6);
+        animation: ak-progress-slide 1.1s ease-in-out infinite;
+    }
+    @keyframes ak-progress-slide {
+        0% { left: -35%; } 100% { left: 100%; }
+    }
 </style>
 
 <script>
@@ -339,5 +362,70 @@
 
     document.addEventListener('input', guard, true);
     document.addEventListener('change', guard, true);
+})();
+</script>
+
+<script>
+/* Global loading bar: shows the thin top bar (#ak-progress) during any Livewire
+   request that lasts longer than a short threshold, so "loading / applying"
+   never looks like a frozen UI. Uses a 180ms delay so instant requests don't
+   flicker, and a counter so overlapping requests keep it visible until the last
+   one finishes. Livewire's own bar still handles wire:navigate page loads. */
+(function () {
+    if (window.__akProgressInstalled) return;
+    window.__akProgressInstalled = true;
+
+    var bar = null, active = 0, timer = null;
+
+    function ensureBar() {
+        if (bar && document.body.contains(bar)) return bar;
+        bar = document.createElement('div');
+        bar.id = 'ak-progress';
+        document.body.appendChild(bar);
+        return bar;
+    }
+    function show() { ensureBar().classList.add('ak-progress-active'); }
+    function hide() { if (bar) bar.classList.remove('ak-progress-active'); }
+
+    function start() {
+        active++;
+        if (active === 1) {
+            clearTimeout(timer);
+            timer = setTimeout(show, 180);
+        }
+    }
+    function stop() {
+        active = Math.max(0, active - 1);
+        if (active === 0) {
+            clearTimeout(timer);
+            timer = null;
+            hide();
+        }
+    }
+
+    document.addEventListener('livewire:init', function () {
+        if (typeof Livewire === 'undefined' || ! Livewire.hook) return;
+
+        Livewire.hook('commit', function (payload) {
+            start();
+            var done = false;
+            var finish = function () { if (done) return; done = true; stop(); };
+            // Register on every completion callback the payload offers; the
+            // done-guard means only the first one counts. Wrapped so an
+            // unexpected payload shape can never break the Livewire commit.
+            try {
+                ['respond', 'succeed', 'fail'].forEach(function (k) {
+                    if (payload && typeof payload[k] === 'function') payload[k](finish);
+                });
+            } catch (e) { /* ignore */ }
+            // Fallback so the bar can never get stuck if no callback fires.
+            setTimeout(finish, 20000);
+        });
+    });
+
+    // Safety net: if a full page navigation happens, reset the bar state.
+    document.addEventListener('livewire:navigated', function () {
+        active = 0; clearTimeout(timer); timer = null; hide();
+    });
 })();
 </script>
