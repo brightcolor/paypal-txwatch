@@ -19,7 +19,7 @@ class TwoFactorEnforcementTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
-        config(['auth.two_factor_required_for_admins' => true]);
+        config(['auth.two_factor_nag_admins' => true]);
     }
 
     private function admin(): User
@@ -30,11 +30,13 @@ class TwoFactorEnforcementTest extends TestCase
         return $user;
     }
 
-    public function test_admin_without_two_factor_is_forced_to_the_settings_page(): void
+    public function test_admin_without_two_factor_is_reminded_but_not_blocked(): void
     {
+        // Nagging is on, but the admin must NOT be forced onto the settings page
+        // - they can keep working. So /admin loads normally (no redirect).
         $response = $this->actingAs($this->admin())->get('/admin');
 
-        $response->assertRedirect(TwoFactorAuthSettings::getUrl());
+        $response->assertOk();
     }
 
     public function test_admin_can_still_reach_the_settings_page_to_enroll(): void
@@ -64,9 +66,9 @@ class TwoFactorEnforcementTest extends TestCase
         $this->actingAs($manager)->get('/admin')->assertOk();
     }
 
-    public function test_enforcement_can_be_disabled_by_config(): void
+    public function test_admin_reaches_panel_with_nag_disabled_too(): void
     {
-        config(['auth.two_factor_required_for_admins' => false]);
+        config(['auth.two_factor_nag_admins' => false]);
 
         $this->actingAs($this->admin())->get('/admin')->assertOk();
     }

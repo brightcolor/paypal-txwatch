@@ -12,9 +12,9 @@ use Symfony\Component\HttpFoundation\Response;
  * Two things, in order:
  *  1. Once a user HAS 2FA enabled, gate every panel request behind the
  *     TOTP/recovery-code challenge until it's passed for the session.
- *  2. If 2FA is required for admins (config auth.two_factor_required_for_admins)
- *     and an admin has NOT enabled it yet, force them onto the 2FA settings
- *     page until they do - so an admin account can't stay unprotected.
+ *  2. If an admin has NOT enabled 2FA yet, REMIND them (once per session) - but
+ *     never block: they can keep working and enrol whenever they get to it.
+ *     Nagging on (config auth.two_factor_nag_admins), enforcement off.
  * Attached as Filament panel authMiddleware, so it runs after the login check.
  */
 class EnsureTwoFactorChallengeIsPassed
@@ -33,22 +33,27 @@ class EnsureTwoFactorChallengeIsPassed
             return redirect()->route('two-factor.challenge');
         }
 
-        // Enforce enrollment for admins. Allow the settings page itself and
-        // logout so they can actually set it up / sign out.
-        if (config('auth.two_factor_required_for_admins', true)
+        // Remind - but never block - admins who haven't set up 2FA yet. A single
+        // persistent warning per session is enough nagging; forcing enrolment
+        // before any work can happen is too much.
+        if (config('auth.two_factor_nag_admins', true)
             && $user->hasRole('admin')
             && ! $user->hasTwoFactorEnabled()
-            && ! $request->routeIs('filament.admin.auth.logout')
-            && ! $request->is(ltrim(TwoFactorAuthSettings::getUrl(isAbsolute: false), '/') . '*')
+            && ! session('two_factor_nag_shown')
         ) {
+            session(['two_factor_nag_shown' => true]);
+
             Notification::make()
-                ->title('Zwei-Faktor-Authentifizierung erforderlich')
-                ->body('Als Administrator musst du 2FA aktivieren, bevor du fortfahren kannst.')
+                ->title('2FA empfohlen')
+                ->body('Dein Admin-Konto ist noch ohne Zwei-Faktor-Authentifizierung. Bitte richte sie bald ein – du kannst aber ganz normal weiterarbeiten.')
                 ->warning()
                 ->persistent()
+                ->actions([
+                    \Filament\Notifications\Actions\Action::make('setup')
+                        ->label('Jetzt einrichten')
+                        ->url(TwoFactorAuthSettings::getUrl()),
+                ])
                 ->send();
-
-            return redirect(TwoFactorAuthSettings::getUrl());
         }
 
         return $next($request);

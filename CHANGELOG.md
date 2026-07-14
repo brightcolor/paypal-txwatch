@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.47.0] - 2026-07-14
+
+### Geändert
+- **2FA für Admins wird nicht mehr erzwungen.** Bisher wurden Admins ohne aktivierte Zwei-Faktor-Auth auf die
+  2FA-Seite umgeleitet und konnten nichts anderes tun, bis sie es einrichten. Jetzt gibt es stattdessen nur
+  noch einen **Hinweis (einmal pro Sitzung, mit „Jetzt einrichten"-Button)** – man kann sofort normal
+  weiterarbeiten. Wer 2FA aktiviert hat, muss die Challenge weiterhin bestehen (unverändert). Konfig-Schalter
+  `TWO_FACTOR_NAG_ADMINS` (fällt auf das alte `TWO_FACTOR_REQUIRED_FOR_ADMINS` zurück); `false` schaltet auch
+  den Hinweis ab.
+
 ## [0.46.0] - 2026-07-14
 
 ### Neu

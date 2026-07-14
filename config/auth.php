@@ -115,9 +115,11 @@ return [
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
     /*
-    | Require admins to enable two-factor authentication before they can use
-    | the panel (enforced by EnsureTwoFactorChallengeIsPassed).
+    | Nag (not block) admins who haven't enabled two-factor auth: a per-session
+    | reminder shown by EnsureTwoFactorChallengeIsPassed. Admins can keep working
+    | before enrolling. Falls back to the old TWO_FACTOR_REQUIRED_FOR_ADMINS env
+    | so existing deployments keep their on/off choice for the reminder.
     */
-    'two_factor_required_for_admins' => (bool) env('TWO_FACTOR_REQUIRED_FOR_ADMINS', true),
+    'two_factor_nag_admins' => (bool) env('TWO_FACTOR_NAG_ADMINS', env('TWO_FACTOR_REQUIRED_FOR_ADMINS', true)),
 
 ];
