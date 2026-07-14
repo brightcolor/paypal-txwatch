@@ -4,6 +4,18 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.44.1] - 2026-07-14
+
+### Behoben
+
+- **PayPal-Sync konnte nach einem Container-Neustart bis zu 24 h stillstehen.** Der Scheduler-Eintrag
+  `paypal:schedule-sync` nutzte `withoutOverlapping()` mit Laravels 24-Stunden-Default. Wurde der
+  Scheduler-Container mitten im Lauf gekillt (Watchtower-Race auf dem geteilten Host), blieb der Lock in
+  Redis hängen und **jeder** folgende Minuten-Tick wurde übersprungen – neue PayPal-Zahlungen (und damit
+  z. B. frische pretix-Bestellungen) tauchten nicht mehr auf. Die Lock-Ablaufzeiten sind jetzt kurz
+  gesetzt (PayPal 10 min, pretix 20 min, Disputes/Bank 30 min), sodass sich ein verwaister Lock von selbst
+  löst. Sofort-Recovery bei Bedarf: `php artisan schedule:clear-cache`.
+
 ## [0.44.0] - 2026-07-14
 
 ### Neu
