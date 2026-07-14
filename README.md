@@ -348,8 +348,13 @@ DB-Fehler nicht zurück in die DB, damit das Logging nie den Request killt oder 
   hochladen. TxWatch importiert die Umsätze (dedupliziert) und gleicht Eingänge **automatisch** ab: gegen
   **PayPal-Auszahlungen** (kam die Auszahlung aufs Konto an?) und gegen **pretix-Überweisungen** (Bestellcode
   im Verwendungszweck). Offene Eingänge sind als Badge sichtbar; manuelles Ignorieren/Zurücksetzen und ein
-  „Erneut abgleichen" sind möglich. Ein automatischer Bankabruf (GoCardless/FinTS) lässt sich später
-  nachrüsten.
+  „Erneut abgleichen" sind möglich.
+- **Automatischer Bankabruf via FinTS/HBCI** (Bank → Auto-Abruf (FinTS), Admin): direkte Anbindung an die
+  Sparkasse ohne Drittanbieter. Zugangsdaten + FinTS-Server-Daten (fints.org) + **DK-Registrierungsnummer**
+  eintragen, TAN-Verfahren wählen, einmal per TAN anmelden – danach zieht `bank:sync` täglich die Umsätze und
+  gleicht sie über dieselbe Pipeline ab. Zugangsdaten/Session verschlüsselt. Verlangt die Bank erneut eine
+  TAN, meldet TxWatch „neu anmelden nötig". (Die DK-Registrierungsnummer muss vorab beantragt werden und kann
+  einige Wochen bis zur Aktivierung am Bankserver brauchen.)
 - **Export-Vorschau**: Auf der Transaktionsliste zeigt „Vorschau" die ersten Zeilen samt Summe, bevor
   exportiert wird. **Dashboard**: Umsatz-Vergleiche (Vormonat/Vorjahr) und Top-Events.
 

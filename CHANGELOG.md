@@ -4,6 +4,27 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.46.0] - 2026-07-14
+
+### Neu
+
+- **Bank-Auto-Abruf jetzt über FinTS/HBCI** (direkt zur Sparkasse, ohne Drittanbieter). Ersetzt GoCardless,
+  dessen Neuregistrierung derzeit gesperrt ist. Unter **Bank → Auto-Abruf (FinTS)**: Zugangsdaten +
+  FinTS-Server-Daten eintragen, TAN-Verfahren wählen, einmal per **TAN** anmelden – danach zieht ein
+  täglicher Job (`bank:sync`) die Umsätze direkt von der Bank in **Bank → Kontoumsätze** und gleicht sie ab
+  (gleiche Import-/Abgleich-Pipeline wie CAMT/MT940). Zugangsdaten und FinTS-Session werden verschlüsselt
+  gespeichert.
+  - Verlangt die Bank später erneut eine TAN, wird die Verbindung auf **„neu anmelden nötig"** gesetzt und
+    die Admins benachrichtigt.
+  - **Voraussetzung**: eine **Produkt-/Registrierungsnummer der Deutschen Kreditwirtschaft**
+    (fints.org/de/hersteller/produktregistrierung) – die Beantragung kann einige Wochen dauern, bis sie beim
+    Bankserver aktiv ist.
+
+### Entfernt
+
+- **GoCardless-Anbindung** (Bank Account Data) inkl. Consent-Callback und PSD2-90-Tage-Logik – ersetzt durch
+  FinTS. Der manuelle CAMT.053-/MT940-Upload bleibt unverändert bestehen.
+
 ## [0.45.3] - 2026-07-14
 
 ### Geändert (im Browser verifiziert)

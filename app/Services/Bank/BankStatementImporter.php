@@ -27,7 +27,7 @@ class BankStatementImporter
     }
 
     /**
-     * Inserts already-parsed/normalized entries (from a file OR the GoCardless
+     * Inserts already-parsed/normalized entries (from a file OR the FinTS
      * API), deduping by import hash, then runs the auto-reconciliation.
      *
      * @param  array<int, array<string, mixed>>  $entries

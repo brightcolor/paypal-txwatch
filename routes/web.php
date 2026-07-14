@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\GoCardlessCallbackController;
 use App\Http\Controllers\PretixWebhookController;
 use App\Http\Controllers\SharedFilterController;
 use App\Http\Controllers\TwoFactorChallengeController;
@@ -17,11 +16,6 @@ Route::post('/webhooks/pretix/{secret}', PretixWebhookController::class)
 Route::middleware('auth')
     ->get('/f/{token}', SharedFilterController::class)
     ->name('filters.shared');
-
-// GoCardless PSD2 consent redirect target.
-Route::middleware('auth')
-    ->get('/bank/gocardless/callback', GoCardlessCallbackController::class)
-    ->name('bank.gocardless.callback');
 
 Route::middleware('auth')->group(function () {
     Route::get('/two-factor-challenge', [TwoFactorChallengeController::class, 'show'])

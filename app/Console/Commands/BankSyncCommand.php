@@ -2,51 +2,43 @@
 
 namespace App\Console\Commands;
 
-use App\Models\BankConnection;
-use App\Services\Bank\GoCardlessSync;
+use App\Models\FintsConnection;
+use App\Services\Bank\FintsSync;
 use App\Support\AdminNotifier;
 use Illuminate\Console\Command;
 
 /**
- * Daily GoCardless pull: fetches new bank transactions and reconciles them.
- * Also flips the connection to "expired" and warns admins when the 90-day PSD2
- * consent is about to run out (or has), since re-authorising needs a manual TAN.
+ * Daily FinTS pull: fetches new bank statements directly from the bank and
+ * reconciles them. If the bank demands a fresh TAN (strong auth expired), the
+ * connection is flipped to "needs_reauth" and admins are warned, since
+ * re-authorising needs a manual TAN on the FinTS settings page.
  */
 class BankSyncCommand extends Command
 {
     protected $signature = 'bank:sync';
 
-    protected $description = 'Fetch bank transactions via GoCardless and reconcile them.';
+    protected $description = 'Fetch bank statements via FinTS/HBCI and reconcile them.';
 
-    public function handle(GoCardlessSync $sync): int
+    public function handle(FintsSync $sync): int
     {
-        $connection = BankConnection::current();
+        $connection = FintsConnection::current();
 
-        if (! $connection->isConnected()) {
-            $this->info('Keine verbundene Bankverbindung – übersprungen.');
-
-            return self::SUCCESS;
-        }
-
-        $daysLeft = $connection->consentDaysLeft();
-
-        if ($daysLeft !== null && $daysLeft <= 0) {
-            $connection->update(['status' => BankConnection::STATUS_EXPIRED]);
-            AdminNotifier::warn('Bank-Freigabe abgelaufen',
-                'Die PSD2-Freigabe für den Bankabruf ist abgelaufen. Bitte unter „Bank → Auto-Abruf" neu freigeben.',
-                url('/admin/bank-connection'));
-            $this->warn('Consent abgelaufen.');
+        if (! $connection->isActive()) {
+            $this->info('Keine aktive FinTS-Bankverbindung – übersprungen.');
 
             return self::SUCCESS;
-        }
-
-        if ($daysLeft !== null && $daysLeft <= 7) {
-            AdminNotifier::warn('Bank-Freigabe läuft bald ab',
-                "Die PSD2-Freigabe für den Bankabruf läuft in {$daysLeft} Tag(en) ab. Bitte rechtzeitig neu freigeben.",
-                url('/admin/bank-connection'));
         }
 
         $result = $sync->syncSafely($connection);
+
+        if (! empty($result['needs_reauth'])) {
+            AdminNotifier::warn('Bank-Anmeldung abgelaufen',
+                'Die Bank verlangt eine erneute TAN-Freigabe. Bitte unter „Bank → Auto-Abruf (FinTS)" neu anmelden.',
+                url('/admin/bank-connection'));
+            $this->warn('TAN-Freigabe erforderlich.');
+
+            return self::SUCCESS;
+        }
 
         if (isset($result['error'])) {
             $this->error('Abruf fehlgeschlagen: ' . $result['error']);
