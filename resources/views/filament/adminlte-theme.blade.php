@@ -303,6 +303,37 @@
     @keyframes ak-progress-slide {
         0% { left: -35%; } 100% { left: 100%; }
     }
+
+    /* ===== Long-running action overlay =====
+       For actions that run longer than a few seconds (esp. PDF export), a
+       centred, styled "this may take a moment" card with a spinner appears on
+       top of everything, so the user knows it's still working. Driven by
+       #ak-longload in the theme script. */
+    #ak-longload {
+        position: fixed; inset: 0; z-index: 100000;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(15,23,42,.55); backdrop-filter: blur(2px);
+        opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility .2s;
+    }
+    #ak-longload.ak-longload-active { opacity: 1; visibility: visible; }
+    .ak-longload-card {
+        background: #fff; color: #1f2d3d;
+        border-top: 3px solid var(--lte-card-border);
+        border-radius: .55rem; box-shadow: 0 12px 44px rgba(0,0,0,.38);
+        padding: 1.7rem 2rem; max-width: 22rem; text-align: center;
+        display: flex; flex-direction: column; align-items: center; gap: .45rem;
+        animation: ak-longload-pop .2s ease;
+    }
+    .dark .ak-longload-card { background: #1f2937; color: #e5e7eb; }
+    @keyframes ak-longload-pop { from { transform: translateY(8px) scale(.97); opacity: 0; } to { transform: none; opacity: 1; } }
+    .ak-longload-title { font-weight: 700; font-size: 1.02rem; }
+    .ak-longload-text { font-size: .82rem; opacity: .8; line-height: 1.45; }
+    .ak-spinner {
+        width: 2.5rem; height: 2.5rem; border-radius: 50%;
+        border: 3px solid rgba(0,123,255,.18); border-top-color: #007bff;
+        animation: ak-spin .8s linear infinite; margin-bottom: .35rem;
+    }
+    @keyframes ak-spin { to { transform: rotate(360deg); } }
 </style>
 
 <script>
@@ -375,7 +406,8 @@
     if (window.__akProgressInstalled) return;
     window.__akProgressInstalled = true;
 
-    var bar = null, active = 0, timer = null;
+    var bar = null, overlay = null, active = 0, barTimer = null, longTimer = null;
+    var LONG_MS = 4000; // after this long, escalate to the centred "one moment" card
 
     function ensureBar() {
         if (bar && document.body.contains(bar)) return bar;
@@ -387,19 +419,36 @@
     function show() { ensureBar().classList.add('ak-progress-active'); }
     function hide() { if (bar) bar.classList.remove('ak-progress-active'); }
 
+    function ensureOverlay() {
+        if (overlay && document.body.contains(overlay)) return overlay;
+        overlay = document.createElement('div');
+        overlay.id = 'ak-longload';
+        overlay.innerHTML =
+            '<div class="ak-longload-card" role="status" aria-live="polite">'
+            + '<div class="ak-spinner"></div>'
+            + '<div class="ak-longload-title">Einen Moment noch …</div>'
+            + '<div class="ak-longload-text">Die Aktion wird verarbeitet. Gerade Exporte können ein paar Sekunden dauern – bitte nicht schließen.</div>'
+            + '</div>';
+        document.body.appendChild(overlay);
+        return overlay;
+    }
+    function showOverlay() { ensureOverlay().classList.add('ak-longload-active'); }
+    function hideOverlay() { if (overlay) overlay.classList.remove('ak-longload-active'); }
+
     function start() {
         active++;
         if (active === 1) {
-            clearTimeout(timer);
-            timer = setTimeout(show, 180);
+            clearTimeout(barTimer);
+            barTimer = setTimeout(show, 180);
+            clearTimeout(longTimer);
+            longTimer = setTimeout(showOverlay, LONG_MS);
         }
     }
     function stop() {
         active = Math.max(0, active - 1);
         if (active === 0) {
-            clearTimeout(timer);
-            timer = null;
-            hide();
+            clearTimeout(barTimer); barTimer = null; hide();
+            clearTimeout(longTimer); longTimer = null; hideOverlay();
         }
     }
 
@@ -418,14 +467,18 @@
                     if (payload && typeof payload[k] === 'function') payload[k](finish);
                 });
             } catch (e) { /* ignore */ }
-            // Fallback so the bar can never get stuck if no callback fires.
-            setTimeout(finish, 20000);
+            // Fallback so the indicators can never get stuck if no callback
+            // fires. Generous (60s) so genuinely long exports keep the overlay
+            // the whole time, while a real hang still clears eventually.
+            setTimeout(finish, 60000);
         });
     });
 
-    // Safety net: if a full page navigation happens, reset the bar state.
+    // Safety net: if a full page navigation happens, reset all loading state.
     document.addEventListener('livewire:navigated', function () {
-        active = 0; clearTimeout(timer); timer = null; hide();
+        active = 0;
+        clearTimeout(barTimer); barTimer = null; hide();
+        clearTimeout(longTimer); longTimer = null; hideOverlay();
     });
 })();
 </script>

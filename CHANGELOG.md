@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.49.0] - 2026-07-14
+
+### Neu
+- **Mittige „Einen Moment noch …"-Info bei langen Aktionen**: Dauert eine Aktion länger als ~4 Sekunden
+  (typisch beim **PDF-Export**), erscheint zusätzlich zur oberen Ladeleiste eine zentrierte, stilvolle Karte
+  mit Spinner und Hinweis, dass es einen Moment dauert – damit klar ist, dass noch gearbeitet wird. Verschwindet
+  automatisch, sobald die Aktion fertig ist (mit großzügigem Sicherheits-Timeout gegen Hänger).
+
 ## [0.48.0] - 2026-07-14
 
 ### Neu
