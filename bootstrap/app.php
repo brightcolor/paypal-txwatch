@@ -12,6 +12,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Behind the swayy.de reverse proxy (host nginx + Cloudflare) TLS is terminated
+        // upstream and the container is reached over plain HTTP. Trust the proxy's
+        // X-Forwarded-* headers so Laravel/Filament know the request is really HTTPS and
+        // generate https URLs / secure redirects (no mixed content, no redirect loop).
+        // The container port is bound to 127.0.0.1 only, so the sole caller is that proxy.
+        $middleware->trustProxies(at: '*', headers: Request::HEADER_X_FORWARDED_FOR
+            | Request::HEADER_X_FORWARDED_HOST
+            | Request::HEADER_X_FORWARDED_PORT
+            | Request::HEADER_X_FORWARDED_PROTO);
+
         // This app has no generic "login" route - authentication lives entirely in the
         // Filament admin panel. Without this, the framework's auth middleware on our own
         // routes (e.g. the shared-filter link /f/{token}, two-factor challenge) tries to

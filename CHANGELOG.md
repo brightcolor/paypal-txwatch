@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.44.0] - 2026-07-14
+
+### Neu
+
+- **Eigene Domain + HTTPS**: TxWatch läuft jetzt unter **https://report.hsp-tickets.de** (Reverse-Proxy auf
+  swayy.de, Let's-Encrypt-Zertifikat). Damit funktioniert auch der **GoCardless-Consent-Redirect** (er braucht
+  HTTPS). Laravel vertraut den Proxy-Headern (`trustProxies`), erzeugt also korrekte `https`-URLs.
+
+### Sicherheit
+
+- Der Container-Port ist **nicht mehr öffentlich** erreichbar: Das Port-Binding liegt nur noch auf
+  `127.0.0.1` (nur der lokale Reverse-Proxy erreicht die App, kein direkter Zugriff über `:8090` von außen).
+- `SESSION_SECURE_COOKIE=true` – Session-Cookies werden nur noch über HTTPS gesendet.
+
 ## [0.43.0] - 2026-07-12
 
 ### Neu
