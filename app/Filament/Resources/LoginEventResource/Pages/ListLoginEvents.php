@@ -9,6 +9,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListLoginEvents extends ListRecords
 {
+    use \App\Filament\Concerns\ClampsRecordsPerPageOnReload;
+
     protected static string $resource = LoginEventResource::class;
 
     protected function getHeaderActions(): array

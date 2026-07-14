@@ -7,6 +7,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListSyncRuns extends ListRecords
 {
+    use \App\Filament\Concerns\ClampsRecordsPerPageOnReload;
+
     protected static string $resource = SyncRunResource::class;
 
     protected function getHeaderActions(): array

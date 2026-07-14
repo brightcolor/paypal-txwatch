@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListPaypalAccounts extends ListRecords
 {
+    use \App\Filament\Concerns\ClampsRecordsPerPageOnReload;
+
     protected static string $resource = PaypalAccountResource::class;
 
     protected function getHeaderActions(): array

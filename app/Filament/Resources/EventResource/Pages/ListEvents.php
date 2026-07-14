@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListEvents extends ListRecords
 {
+    use \App\Filament\Concerns\ClampsRecordsPerPageOnReload;
+
     protected static string $resource = EventResource::class;
 
     protected function getHeaderActions(): array

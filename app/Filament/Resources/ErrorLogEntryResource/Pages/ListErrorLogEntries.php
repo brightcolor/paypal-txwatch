@@ -9,6 +9,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListErrorLogEntries extends ListRecords
 {
+    use \App\Filament\Concerns\ClampsRecordsPerPageOnReload;
+
     protected static string $resource = ErrorLogEntryResource::class;
 
     protected function getHeaderActions(): array

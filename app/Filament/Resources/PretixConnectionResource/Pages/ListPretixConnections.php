@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListPretixConnections extends ListRecords
 {
+    use \App\Filament\Concerns\ClampsRecordsPerPageOnReload;
+
     protected static string $resource = PretixConnectionResource::class;
 
     protected function getHeaderActions(): array

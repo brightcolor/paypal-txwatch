@@ -14,13 +14,18 @@
 
     /* ===== Page canvas (light-only surfaces; dark mode keeps Filament's) ===== */
     html:not(.dark) .fi-body { background-color: var(--lte-body) !important; }
-    /* Tight top: trim the empty space above the page heading ("Dashboard"). */
-    .fi-main { padding: .3rem 1rem .8rem !important; gap: .6rem !important; }
+    /* Tight top: push the page heading ("Dashboard" & co.) right up under the
+       topbar - almost no empty space above it. */
+    .fi-main { padding: .1rem 1rem .7rem !important; gap: .6rem !important; }
     .fi-main > * + * { margin-top: .7rem !important; }
     .fi-page { gap: .6rem !important; }
     /* tighter page header (title + actions) */
     .fi-header { margin-bottom: 0 !important; padding-top: 0 !important; }
     .fi-header-heading { font-size: 1.25rem !important; }
+    /* Breadcrumbs only where you actually drilled through levels: hide them when
+       the trail has a single item (Dashboard, list pages) - keep them on
+       Edit/View/Create where there are >= 2 items and they aid navigation. */
+    .fi-breadcrumbs:not(:has(.fi-breadcrumbs-item + .fi-breadcrumbs-item)) { display: none !important; }
 
     /* ===== Dark sidebar (the AdminLTE signature) ===== */
     .fi-sidebar { background-color: var(--lte-sidebar) !important; }
@@ -50,6 +55,12 @@
     .fi-sidebar-item-active .fi-sidebar-item-label,
     .fi-sidebar-item-active .fi-sidebar-item-icon { color: #fff !important; font-weight: 600; }
     .fi-sidebar-item-badge .fi-badge { box-shadow: none; }
+    /* Tighter nav rows: less vertical padding per item and smaller gaps between
+       items/groups, so the whole menu is more compact. */
+    .fi-sidebar-item a, .fi-sidebar-item button { padding-top: .28rem !important; padding-bottom: .28rem !important; }
+    .fi-sidebar-nav-groups { gap: .15rem !important; }
+    .fi-sidebar-group-items { gap: .05rem !important; }
+    .fi-sidebar-group-items > * + * { margin-top: .05rem !important; }
 
     /* ===== Mobile sidebar: reach the last menu item =====
        Filament's off-canvas sidebar is 100vh, which counts the area *behind*
@@ -92,15 +103,17 @@
     html:not(.dark) .fi-ta-header-cell { background: #f8fafc !important; border-bottom: 2px solid #dee2e6 !important; }
     .fi-ta-header-cell-label { font-size: .72rem !important; text-transform: uppercase; letter-spacing: .03em; }
     html:not(.dark) .fi-ta-header-cell-label { color: #5f6b7a !important; }
-    .fi-ta-cell { padding-top: .28rem !important; padding-bottom: .28rem !important; }
+    /* Rows about half as tall: minimal vertical padding + tight line-height and
+       no row min-height, so lists show roughly twice as many rows per screen. */
+    .fi-ta-cell { padding-top: .13rem !important; padding-bottom: .13rem !important; min-height: 0 !important; }
+    .fi-ta-row, .fi-ta-record { --min-height: 0 !important; min-height: 0 !important; }
     /* tighter toolbar above tables (search + filters) */
     .fi-ta-header-toolbar { padding: .5rem .75rem !important; }
     .fi-ta-header-ctn { gap: .4rem !important; }
     html:not(.dark) .fi-ta-row:nth-child(even) { background-color: #fafbfd; }
     html:not(.dark) .fi-ta-row:hover { background-color: #eef4fb !important; transition: background-color .1s; }
     .dark .fi-ta-row:hover { background-color: rgba(255,255,255,.04) !important; }
-    .fi-ta-record { --min-height: 0 !important; }
-    .fi-ta-text-item { line-height: 1.3 !important; }
+    .fi-ta-text-item { line-height: 1.2 !important; }
     .fi-ta-table thead { position: sticky; top: 0; z-index: 5; }
     /* money columns read better with equal-width digits */
     .fi-ta-text-item-label { font-variant-numeric: tabular-nums; }
@@ -235,3 +248,63 @@
         border-radius: .4rem !important;
     }
 </style>
+
+<script>
+/* Pagination guard: warn before very large page sizes (>= 400 rows). A native
+   confirm() popup must be accepted; if declined the select is reverted and the
+   change never reaches Livewire. Together with the ClampsRecordsPerPageOnReload
+   trait (server side) a confirmed 500 applies only to the current view and is
+   reset to 200 on the next reload/revisit - so we never loop on a slow query.
+   Only ever intervenes at >= 400; 25-200 are completely untouched. */
+(function () {
+    if (window.__ppGuardInstalled) return;
+    window.__ppGuardInstalled = true;
+
+    var THRESHOLD = 400;
+    var prev = new WeakMap();
+
+    function perPageSelect(t) {
+        return (t && t.tagName === 'SELECT' && t.closest('.fi-pagination-records-per-page-select')) ? t : null;
+    }
+
+    document.addEventListener('focusin', function (e) {
+        var s = perPageSelect(e.target);
+        if (s) prev.set(s, s.value);
+    }, true);
+
+    function revert(e, s) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        var p = prev.get(s);
+        s.value = (p !== undefined ? p : '200');
+    }
+
+    function guard(e) {
+        var s = perPageSelect(e.target);
+        if (!s) return;
+
+        var v = parseInt(s.value, 10);
+        if (isNaN(v) || v < THRESHOLD) { prev.set(s, s.value); return; }
+
+        if (s.dataset.ppOk === s.value) return;               // already confirmed this size
+        if (s.dataset.ppNo === s.value) { revert(e, s); return; } // declined within this event pair
+
+        var ok = window.confirm(v + ' Zeilen pro Seite zu laden dauert deutlich länger und '
+            + 'belastet den Server stark.\n\nBeim nächsten Neuladen der Seite wird automatisch '
+            + 'wieder auf 200 begrenzt.\n\nTrotzdem laden?');
+
+        if (ok) {
+            s.dataset.ppOk = s.value;
+            delete s.dataset.ppNo;
+            prev.set(s, s.value);
+        } else {
+            s.dataset.ppNo = s.value;
+            revert(e, s);
+            setTimeout(function () { if (s.dataset.ppNo === String(v)) delete s.dataset.ppNo; }, 0);
+        }
+    }
+
+    document.addEventListener('input', guard, true);
+    document.addEventListener('change', guard, true);
+})();
+</script>

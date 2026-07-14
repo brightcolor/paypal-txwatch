@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Storage;
 
 class ListBankTransactions extends ListRecords
 {
+    use \App\Filament\Concerns\ClampsRecordsPerPageOnReload;
+
     protected static string $resource = BankTransactionResource::class;
 
     protected function getHeaderActions(): array

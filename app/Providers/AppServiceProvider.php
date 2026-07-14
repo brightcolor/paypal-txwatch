@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Filament\Tables\Table;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\ServiceProvider;
 
@@ -30,6 +31,18 @@ class AppServiceProvider extends ServiceProvider
         Carbon::setLocale(config('app.locale'));
 
         $this->applyMailSettings();
+
+        // Pagination policy for every table (list pages + relation managers):
+        // NO "Alle" option - loading the full table (tens of thousands of rows)
+        // kills the server. Cap at 500 rows; the pagination guard warns before a
+        // 500-row load and the ClampsRecordsPerPageOnReload trait resets a
+        // remembered large size back to 200 on reload so we don't loop on a slow
+        // query. Default 50.
+        Table::configureUsing(function (Table $table): void {
+            $table
+                ->paginationPageOptions([25, 50, 100, 200, 500])
+                ->defaultPaginationPageOption(50);
+        });
     }
 
     /**

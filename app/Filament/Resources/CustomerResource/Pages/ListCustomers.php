@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListCustomers extends ListRecords
 {
+    use \App\Filament\Concerns\ClampsRecordsPerPageOnReload;
+
     protected static string $resource = CustomerResource::class;
 
     protected function getHeaderActions(): array

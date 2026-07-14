@@ -4,6 +4,26 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.45.0] - 2026-07-14
+
+### Geändert (UI-Dichte)
+
+- **Tabellenzeilen** sind rund **halb so hoch** – es passen etwa doppelt so viele Zeilen auf den Bildschirm.
+- **Seitentitel** (z. B. „Dashboard") rückt direkt unter die Topbar; kaum noch Leerraum darüber. Gilt für alle Seiten.
+- **Navigationszeilen** in der Sidebar sind enger (weniger Höhe, kleinere Abstände).
+- **Breadcrumbs** erscheinen nur noch dort, wo man wirklich über mehrere Ebenen navigiert (Bearbeiten/Ansehen/Anlegen).
+  Auf Dashboard und Listenseiten (eine Ebene) sind sie ausgeblendet.
+
+### Geändert (Pagination – Server-Schutz)
+
+- Die Option **„Alle"** ist **entfernt** – sie lud die komplette Tabelle und konnte den Server lahmlegen.
+- Seitengrößen jetzt **25 / 50 / 100 / 200 / 500** (Standard 50).
+- **Warnung ab großen Seitengrößen (ab 400):** Ein Bestätigungs-Popup weist auf die lange Ladezeit hin; erst nach
+  Bestätigung wird geladen.
+- **Kein Im-Kreis-Drehen:** Eine bestätigte 500er-Auswahl gilt nur für die aktuelle Ansicht. Beim **Neuladen oder
+  erneuten Besuch** der Seite wird automatisch auf **200 begrenzt**, damit nicht jeder Aufruf die langsame Abfrage
+  wiederholt.
+
 ## [0.44.1] - 2026-07-14
 
 ### Behoben

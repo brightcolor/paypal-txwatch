@@ -7,6 +7,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListTransactions extends ListRecords
 {
+    use \App\Filament\Concerns\ClampsRecordsPerPageOnReload;
+
     protected static string $resource = TransactionResource::class;
 
     protected function getHeaderActions(): array

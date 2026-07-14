@@ -7,6 +7,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListSavedFilters extends ListRecords
 {
+    use \App\Filament\Concerns\ClampsRecordsPerPageOnReload;
+
     protected static string $resource = SavedFilterResource::class;
 
     // No create action on purpose: saved filters are created only via the

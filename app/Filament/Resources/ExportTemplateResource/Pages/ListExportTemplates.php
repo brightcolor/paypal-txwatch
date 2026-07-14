@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListExportTemplates extends ListRecords
 {
+    use \App\Filament\Concerns\ClampsRecordsPerPageOnReload;
+
     protected static string $resource = ExportTemplateResource::class;
 
     protected function getHeaderActions(): array

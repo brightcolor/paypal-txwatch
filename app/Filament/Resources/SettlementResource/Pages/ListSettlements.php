@@ -7,6 +7,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListSettlements extends ListRecords
 {
+    use \App\Filament\Concerns\ClampsRecordsPerPageOnReload;
+
     protected static string $resource = SettlementResource::class;
 
     protected function getHeaderActions(): array

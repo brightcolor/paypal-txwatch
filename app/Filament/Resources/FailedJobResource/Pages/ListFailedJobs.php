@@ -7,6 +7,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListFailedJobs extends ListRecords
 {
+    use \App\Filament\Concerns\ClampsRecordsPerPageOnReload;
+
     protected static string $resource = FailedJobResource::class;
 
     protected function getHeaderActions(): array
