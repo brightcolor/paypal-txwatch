@@ -75,7 +75,13 @@ php artisan key:generate --show   # oder: openssl rand -base64 32, mit "base64:"
 docker compose up -d
 ```
 
-Die App läuft danach unter `http://<server>:${APP_PORT}/admin` (Standard-Port `8090`, siehe `.env`).
+Die App lauscht danach containerseitig auf `${APP_PORT}` (Standard `8090`). In der Produktion ist der
+Port bewusst **nur auf `127.0.0.1` gebunden** (`docker-compose.yml`: `127.0.0.1:${APP_PORT}:80`) – öffentlich
+erreichbar ist die App ausschließlich über einen vorgelagerten **Reverse-Proxy mit HTTPS**
+(Prod: `https://report.hsp-tickets.de`). Dafür in `.env` `APP_URL=https://…` und `SESSION_SECURE_COOKIE=true`
+setzen; Laravel vertraut den Proxy-Headern via `trustProxies` (`bootstrap/app.php`). Für rein lokalen Test
+ohne Proxy die Portzeile auf `${APP_PORT}:80` stellen und via `http://<server>:${APP_PORT}/admin` zugreifen.
+
 Beim allerersten Start einen Admin-Benutzer anlegen:
 
 ```bash
