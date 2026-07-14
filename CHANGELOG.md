@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.45.1] - 2026-07-14
+
+### Behoben
+
+- **Zeilenhöhe wurde in 0.45.0 nicht wirklich kleiner.** Die Regel zielte auf `.fi-ta-cell`, das aber `p-0` ist –
+  die Höhe kommt vom inneren Spalten-Wrapper (`.fi-ta-text` mit `py-4`). Jetzt wird das innere Element getroffen
+  (`.fi-ta-cell > *`), Zeilen sind spürbar niedriger. Sidebar-Nav analog auf `.fi-sidebar-item-button` gezielt.
+- Hinweis: Das Panel läuft im **SPA-Modus** – nach dem Update einmal **hart neu laden** (Strg/Cmd+Shift+R), sonst
+  bleiben die alten Inline-Styles im geöffneten Tab.
+
 ## [0.45.0] - 2026-07-14
 
 ### Geändert (UI-Dichte)

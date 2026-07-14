@@ -57,7 +57,9 @@
     .fi-sidebar-item-badge .fi-badge { box-shadow: none; }
     /* Tighter nav rows: less vertical padding per item and smaller gaps between
        items/groups, so the whole menu is more compact. */
-    .fi-sidebar-item a, .fi-sidebar-item button { padding-top: .28rem !important; padding-bottom: .28rem !important; }
+    /* The clickable row is .fi-sidebar-item-button (ships with py-2); target it
+       directly so the padding override actually lands. */
+    .fi-sidebar-item-button, .fi-sidebar-item a, .fi-sidebar-item button { padding-top: .3rem !important; padding-bottom: .3rem !important; }
     .fi-sidebar-nav-groups { gap: .15rem !important; }
     .fi-sidebar-group-items { gap: .05rem !important; }
     .fi-sidebar-group-items > * + * { margin-top: .05rem !important; }
@@ -103,9 +105,11 @@
     html:not(.dark) .fi-ta-header-cell { background: #f8fafc !important; border-bottom: 2px solid #dee2e6 !important; }
     .fi-ta-header-cell-label { font-size: .72rem !important; text-transform: uppercase; letter-spacing: .03em; }
     html:not(.dark) .fi-ta-header-cell-label { color: #5f6b7a !important; }
-    /* Rows about half as tall: minimal vertical padding + tight line-height and
-       no row min-height, so lists show roughly twice as many rows per screen. */
-    .fi-ta-cell { padding-top: .13rem !important; padding-bottom: .13rem !important; min-height: 0 !important; }
+    /* Rows about half as tall. IMPORTANT: the row height is NOT set on
+       .fi-ta-cell (that ships as `p-0`) - it comes from the inner column wrapper
+       (.fi-ta-text / .fi-ta-icon / ...) which Filament ships with `py-4` (1rem
+       top+bottom). So target the cell's direct child to actually shrink rows. */
+    .fi-ta-cell > * { padding-top: .3rem !important; padding-bottom: .3rem !important; }
     .fi-ta-row, .fi-ta-record { --min-height: 0 !important; min-height: 0 !important; }
     /* tighter toolbar above tables (search + filters) */
     .fi-ta-header-toolbar { padding: .5rem .75rem !important; }
