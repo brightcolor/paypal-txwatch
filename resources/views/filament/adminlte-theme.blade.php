@@ -341,6 +341,13 @@
        click is suppressed). Driven by the theme script. */
     .fi-ta-content.ak-grabbable { cursor: grab; }
     body.ak-drag-scrolling, body.ak-drag-scrolling * { cursor: grabbing !important; user-select: none !important; }
+
+    /* ===== Column reordering (drag table headers) ===== */
+    th.ak-col-draggable { cursor: grab; }
+    th.ak-col-draggable:hover { background: rgba(0,123,255,.06); }
+    th.ak-col-dragging { opacity: .45; }
+    th.ak-col-dropbefore { box-shadow: inset 3px 0 0 0 var(--lte-card-border, #007bff); }
+    th.ak-col-dropafter { box-shadow: inset -3px 0 0 0 var(--lte-card-border, #007bff); }
 </style>
 
 <script>
@@ -504,7 +511,8 @@
 
     var SCROLLER = '.fi-ta-content';
     // Only real text-entry controls block a drag; links & buttons are grabbable.
-    var NODRAG = 'input, select, textarea, [contenteditable]';
+    // `thead` is excluded so column-header dragging (reordering) works there.
+    var NODRAG = 'input, select, textarea, [contenteditable], thead';
     var drag = null;
     var suppressClick = false, suppressTimer = null;
 
@@ -577,5 +585,159 @@
         }
     });
     setTimeout(markGrabbable, 400);
+})();
+</script>
+
+<script>
+/* Column reordering for tables (Filament 3.3 has no native support): drag a
+   column HEADER onto another column to move it there. Order is stored per user
+   in localStorage and re-applied after every table re-render (Livewire morphs
+   the cells back into source order positionally, so we re-apply AFTER each
+   commit - and because whole <td>s are moved, cell contents always travel with
+   their column). The selection checkbox + row-actions columns stay pinned. */
+(function () {
+    if (window.__akColReorderInstalled) return;
+    window.__akColReorderInstalled = true;
+
+    function allTables() { return [].slice.call(document.querySelectorAll('.fi-ta-table')); }
+    function tableIndex(table) { return allTables().indexOf(table); }
+    function storeKey(idx) { return 'akColOrder:' + location.pathname + '#' + idx; }
+    function loadOrder(idx) { try { return JSON.parse(localStorage.getItem(storeKey(idx)) || 'null'); } catch (e) { return null; } }
+    function saveOrder(idx, order) { try { localStorage.setItem(storeKey(idx), JSON.stringify(order)); } catch (e) {} }
+
+    function cellKey(cell) {
+        var m = (cell.className || '').match(/fi-table-cell-([A-Za-z0-9._-]+)/);
+        return m ? m[1] : null;
+    }
+    function isSelection(c) { return c.classList.contains('fi-ta-selection-cell'); }
+    function isActions(c) { return c.classList.contains('fi-ta-actions-cell'); }
+
+    // Tag header + body cells with data-akcol (key from a body cell's
+    // fi-table-cell-<name> class) and make data headers draggable.
+    function tag(table) {
+        var headRow = table.querySelector('thead tr');
+        if (! headRow) return null;
+        var headCells = [].slice.call(headRow.children);
+        var refRow = table.querySelector('tbody tr');
+        var keys = [];
+        for (var i = 0; i < headCells.length; i++) {
+            var key = (refRow && refRow.children[i]) ? cellKey(refRow.children[i]) : null;
+            if (! key) key = 'col' + i;
+            keys.push(key);
+            var th = headCells[i];
+            th.dataset.akcol = key;
+            if (! isSelection(th) && ! isActions(th)) {
+                th.setAttribute('draggable', 'true');
+                th.classList.add('ak-col-draggable');
+            }
+        }
+        [].slice.call(table.querySelectorAll('tbody tr')).forEach(function (row) {
+            [].slice.call(row.children).forEach(function (c, i) { c.dataset.akcol = keys[i] || ('col' + i); });
+        });
+        return keys;
+    }
+
+    function reorderRow(row, order) {
+        if (! row) return;
+        var cells = [].slice.call(row.children);
+        var selection = cells.filter(isSelection)[0];
+        var actions = cells.filter(isActions)[0];
+        var byKey = {};
+        cells.forEach(function (c) { if (c !== selection && c !== actions) byKey[c.dataset.akcol] = c; });
+        var ordered = order.map(function (k) { return byKey[k]; }).filter(Boolean);
+        cells.forEach(function (c) { if (c !== selection && c !== actions && ordered.indexOf(c) === -1) ordered.push(c); });
+        var seq = [];
+        if (selection) seq.push(selection);
+        seq = seq.concat(ordered);
+        if (actions) seq.push(actions);
+        seq.forEach(function (c) { row.appendChild(c); });
+    }
+
+    function currentOrder(table) {
+        var headRow = table.querySelector('thead tr');
+        if (! headRow) return [];
+        return [].slice.call(headRow.children)
+            .filter(function (c) { return c.classList.contains('ak-col-draggable'); })
+            .map(function (c) { return c.dataset.akcol; });
+    }
+    function sameOrder(a, b) { return a.length === b.length && a.every(function (k, i) { return k === b[i]; }); }
+
+    function applyOrder(table, order) {
+        if (sameOrder(currentOrder(table), order)) return;
+        reorderRow(table.querySelector('thead tr'), order);
+        [].slice.call(table.querySelectorAll('tbody tr')).forEach(function (row) { reorderRow(row, order); });
+    }
+
+    function moveColumn(table, from, targetKey, after) {
+        if (from === targetKey) return;
+        var order = currentOrder(table);
+        var f = order.indexOf(from);
+        if (f === -1) return;
+        order.splice(f, 1);
+        var to = order.indexOf(targetKey);
+        if (to === -1) order.push(from);
+        else order.splice(after ? to + 1 : to, 0, from);
+        saveOrder(tableIndex(table), order);
+        applyOrder(table, order);
+    }
+
+    var refreshTimer = null;
+    function refresh() {
+        allTables().forEach(function (table, idx) {
+            if (! tag(table)) return;
+            var saved = loadOrder(idx);
+            if (saved && saved.length) applyOrder(table, saved);
+        });
+    }
+    function scheduleRefresh() { clearTimeout(refreshTimer); refreshTimer = setTimeout(refresh, 60); }
+
+    // ----- drag interaction on the (draggable) header cells -----
+    var srcKey = null, srcTable = null;
+    function clearIndicators() {
+        [].slice.call(document.querySelectorAll('.ak-col-dropbefore, .ak-col-dropafter'))
+            .forEach(function (e) { e.classList.remove('ak-col-dropbefore', 'ak-col-dropafter'); });
+    }
+    document.addEventListener('dragstart', function (e) {
+        var th = e.target.closest && e.target.closest('.ak-col-draggable');
+        if (! th) return;
+        srcKey = th.dataset.akcol;
+        srcTable = th.closest('.fi-ta-table');
+        th.classList.add('ak-col-dragging');
+        try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', srcKey); } catch (x) {}
+    }, true);
+    document.addEventListener('dragover', function (e) {
+        if (srcKey === null) return;
+        var th = e.target.closest && e.target.closest('.ak-col-draggable');
+        if (! th || th.closest('.fi-ta-table') !== srcTable) return;
+        e.preventDefault();
+        try { e.dataTransfer.dropEffect = 'move'; } catch (x) {}
+        clearIndicators();
+        var r = th.getBoundingClientRect();
+        th.classList.add((e.clientX > r.left + r.width / 2) ? 'ak-col-dropafter' : 'ak-col-dropbefore');
+    });
+    document.addEventListener('drop', function (e) {
+        if (srcKey === null) return;
+        var th = e.target.closest && e.target.closest('.ak-col-draggable');
+        if (th && th.closest('.fi-ta-table') === srcTable) {
+            e.preventDefault();
+            var r = th.getBoundingClientRect();
+            moveColumn(srcTable, srcKey, th.dataset.akcol, e.clientX > r.left + r.width / 2);
+        }
+        srcKey = null; srcTable = null; clearIndicators();
+    });
+    document.addEventListener('dragend', function () {
+        srcKey = null; srcTable = null; clearIndicators();
+        [].slice.call(document.querySelectorAll('.ak-col-dragging')).forEach(function (e) { e.classList.remove('ak-col-dragging'); });
+    });
+
+    document.addEventListener('livewire:navigated', scheduleRefresh);
+    document.addEventListener('livewire:init', function () {
+        if (window.Livewire && Livewire.hook) {
+            Livewire.hook('commit', function (p) {
+                try { if (typeof p.succeed === 'function') p.succeed(scheduleRefresh); } catch (e) {}
+            });
+        }
+    });
+    setTimeout(refresh, 500);
 })();
 </script>

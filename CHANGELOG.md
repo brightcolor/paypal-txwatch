@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.52.0] - 2026-07-14
+
+### Neu
+- **Spalten-Reihenfolge per Drag bestimmen** (Recherche-Tool): Eine **Spalten-Überschrift auf eine andere
+  ziehen** ordnet die Spalte dort ein. Die Reihenfolge wird pro Benutzer im Browser gespeichert und nach jedem
+  Tabellen-Update automatisch wieder angewandt. Auswahl-Kästchen und Aktions-Spalte bleiben fest. (Filament 3.3
+  hat dafür kein natives Feature – umgesetzt als robuste, **selbstkorrigierende** Theme-JS-Lösung: die
+  Spalten-Identität wird nach jedem Update aus Filaments eigenen Zell-Klassen abgeleitet, damit Inhalte nie in
+  die falsche Spalte geraten können; ohne eigene Reihenfolge bleibt die Tabelle unangetastet.)
+
 ## [0.51.0] - 2026-07-14
 
 ### Neu
