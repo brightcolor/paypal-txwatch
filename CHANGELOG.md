@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.53.2] - 2026-07-28
+
+### Behoben
+- **Speichern der FinTS-Zugangsdaten warf einen 500er.** Ursache: Filament füllt Funktionsargumente **nach
+  Parameternamen** – beim PIN-Feld hieß der Parameter `$s` statt `$state` („[$s] was unresolvable"). Behoben;
+  dieselbe Stolperfalle war auch in fünf Spalten der Kontoumsätze angelegt und wurde gleich mit entschärft.
+  Regressionstest ergänzt (schlägt mit dem alten Code fehl).
+
+### Geändert
+- **Klarer Hinweis, wo „TAN-Verfahren anzeigen" steckt:** Die Schaltflächen erscheinen **oben rechts im
+  Seitenkopf**, aber erst **nachdem** die Zugangsdaten gespeichert sind. Solange etwas fehlt, sagt die Seite das
+  jetzt ausdrücklich, statt die Knöpfe kommentarlos zu verstecken.
+
 ## [0.53.1] - 2026-07-16
 
 ### Behoben

@@ -96,7 +96,9 @@ class FintsConnectionPage extends Page implements HasForms
                     Forms\Components\TextInput::make('username')->label('Anmeldename / Legitimations-ID')->required()->autocomplete(false),
                     Forms\Components\TextInput::make('pin')->label('Online-Banking-PIN')->password()->revealable()
                         ->autocomplete('new-password')->placeholder('unverändert lassen zum Beibehalten')
-                        ->dehydrated(fn (?string $s) => filled($s)),
+                        // Filament injiziert Closure-Argumente PER NAME: hier muss der
+                        // Parameter $state heißen, sonst 500 ("[$s] was unresolvable").
+                        ->dehydrated(fn (?string $state) => filled($state)),
                     Forms\Components\TextInput::make('tan_mode')->label('TAN-Verfahren (ID)')
                         ->helperText('Über „TAN-Verfahren anzeigen" (oben) ermitteln.')->numeric(),
                     Forms\Components\TextInput::make('tan_medium')->label('TAN-Medium (Name, optional)'),

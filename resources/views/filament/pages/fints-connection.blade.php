@@ -29,6 +29,14 @@
             landen unter <strong>Bank → Kontoumsätze</strong> und werden automatisch abgeglichen. Direkt zur Sparkasse,
             ohne Drittanbieter.
         </p>
+
+        @unless ($c->hasCredentials())
+            <p class="mt-2 text-xs" style="color: var(--ak-warning, #ffc107);">
+                <strong>Nächster Schritt:</strong> Zugangsdaten unten ausfüllen und <strong>speichern</strong>.
+                Die Schaltflächen <em>„TAN-Verfahren anzeigen"</em> und <em>„Login / Bank verbinden"</em> erscheinen
+                danach oben rechts im Seitenkopf – sie brauchen BLZ, FinTS-URL, Registrierungsnummer, Anmeldename und PIN.
+            </p>
+        @endunless
     </x-filament::section>
 
     @if ($c->status === 'needs_tan')

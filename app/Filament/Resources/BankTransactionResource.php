@@ -63,32 +63,32 @@ class BankTransactionResource extends Resource
                     ->color(fn (BankTransaction $r) => (float) $r->amount < 0 ? 'danger' : 'success')
                     ->weight(\Filament\Support\Enums\FontWeight::SemiBold),
                 Tables\Columns\TextColumn::make('reconciliation_status')->label('Abgleich')->badge()
-                    ->formatStateUsing(fn (string $s) => match ($s) {
+                    ->formatStateUsing(fn (string $state) => match ($state) {
                         BankTransaction::STATUS_MATCHED => 'zugeordnet',
                         BankTransaction::STATUS_IGNORED => 'ignoriert',
                         default => 'offen',
                     })
-                    ->color(fn (string $s) => match ($s) {
+                    ->color(fn (string $state) => match ($state) {
                         BankTransaction::STATUS_MATCHED => 'success',
                         BankTransaction::STATUS_IGNORED => 'gray',
                         default => 'warning',
                     }),
                 Tables\Columns\TextColumn::make('match_method')->label('Zuordnung über')
-                    ->formatStateUsing(fn (?string $s) => match ($s) {
+                    ->formatStateUsing(fn (?string $state) => match ($state) {
                         BankTransaction::METHOD_PAYOUT => 'PayPal-Auszahlung',
                         BankTransaction::METHOD_PRETIX => 'pretix-Überweisung',
                         BankTransaction::METHOD_MANUAL => 'manuell',
                         default => '–',
                     })->toggleable(),
                 Tables\Columns\TextColumn::make('pretix_report_status')->label('pretix-Meldung')->badge()
-                    ->formatStateUsing(fn (string $s) => match ($s) {
+                    ->formatStateUsing(fn (string $state) => match ($state) {
                         BankTransaction::REPORT_PROPOSED => 'vorgeschlagen',
                         BankTransaction::REPORT_REPORTED => 'gemeldet',
                         BankTransaction::REPORT_FAILED => 'fehlgeschlagen',
                         BankTransaction::REPORT_DISMISSED => 'verworfen',
                         default => '–',
                     })
-                    ->color(fn (string $s) => match ($s) {
+                    ->color(fn (string $state) => match ($state) {
                         BankTransaction::REPORT_PROPOSED => 'warning',
                         BankTransaction::REPORT_REPORTED => 'success',
                         BankTransaction::REPORT_FAILED => 'danger',
