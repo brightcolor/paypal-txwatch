@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Models\FintsConnection;
 use App\Services\Bank\FintsBanks;
 use App\Services\Bank\FintsClient;
+use App\Services\Bank\FintsErrorHelp;
 use App\Services\Bank\FintsSync;
 use Filament\Actions\Action;
 use Filament\Forms;
@@ -153,7 +154,7 @@ class FintsConnectionPage extends Page implements HasForms
 
                         Notification::make()->title('Verfügbare TAN-Verfahren')->body($lines)->persistent()->info()->send();
                     } catch (\Throwable $e) {
-                        Notification::make()->title('Abfrage fehlgeschlagen')->body($e->getMessage())->danger()->persistent()->send();
+                        Notification::make()->title('Abfrage fehlgeschlagen')->body(FintsErrorHelp::decorate($e->getMessage()))->danger()->persistent()->send();
                     }
                 }),
 
@@ -231,7 +232,7 @@ class FintsConnectionPage extends Page implements HasForms
             $this->firstSync();
         } catch (\Throwable $e) {
             $c->update(['status' => FintsConnection::STATUS_ERROR, 'last_error' => $e->getMessage()]);
-            Notification::make()->title('Login fehlgeschlagen')->body($e->getMessage())->danger()->persistent()->send();
+            Notification::make()->title('Login fehlgeschlagen')->body(FintsErrorHelp::decorate($e->getMessage()))->danger()->persistent()->send();
         }
     }
 
@@ -251,7 +252,7 @@ class FintsConnectionPage extends Page implements HasForms
             $this->firstSync();
         } catch (\Throwable $e) {
             $c->update(['status' => FintsConnection::STATUS_ERROR, 'last_error' => $e->getMessage()]);
-            Notification::make()->title('TAN-Bestätigung fehlgeschlagen')->body($e->getMessage())->danger()->persistent()->send();
+            Notification::make()->title('TAN-Bestätigung fehlgeschlagen')->body(FintsErrorHelp::decorate($e->getMessage()))->danger()->persistent()->send();
         }
     }
 
@@ -265,7 +266,7 @@ class FintsConnectionPage extends Page implements HasForms
     private function reportSync(array $result): void
     {
         if (isset($result['error'])) {
-            Notification::make()->title('Abruf fehlgeschlagen')->body($result['error'])->danger()->persistent()->send();
+            Notification::make()->title('Abruf fehlgeschlagen')->body(FintsErrorHelp::decorate($result['error']))->danger()->persistent()->send();
 
             return;
         }

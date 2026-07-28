@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.54.0] - 2026-07-28
+
+### Neu
+- **FinTS-Fehler werden im Klartext erklärt.** Die Bank antwortet nur mit Nummern (z. B. „9078", „9931"); TxWatch
+  stellt jetzt eine verständliche Erklärung mit Handlungsempfehlung voran – etwa dass die Registrierungsnummer
+  bei der Bank noch nicht bekannt ist, oder dass bei Sparkassen die Legitimations-ID statt des Web-Anmeldenamens
+  nötig ist (inkl. Warnung vor Zugangssperre nach mehreren Fehlversuchen). Die Original-Meldung der Bank bleibt
+  darunter sichtbar.
+
 ## [0.53.3] - 2026-07-28
 
 ### Behoben
