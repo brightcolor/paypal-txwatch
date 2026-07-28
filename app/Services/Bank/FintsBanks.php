@@ -21,15 +21,32 @@ class FintsBanks
             return [];
         }
 
+        // Case-INSENSITIVE (Postgres LIKE is case-sensitive!) token search: every
+        // whitespace-separated token must appear somewhere in name/place/BLZ/BIC,
+        // so "sparkasse nordwest" or "sparkasse wismar" both find the bank.
+        // LOWER + || work identically on PostgreSQL and SQLite.
+        $tokens = array_filter(preg_split('/\s+/', mb_strtolower($query)));
+        $first = $tokens[0] ?? '';
+
+        // Relevance beats alphabet: there are ~340 banks containing "sparkasse",
+        // so a plain A-Z sort buried the wanted one far beyond any limit. Rank
+        // name-start matches first, then early-in-name, then the rest.
         return FintsBank::query()
-            ->where(function ($w) use ($query) {
-                $w->where('name', 'like', "%{$query}%")
-                    ->orWhere('ort', 'like', "%{$query}%")
-                    ->orWhere('blz', 'like', "{$query}%")
-                    ->orWhere('bic', 'like', "{$query}%");
+            ->where(function ($w) use ($tokens) {
+                foreach ($tokens as $token) {
+                    $w->whereRaw(
+                        "LOWER(name || ' ' || COALESCE(ort, '') || ' ' || blz || ' ' || COALESCE(bic, '')) LIKE ?",
+                        ['%' . $token . '%'],
+                    );
+                }
             })
+            ->orderByRaw(
+                'CASE WHEN LOWER(name) LIKE ? THEN 0 WHEN LOWER(name) LIKE ? THEN 1 ELSE 2 END',
+                [$first . '%', '%' . $first . '%'],
+            )
+            ->orderByRaw('LENGTH(name)')
             ->orderBy('name')
-            ->limit(50)
+            ->limit(60)
             ->get()
             ->mapWithKeys(fn (FintsBank $b) => [$b->blz => self::label($b)])
             ->all();

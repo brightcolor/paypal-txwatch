@@ -67,4 +67,30 @@ class FintsBanksImportTest extends TestCase
         // Label resolver for a stored BLZ.
         $this->assertSame('Postbank, Berlin (10010010)', FintsBanks::labelFor('10010010'));
     }
+
+    /**
+     * Regression: on PostgreSQL `LIKE` is case-SENSITIVE, so lower-case input
+     * found nothing ("sparkasse" only matched "KreisSPARKASSE", "wismar" matched
+     * nothing at all). Search must be case-insensitive and match across
+     * name + place, with all tokens required.
+     */
+    public function test_search_is_case_insensitive_and_matches_place_and_multiple_tokens(): void
+    {
+        $this->artisan('fints:import-banks', ['file' => $this->writeCsv()])->assertSuccessful();
+
+        // lower-case name
+        $this->assertArrayHasKey('14051000', FintsBanks::search('sparkasse'));
+        // lower-case place only
+        $this->assertArrayHasKey('14051000', FintsBanks::search('wismar'));
+        // upper-case
+        $this->assertArrayHasKey('14051000', FintsBanks::search('SPARKASSE'));
+        // part of the name that is not the beginning
+        $this->assertArrayHasKey('14051000', FintsBanks::search('nordwest'));
+        // multiple tokens, mixed name + place, any order
+        $this->assertArrayHasKey('14051000', FintsBanks::search('sparkasse wismar'));
+        $this->assertArrayHasKey('14051000', FintsBanks::search('nordwest sparkasse'));
+
+        // A token that matches nothing must exclude the row (AND semantics).
+        $this->assertSame([], FintsBanks::search('sparkasse hamburg'));
+    }
 }

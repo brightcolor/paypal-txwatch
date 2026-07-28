@@ -73,7 +73,7 @@ class FintsConnectionPage extends Page implements HasForms
                     Forms\Components\Select::make('bank_lookup')
                         ->label('Bank suchen & auswählen')
                         ->helperText(fn () => FintsBanks::count() > 0
-                            ? 'Name, Ort oder BLZ tippen – BLZ und FinTS-URL werden automatisch gesetzt. Nicht dabei? Felder unten manuell ausfüllen.'
+                            ? 'Name, Ort oder BLZ tippen (z. B. „Wismar" oder „Sparkasse Meck") – BLZ und FinTS-URL werden automatisch gesetzt. Bei häufigen Namen wie „Sparkasse" am besten den Ort mit eingeben. Nicht dabei? Felder unten manuell ausfüllen.'
                             : 'Bankliste noch nicht eingespielt – BLZ und FinTS-URL bitte manuell eintragen.')
                         ->searchable()
                         ->getSearchResultsUsing(fn (string $search) => FintsBanks::search($search))

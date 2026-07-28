@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.53.1] - 2026-07-16
+
+### Behoben
+- **Bank-Suche fand die eigene Bank nicht.** Zwei Ursachen: (1) Die Suche war auf der Produktions-Datenbank
+  (PostgreSQL) **groß-/kleinschreibungsabhängig** – „sparkasse" traf nur „Krei**ssparkasse**", „wismar" gar
+  nichts. (2) Bei häufigen Namen (~340 Treffer für „Sparkasse") wurde rein alphabetisch sortiert, sodass die
+  gesuchte Bank hinter dem Ergebnis-Limit lag. Jetzt: **komplett groß-/kleinschreibungsunabhängig**, Suche über
+  **Name + Ort + BLZ + BIC** mit **Mehrwort-Suche** („sparkasse wismar", „nordwest sparkasse") und
+  **Relevanz-Sortierung** (Namensanfang zuerst, kurze Namen vor langen). Beispiel: „wismar" oder
+  „sparkasse meck" liefert die Sparkasse Mecklenburg-Nordwest jetzt auf **Platz 1**.
+
 ## [0.53.0] - 2026-07-16
 
 ### Neu
