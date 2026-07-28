@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.55.0] - 2026-07-28
+
+### Geändert
+- **Klartext-Erklärung jetzt für alle FinTS-Rückmeldungen.** Ergänzt um Registrierung (9078/3078/3079),
+  Zugangsdaten und Sperren (9931/9930/9942), TAN-Themen (9075/9260/3076/3920/3955/9210), Technik
+  (9030/9110/9130/9330/9370) und unkritische Hinweise (3010/3040/3050/3060/0020).
+  - **Der aussagekräftigste Code gewinnt:** Eine abgebrochene Anmeldung meldet meist mehrere Codes, wobei die
+    ersten („Die Nachricht enthält Fehler", „Dialog abgebrochen") nichts über die Ursache sagen. TxWatch wertet
+    jetzt den spezifischsten Code aus statt des ersten.
+  - **Unbekannte Codes** bekommen mindestens eine Einordnung nach Bereich (9xxx Fehler, 3xxx Hinweis,
+    0xxx Erfolg), damit erkennbar ist, ob etwas wirklich schiefging.
+  - Die **Originalmeldung der Bank** steht weiterhin darunter – sie ist für den Einzelfall maßgeblich.
+
 ## [0.54.0] - 2026-07-28
 
 ### Neu
