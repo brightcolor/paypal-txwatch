@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\FintsConnection;
+use App\Services\Bank\FintsBanks;
 use App\Services\Bank\FintsClient;
 use App\Services\Bank\FintsSync;
 use Filament\Actions\Action;
@@ -58,6 +59,7 @@ class FintsConnectionPage extends Page implements HasForms
             'tan_mode' => $c->tan_mode,
             'tan_medium' => $c->tan_medium,
             'iban' => $c->iban,
+            'bank_lookup' => $c->bank_code,
         ]);
     }
 
@@ -68,8 +70,27 @@ class FintsConnectionPage extends Page implements HasForms
                 ->description('Zugangsdaten aus dem Online-Banking der Sparkasse Mecklenburg-Nordwest. PIN und Login werden verschlüsselt gespeichert. Server-Daten (FinTS-URL/BLZ) findest du unter fints.org; die Produkt-/Registrierungsnummer musst du bei der Deutschen Kreditwirtschaft beantragen (fints.org/de/hersteller/produktregistrierung).')
                 ->columns(2)
                 ->schema([
-                    Forms\Components\TextInput::make('bank_code')->label('Bankleitzahl (BLZ)')->required()->autocomplete(false),
-                    Forms\Components\TextInput::make('fints_url')->label('FinTS-URL (PIN/TAN)')->url()->required()->autocomplete(false),
+                    Forms\Components\Select::make('bank_lookup')
+                        ->label('Bank suchen & auswählen')
+                        ->helperText(fn () => FintsBanks::count() > 0
+                            ? 'Name, Ort oder BLZ tippen – BLZ und FinTS-URL werden automatisch gesetzt. Nicht dabei? Felder unten manuell ausfüllen.'
+                            : 'Bankliste noch nicht eingespielt – BLZ und FinTS-URL bitte manuell eintragen.')
+                        ->searchable()
+                        ->getSearchResultsUsing(fn (string $search) => FintsBanks::search($search))
+                        ->getOptionLabelUsing(fn ($value) => FintsBanks::labelFor($value))
+                        ->live()
+                        ->afterStateUpdated(function ($state, Forms\Set $set) {
+                            $bank = $state ? FintsBanks::find($state) : null;
+                            if ($bank) {
+                                $set('bank_code', $bank->blz);
+                                $set('fints_url', $bank->url);
+                            }
+                        })
+                        ->columnSpanFull(),
+                    Forms\Components\TextInput::make('bank_code')->label('Bankleitzahl (BLZ)')->required()->autocomplete(false)
+                        ->helperText('Wird über die Bank-Auswahl oben gesetzt; bei Bedarf manuell überschreibbar.'),
+                    Forms\Components\TextInput::make('fints_url')->label('FinTS-URL (PIN/TAN)')->url()->required()->autocomplete(false)
+                        ->helperText('Wird über die Bank-Auswahl oben gesetzt.'),
                     Forms\Components\TextInput::make('product_id')->label('Produkt-/Registrierungsnummer (DK)')->required()->autocomplete(false),
                     Forms\Components\TextInput::make('product_version')->label('Produktversion')->default('1.0')->required(),
                     Forms\Components\TextInput::make('username')->label('Anmeldename / Legitimations-ID')->required()->autocomplete(false),

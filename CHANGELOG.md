@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.53.0] - 2026-07-16
+
+### Neu
+- **Bank auswählen statt BLZ/URL tippen** (FinTS-Einrichtung): Neues Suchfeld „Bank suchen & auswählen" –
+  Name, Ort oder BLZ eintippen, die passende Bank wählen, **BLZ und FinTS-URL werden automatisch gesetzt**.
+  Basis ist die **offizielle FinTS-Institutsliste** der Deutschen Kreditwirtschaft (mit PIN/TAN-Zugang). Banken
+  ohne PIN/TAN werden ausgeblendet; nicht gelistete Banken lassen sich weiter manuell eintragen. Produktversion
+  ist wie bisher vorbelegt (1.0).
+  - Import per `php artisan fints:import-banks <csv>`; die Institutsliste selbst liegt **nicht** im (öffentlichen)
+    Repo, sondern wird serverseitig eingespielt (die DK stellt sie nur registrierten Herstellern bereit).
+
 ## [0.52.0] - 2026-07-14
 
 ### Neu
