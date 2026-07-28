@@ -170,7 +170,9 @@ class FintsClient
     private function selectTan(FinTs $fints): void
     {
         if (filled($this->connection->tan_mode)) {
-            $fints->selectTanMode($this->connection->tan_mode, $this->connection->tan_medium ?: null);
+            // phpFinTS insists on a real int here ("tanMode must be an int or a
+            // TanMode"); the ID comes from the form/DB as a string.
+            $fints->selectTanMode((int) $this->connection->tan_mode, $this->connection->tan_medium ?: null);
         }
     }
 

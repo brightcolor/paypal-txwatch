@@ -4,6 +4,13 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.56.1] - 2026-07-28
+
+### Behoben
+- **„tanMode must be an int or a TanMode" beim Bank-Login.** Die Nummer des TAN-Verfahrens wird im Formular als
+  Text erfasst, die FinTS-Bibliothek verlangt aber zwingend eine Zahl – der Login brach deshalb sofort ab,
+  noch bevor überhaupt eine Verbindung zur Bank aufgebaut wurde. Der Wert wird jetzt korrekt umgewandelt.
+
 ## [0.56.0] - 2026-07-28
 
 ### Geändert
