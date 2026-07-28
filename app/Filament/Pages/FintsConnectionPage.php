@@ -111,11 +111,14 @@ class FintsConnectionPage extends Page implements HasForms
         $state = $this->form->getState();
         $c = FintsConnection::current();
 
+        // Copy-pasted credentials often carry invisible leading/trailing spaces,
+        // which the bank rejects with "Anmeldename oder PIN ist falsch" (9931).
         foreach (['bank_code', 'fints_url', 'product_id', 'product_version', 'username', 'tan_mode', 'tan_medium'] as $key) {
-            $c->{$key} = $state[$key] ?? null;
+            $value = $state[$key] ?? null;
+            $c->{$key} = is_string($value) ? trim($value) : $value;
         }
         if (filled($state['pin'] ?? null)) {
-            $c->pin = $state['pin'];
+            $c->pin = trim($state['pin']);
         }
         $c->save();
 

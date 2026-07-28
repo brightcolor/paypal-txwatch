@@ -4,6 +4,13 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.53.3] - 2026-07-28
+
+### Behoben
+- **Zugangsdaten werden beim Speichern von überflüssigen Leerzeichen befreit.** Beim Kopieren aus anderen
+  Programmen schleichen sich oft unsichtbare Leer-/Tabulatorzeichen ein – die Bank antwortet dann mit
+  „Anmeldename oder PIN ist falsch" (Fehler 9931), obwohl die Daten scheinbar stimmen.
+
 ## [0.53.2] - 2026-07-28
 
 ### Behoben

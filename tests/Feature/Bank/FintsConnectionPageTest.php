@@ -53,6 +53,33 @@ class FintsConnectionPageTest extends TestCase
         $this->assertSame('geheim', $c->pin);
     }
 
+    /**
+     * Pasted credentials often carry stray spaces; the bank then answers 9931
+     * ("Anmeldename oder PIN ist falsch") which looks like wrong credentials.
+     */
+    public function test_credentials_are_trimmed_on_save(): void
+    {
+        Livewire::test(FintsConnectionPage::class)
+            ->fillForm([
+                'bank_code' => ' 14051000 ',
+                'fints_url' => 'https://banking-mv6.s-fints-pt-mv.de/fints30',
+                'product_id' => "  E67DD14597C6086A4634C7DB4\t",
+                'product_version' => '1.0',
+                'username' => "  testuser \n",
+                'pin' => '  geheim  ',
+                'tan_mode' => ' 923 ',
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $c = FintsConnection::current();
+        $this->assertSame('14051000', $c->bank_code);
+        $this->assertSame('E67DD14597C6086A4634C7DB4', $c->product_id);
+        $this->assertSame('testuser', $c->username);
+        $this->assertSame('geheim', $c->pin);
+        $this->assertSame('923', $c->tan_mode);
+    }
+
     public function test_saving_without_a_new_pin_keeps_the_stored_one(): void
     {
         FintsConnection::current()->update([
