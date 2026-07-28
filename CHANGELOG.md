@@ -4,6 +4,14 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.56.0] - 2026-07-28
+
+### Geändert
+- **Registrierungsnummer und Anmeldename werden verdeckt angezeigt.** Beide Felder zeigen nur noch die
+  **letzten 4 Zeichen** (z. B. `•••••••••••••••••••••7DB4`); ein **Augen-Symbol im Feld** blendet den vollen
+  Wert bei Bedarf ein und wieder aus. Zum Ändern einfach neu eintippen – ein Speichern mit verdecktem Feld
+  lässt den gespeicherten Wert unangetastet (die Maske landet nie in der Datenbank).
+
 ## [0.55.0] - 2026-07-28
 
 ### Geändert

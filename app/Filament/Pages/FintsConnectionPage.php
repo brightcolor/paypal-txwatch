@@ -47,21 +47,69 @@ class FintsConnectionPage extends Page implements HasForms
         return auth()->user()?->hasRole('admin') ?? false;
     }
 
+    /** Character used to mask stored secrets; never occurs in real values. */
+    private const MASK = '•';
+
+    /** Fields shown masked (all but the last 4 characters), revealable on demand. */
+    private const MASKED_FIELDS = ['product_id', 'username'];
+
+    /**
+     * Masks everything but the last 4 characters, so the value stays
+     * recognisable ("…C7DB4") without exposing it on screen.
+     */
+    private static function mask(?string $value): ?string
+    {
+        if (blank($value)) {
+            return $value;
+        }
+
+        $visible = mb_substr($value, -4);
+        $hidden = max(mb_strlen($value) - 4, 0);
+
+        // Very short values are masked completely - showing 4 of 4 characters
+        // would reveal everything.
+        return $hidden === 0
+            ? str_repeat(self::MASK, mb_strlen($value))
+            : str_repeat(self::MASK, $hidden) . $visible;
+    }
+
+    /** True while the field still shows the mask (i.e. the user didn't retype it). */
+    private static function isMasked(mixed $value): bool
+    {
+        return is_string($value) && str_contains($value, self::MASK);
+    }
+
     public function mount(): void
     {
         $c = FintsConnection::current();
         $this->form->fill([
             'bank_code' => $c->bank_code,
             'fints_url' => $c->fints_url,
-            'product_id' => $c->product_id,
+            'product_id' => self::mask($c->product_id),
             'product_version' => $c->product_version ?: '1.0',
-            'username' => $c->username,
+            'username' => self::mask($c->username),
             'pin' => null,
             'tan_mode' => $c->tan_mode,
             'tan_medium' => $c->tan_medium,
             'iban' => $c->iban,
             'bank_lookup' => $c->bank_code,
         ]);
+    }
+
+    /**
+     * Eye button inside a masked field: swaps the mask for the stored value
+     * (and back). Only offered while something is actually stored.
+     */
+    private static function revealAction(string $field): Forms\Components\Actions\Action
+    {
+        return Forms\Components\Actions\Action::make('reveal_' . $field)
+            ->icon(fn ($state) => self::isMasked($state) ? 'heroicon-m-eye' : 'heroicon-m-eye-slash')
+            ->tooltip(fn ($state) => self::isMasked($state) ? 'Einblenden' : 'Wieder verdecken')
+            ->visible(fn () => filled(FintsConnection::current()->{$field}))
+            ->action(function ($state, Forms\Set $set) use ($field) {
+                $stored = FintsConnection::current()->{$field};
+                $set($field, self::isMasked($state) ? $stored : self::mask($stored));
+            });
     }
 
     public function form(Form $form): Form
@@ -92,9 +140,15 @@ class FintsConnectionPage extends Page implements HasForms
                         ->helperText('Wird über die Bank-Auswahl oben gesetzt; bei Bedarf manuell überschreibbar.'),
                     Forms\Components\TextInput::make('fints_url')->label('FinTS-URL (PIN/TAN)')->url()->required()->autocomplete(false)
                         ->helperText('Wird über die Bank-Auswahl oben gesetzt.'),
-                    Forms\Components\TextInput::make('product_id')->label('Produkt-/Registrierungsnummer (DK)')->required()->autocomplete(false),
+                    Forms\Components\TextInput::make('product_id')->label('Produkt-/Registrierungsnummer (DK)')
+                        ->required()->autocomplete(false)
+                        ->suffixAction(self::revealAction('product_id'))
+                        ->helperText('Aus Datenschutzgründen verdeckt – die letzten 4 Zeichen bleiben sichtbar. Zum Ändern einfach neu eintippen.'),
                     Forms\Components\TextInput::make('product_version')->label('Produktversion')->default('1.0')->required(),
-                    Forms\Components\TextInput::make('username')->label('Anmeldename / Legitimations-ID')->required()->autocomplete(false),
+                    Forms\Components\TextInput::make('username')->label('Anmeldename / Legitimations-ID')
+                        ->required()->autocomplete(false)
+                        ->suffixAction(self::revealAction('username'))
+                        ->helperText('Aus Datenschutzgründen verdeckt – die letzten 4 Zeichen bleiben sichtbar. Zum Ändern einfach neu eintippen.'),
                     Forms\Components\TextInput::make('pin')->label('Online-Banking-PIN')->password()->revealable()
                         ->autocomplete('new-password')->placeholder('unverändert lassen zum Beibehalten')
                         // Filament injiziert Closure-Argumente PER NAME: hier muss der
@@ -116,7 +170,15 @@ class FintsConnectionPage extends Page implements HasForms
         // which the bank rejects with "Anmeldename oder PIN ist falsch" (9931).
         foreach (['bank_code', 'fints_url', 'product_id', 'product_version', 'username', 'tan_mode', 'tan_medium'] as $key) {
             $value = $state[$key] ?? null;
-            $c->{$key} = is_string($value) ? trim($value) : $value;
+            $value = is_string($value) ? trim($value) : $value;
+
+            // A still-masked field means "unchanged" - never write the mask
+            // itself into the database (that would destroy the stored value).
+            if (in_array($key, self::MASKED_FIELDS, true) && self::isMasked($value)) {
+                continue;
+            }
+
+            $c->{$key} = $value;
         }
         if (filled($state['pin'] ?? null)) {
             $c->pin = trim($state['pin']);

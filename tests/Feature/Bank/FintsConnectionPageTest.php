@@ -54,6 +54,70 @@ class FintsConnectionPageTest extends TestCase
     }
 
     /**
+     * The registration number and the login name are shown masked (all but the
+     * last 4 characters). Mounting must therefore never expose them in full.
+     */
+    public function test_stored_secrets_are_shown_masked_with_last_four_visible(): void
+    {
+        FintsConnection::current()->update([
+            'product_id' => 'E67DD14597C6086A4634C7DB4',
+            'username' => '1234567890',
+        ]);
+
+        // 25 characters -> 21 masked + the last 4 ("7DB4") visible.
+        Livewire::test(FintsConnectionPage::class)
+            ->assertFormSet([
+                'product_id' => str_repeat('•', 21) . '7DB4',
+                'username' => str_repeat('•', 6) . '7890',
+            ]);
+    }
+
+    /**
+     * The critical case: saving while the fields still show the mask must keep
+     * the stored values - writing the mask would destroy the credentials.
+     */
+    public function test_saving_while_masked_keeps_the_stored_values(): void
+    {
+        FintsConnection::current()->update([
+            'bank_code' => '14051000',
+            'fints_url' => 'https://banking-mv6.s-fints-pt-mv.de/fints30',
+            'product_id' => 'E67DD14597C6086A4634C7DB4',
+            'username' => '1234567890',
+            'pin' => 'geheim',
+        ]);
+
+        Livewire::test(FintsConnectionPage::class)
+            ->fillForm(['tan_mode' => '923']) // change something unrelated
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $c = FintsConnection::current();
+        $this->assertSame('E67DD14597C6086A4634C7DB4', $c->product_id);
+        $this->assertSame('1234567890', $c->username);
+        $this->assertSame('923', $c->tan_mode);
+    }
+
+    public function test_retyping_a_masked_field_overwrites_it(): void
+    {
+        FintsConnection::current()->update([
+            'bank_code' => '14051000',
+            'fints_url' => 'https://banking-mv6.s-fints-pt-mv.de/fints30',
+            'product_id' => 'ALTE-NUMMER',
+            'username' => 'alt',
+            'pin' => 'geheim',
+        ]);
+
+        Livewire::test(FintsConnectionPage::class)
+            ->fillForm(['product_id' => 'NEUE-NUMMER', 'username' => 'neu'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $c = FintsConnection::current();
+        $this->assertSame('NEUE-NUMMER', $c->product_id);
+        $this->assertSame('neu', $c->username);
+    }
+
+    /**
      * Pasted credentials often carry stray spaces; the bank then answers 9931
      * ("Anmeldename oder PIN ist falsch") which looks like wrong credentials.
      */
