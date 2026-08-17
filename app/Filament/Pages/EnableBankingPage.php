@@ -306,6 +306,35 @@ class EnableBankingPage extends Page implements HasForms
         return app(KeyVault::class);
     }
 
+    /**
+     * How long the consent will actually last, as a phrase for the dialog.
+     *
+     * Falls back to a vague wording rather than a wrong number: if the list is
+     * momentarily unreachable, "so lange wie Ihre Bank es erlaubt" is true, while
+     * "höchstens 90 Tage" might not be.
+     */
+    private function consentDurationLabel(): string
+    {
+        $c = EnableBankingConnection::current();
+
+        try {
+            $allowed = app(Client::class)->maxConsentDays(
+                (string) $c->aspsp_name,
+                (string) ($c->aspsp_country ?: 'DE'),
+            );
+        } catch (EnableBankingException) {
+            return 'so lange wie Ihre Bank es erlaubt';
+        }
+
+        $days = $allowed !== null
+            ? min((int) config('bank.enablebanking.consent_days'), $allowed)
+            : null;
+
+        return $days !== null
+            ? sprintf('höchstens %d Tage', $days)
+            : 'so lange wie Ihre Bank es erlaubt';
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -321,11 +350,16 @@ class EnableBankingPage extends Page implements HasForms
                 ->visible(fn () => $this->vault()->isReady() && filled(EnableBankingConnection::current()->aspsp_name))
                 ->requiresConfirmation()
                 ->modalHeading('Weiter zu Ihrer Bank')
+                /*
+                 * The number in this sentence is the bank's own, not the wish
+                 * from the config. Naming a duration the bank does not grant
+                 * would be a promise broken on the next screen.
+                 */
                 ->modalDescription(fn () => sprintf(
                     'Sie werden zu „%s" geleitet und melden sich dort an. TxWatch bekommt Ihre Zugangsdaten '
-                    . 'nicht zu sehen – nur einen Leseschlüssel für Umsätze und Salden, und den höchstens %d Tage.',
+                    . 'nicht zu sehen – nur einen Leseschlüssel für Umsätze und Salden, und den %s.',
                     EnableBankingConnection::current()->aspsp_name,
-                    (int) config('bank.enablebanking.consent_days'),
+                    $this->consentDurationLabel(),
                 ))
                 ->modalSubmitActionLabel('Zur Bank')
                 ->action(fn () => $this->beginConsent()),
@@ -418,8 +452,22 @@ class EnableBankingPage extends Page implements HasForms
     {
         $c = EnableBankingConnection::current();
 
-        $days = (int) config('bank.enablebanking.consent_days');
-        $validUntil = now()->addDays(max(1, min(90, $days)));
+        /*
+         * ASK THE BANK, don't assume 90.
+         *
+         * The config value is only a ceiling for the wish; what actually decides
+         * is `maximum_consent_validity` of the chosen bank. Measured on
+         * 2026-08-17: German banks grant 180 days, not the 90 that every older
+         * PSD2 guide names. Sending 90 anyway would halve the validity and make
+         * the account holder re-authorise twice as often - and `valid_until`
+         * ABOVE the bank's limit is rejected outright, so guessing in either
+         * direction costs something.
+         */
+        $wish = (int) config('bank.enablebanking.consent_days');
+        $allowed = app(Client::class)->maxConsentDays((string) $c->aspsp_name, (string) ($c->aspsp_country ?: 'DE'));
+
+        $days = max(1, $allowed !== null ? min($wish, $allowed) : min($wish, 90));
+        $validUntil = now()->addDays($days);
 
         try {
             $start = app(Client::class)->startAuthorization(

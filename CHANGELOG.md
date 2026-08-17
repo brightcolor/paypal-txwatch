@@ -6,6 +6,17 @@ Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [0.57.1] - 2026-08-17
 
+### Geändert
+- **Die Freigabe gilt jetzt so lange, wie die Bank es erlaubt** – gemessen an der echten Bankenliste
+  sind das bei deutschen Instituten **180 Tage**, nicht die 90, die in jeder älteren PSD2-Anleitung
+  stehen. TxWatch fragte vorher pauschal 90 an und hätte damit die Hälfte der möglichen Laufzeit
+  weggeworfen: doppelt so oft neu freigeben, ohne Gewinn. Vor jeder Freigabe wird jetzt
+  `maximum_consent_validity` der gewählten Bank gelesen; mehr als sie erlaubt weist die Schnittstelle
+  ohnehin ab, weniger kostet nur Aufwand. Der Bestätigungsdialog nennt die Zahl der Bank, nicht die
+  eigene Annahme.
+  - Nachgemessen am 17.08.2026: 1.109 Banken für DE, darunter Sparkasse Mecklenburg-Nordwest, alle
+    mit 180 Tagen.
+
 ### Behoben
 - **„Es werden keine Banken angezeigt."** Solange kein Schlüssel hinterlegt ist, kann die Bankenliste
   nicht abgerufen werden – das Auswahlfeld gab aber einfach ein leeres Ergebnis zurück. Wer tippte,

@@ -78,11 +78,21 @@ return [
         'key_dir' => storage_path('app/private/enablebanking'),
 
         /*
-         * PSD2 caps a consent at 90 days; individual banks allow less. The
-         * request is clamped to the bank's own maximum_consent_validity, so this
-         * is only the wish, not a promise.
+         * The WISH for how long a consent should last - not a promise, and not a
+         * limit of its own.
+         *
+         * What decides is `maximum_consent_validity` of the chosen bank, which
+         * the page reads before starting the consent. Measured against the live
+         * list on 2026-08-17, German banks grant 180 days; the 90 that every
+         * older PSD2 guide names is the original cap, raised since for account
+         * information. Hard-coding 90 would have halved the validity and made the
+         * account holder re-authorise twice as often for nothing.
+         *
+         * 180 is therefore the wish, and the bank lowers it where it grants less.
+         * Sending MORE than the bank allows is rejected outright, which is why the
+         * clamp is not optional.
          */
-        'consent_days' => 90,
+        'consent_days' => 180,
 
         /*
          * How far back the first pull reaches, and how much every later pull

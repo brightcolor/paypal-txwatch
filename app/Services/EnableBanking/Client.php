@@ -69,6 +69,36 @@ class Client
     }
 
     /**
+     * How many days of consent one specific bank grants at most - or null when it
+     * does not say.
+     *
+     * WHY ASK INSTEAD OF ASSUMING: PSD2 originally capped account-information
+     * consent at 90 days, and that number is in every older guide. Measured
+     * against the live list on 2026-08-17, German banks report
+     * `maximum_consent_validity` of 180 days. Requesting 90 would have thrown
+     * away half the validity and made the account holder re-authorise at their
+     * bank twice as often as necessary - for no reason other than a number
+     * someone once wrote down.
+     *
+     * Asking costs one request per consent, which happens at most a few times a
+     * year.
+     */
+    public function maxConsentDays(string $bank, string $country = 'DE'): ?int
+    {
+        foreach ($this->banks($country) as $candidate) {
+            if (($candidate['name'] ?? null) !== $bank) {
+                continue;
+            }
+
+            $seconds = $candidate['maximum_consent_validity'] ?? null;
+
+            return is_numeric($seconds) ? (int) floor((int) $seconds / 86400) : null;
+        }
+
+        return null;
+    }
+
+    /**
      * Starts the consent and returns the address the browser has to go to.
      *
      * `valid_until` MUST NOT EXCEED THE BANK'S `maximum_consent_validity` - the
