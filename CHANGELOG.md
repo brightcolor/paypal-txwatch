@@ -4,6 +4,24 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.57.1] - 2026-08-17
+
+### Behoben
+- **„Es werden keine Banken angezeigt."** Solange kein Schlüssel hinterlegt ist, kann die Bankenliste
+  nicht abgerufen werden – das Auswahlfeld gab aber einfach ein leeres Ergebnis zurück. Wer tippte,
+  sah nichts und bekam keinen Hinweis, dass das Fehlende zwei Abschnitte weiter oben liegt. Das Feld
+  ist jetzt **gesperrt, solange kein Schlüssel da ist**, und sagt das auch: „Erst den Schlüssel oben
+  hinterlegen." Ein Bedienelement, das stillschweigend nichts tut, ist schlimmer als eines, das
+  sichtbar nicht verfügbar ist.
+- **Ein Fehler beim Abruf der Bankenliste wird gemeldet, nicht verschluckt.** Vorher landete er nur
+  im Log, und eine gescheiterte Abfrage sah genauso aus wie „keine Bank passt zur Suche" – zwei
+  Zustände, die völlig verschiedene Schritte verlangen. Hier fällt zuerst auf, wenn die Anwendung im
+  Control Panel nicht aktiv ist oder der Schlüssel nicht zur Kennung passt.
+- Das Auswahlfeld nennt jetzt die **Mindestlänge** („mindestens zwei Buchstaben"), statt sie
+  vorauszusetzen.
+- Der Beispielpfad für `ENABLEBANKING_KEY_PATH` in `.env.example` zeigte auf `/app/…`; in diesem
+  Abbild liegt die Anwendung unter `/var/www/html`.
+
 ## [0.57.0] - 2026-08-17
 
 ### Hinzugefügt

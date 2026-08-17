@@ -114,7 +114,20 @@ class EnableBankingPage extends Page implements HasForms
                         ->searchable()
                         ->getSearchResultsUsing(fn (string $search) => $this->searchBanks($search))
                         ->getOptionLabelUsing(fn ($value) => $value)
-                        ->helperText('Name tippen. Die Liste kommt live von Enable Banking und enthält nur Banken, die dort angebunden sind.')
+                        /*
+                         * DISABLED WITH A REASON while no key is stored.
+                         *
+                         * The first version left it enabled and simply returned
+                         * an empty result set - so someone typed, nothing
+                         * appeared, and the field gave no hint that the missing
+                         * piece was the key two sections above. A control that
+                         * silently does nothing is worse than one that is
+                         * visibly unavailable.
+                         */
+                        ->disabled(fn () => ! $this->vault()->isReady())
+                        ->helperText(fn () => $this->vault()->isReady()
+                            ? 'Mindestens zwei Buchstaben tippen, dann erscheinen Vorschläge. Die Liste kommt live von Enable Banking und enthält nur Banken, die dort angebunden sind.'
+                            : 'Erst den Schlüssel oben hinterlegen – ohne ihn lässt sich die Bankenliste nicht abrufen.')
                         ->required(),
 
                     Forms\Components\TextInput::make('iban')
@@ -147,6 +160,21 @@ class EnableBankingPage extends Page implements HasForms
             $banks = app(Client::class)->banks($this->data['country'] ?? 'DE');
         } catch (EnableBankingException $e) {
             Log::warning('Enable Banking: Bankenliste nicht abrufbar', ['error' => $e->getMessage()]);
+
+            /*
+             * SAID OUT LOUD, not only written to the log.
+             *
+             * A failed list looks exactly like "no bank matches your search",
+             * and the two call for completely different actions. This is where
+             * an inactive application or a key that does not match its id first
+             * becomes noticeable, so the reason has to reach the screen.
+             */
+            Notification::make()
+                ->title('Bankenliste nicht abrufbar')
+                ->body($e->getMessage())
+                ->danger()
+                ->persistent()
+                ->send();
 
             return [];
         }
