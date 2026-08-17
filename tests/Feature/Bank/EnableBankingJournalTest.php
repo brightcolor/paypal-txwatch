@@ -26,16 +26,116 @@ class EnableBankingJournalTest extends TestCase
         config(['bank.enablebanking.mode' => 'journal']);
 
         $written = app(JournalWriter::class)->record([
-            self::entry(['amount' => -5.95, 'purpose' => 'Entgelt Debitkarte']),
             self::entry(['amount' => 120.00, 'purpose' => 'Ticketzahlung', 'bank_ref' => 'REF-2']),
         ]);
 
-        $this->assertSame(2, $written['recorded']);
+        $this->assertSame(1, $written['recorded']);
         $this->assertSame(0, $written['known']);
-        $this->assertSame(2, EnableBankingJournalEntry::count());
+        $this->assertSame(1, EnableBankingJournalEntry::count());
 
         // THE ASSERTION THAT MATTERS: nothing reached the books.
         $this->assertSame(0, BankTransaction::count());
+    }
+
+    /**
+     * MONEY OUT WITHOUT AN ORDER CODE DOES NOT EVEN GET RECORDED.
+     *
+     * A card fee, a petrol station, a standing order - this application watches
+     * ticket money, and recording the rest would bury the one entry that matters
+     * under hundreds that do not.
+     */
+    public function test_debits_without_an_order_code_are_dropped(): void
+    {
+        $written = app(JournalWriter::class)->record([
+            self::entry(['amount' => -5.95, 'purpose' => 'Entgelt Ausgabe Debitkarte', 'bank_ref' => 'R1']),
+            self::entry(['amount' => -68.40, 'purpose' => 'TANKSTELLE MUSTERSTADT//KARTENZAHLUNG', 'bank_ref' => 'R2']),
+            self::entry(['amount' => 120.00, 'purpose' => 'Ticketzahlung', 'bank_ref' => 'R3']),
+        ]);
+
+        $this->assertSame(2, $written['dropped']);
+        $this->assertSame(1, $written['recorded']);
+        $this->assertSame(1, EnableBankingJournalEntry::count());
+        // Only the credit survived.
+        $this->assertSame('120.00', EnableBankingJournalEntry::query()->value('amount'));
+    }
+
+    /**
+     * A debit WITH an order code is a refund and stays.
+     *
+     * Dropping it would leave a settled order looking paid while the money went
+     * back - the error that only shows up when the books no longer add up.
+     */
+    public function test_a_debit_with_an_order_code_is_kept_as_a_refund(): void
+    {
+        $order = $this->pendingOrder('ABCDE');
+
+        $written = app(JournalWriter::class)->record([
+            self::entry([
+                'amount' => -120.00,
+                'purpose' => 'Erstattung Bestellung ABCDE',
+                'bank_ref' => 'R9',
+            ]),
+        ]);
+
+        $this->assertSame(0, $written['dropped']);
+        $this->assertSame(1, $written['recorded']);
+        $this->assertSame(1, $written['refunds']);
+        $this->assertSame(1, $written['with_order']);
+        $this->assertSame($order, EnableBankingJournalEntry::query()->value('pretix_order_code'));
+    }
+
+    /**
+     * In import mode the books get the SAME set the journal kept.
+     *
+     * Handing the importer everything would put petrol stations into the
+     * reconciliation while the journal claims they were dropped: one screen saying
+     * one thing, the books another.
+     */
+    public function test_import_mode_only_books_what_the_journal_kept(): void
+    {
+        config(['bank.enablebanking.mode' => 'import']);
+
+        $written = app(JournalWriter::class)->record([
+            self::entry(['amount' => -68.40, 'purpose' => 'TANKSTELLE MUSTERSTADT', 'bank_ref' => 'R1']),
+            self::entry(['amount' => 120.00, 'purpose' => 'Ticketzahlung', 'bank_ref' => 'R2']),
+        ]);
+
+        app(\App\Services\Bank\BankStatementImporter::class)->importEntries($written['kept']);
+
+        $this->assertSame(1, BankTransaction::count());
+        $this->assertSame('120.00', BankTransaction::query()->value('amount'));
+    }
+
+    /**
+     * A pending bank-transfer order whose code can appear in a purpose.
+     *
+     * Built the same way BankPretixReporterTest does it - a connection first,
+     * because pretix_orders has a foreign key on it. Guessing the required columns
+     * one error message at a time is how the first version of this fixture went.
+     */
+    private function pendingOrder(string $code): string
+    {
+        $connection = \App\Models\PretixConnection::create([
+            'name' => 'Verein',
+            'base_url' => 'https://pretix.eu',
+            'organizer_slug' => 'verein',
+            'api_token' => 'tok',
+            'is_active' => true,
+        ]);
+
+        \App\Models\PretixOrder::create([
+            'pretix_connection_id' => $connection->id,
+            'event_slug' => 'musterevent',
+            'order_code' => $code,
+            'status' => 'n',
+            'payment_provider' => 'banktransfer',
+            'total' => 120.00,
+            'currency' => 'EUR',
+            'url' => 'https://pretix.eu/control/order/musterevent/' . $code . '/',
+            'raw_payload' => [],
+        ]);
+
+        return $code;
     }
 
     /**
@@ -155,9 +255,9 @@ class EnableBankingJournalTest extends TestCase
         return array_replace([
             'booked_on' => '2026-05-20',
             'valued_on' => '2026-05-20',
-            'amount' => -5.95,
+            'amount' => 120.00,
             'currency' => 'EUR',
-            'purpose' => 'Entgelt Ausgabe Debitkarte',
+            'purpose' => 'Ticketzahlung Musterveranstaltung',
             'counterparty_name' => null,
             'counterparty_iban' => null,
             'end_to_end_id' => null,

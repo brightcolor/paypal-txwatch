@@ -574,10 +574,13 @@ class EnableBankingPage extends Page implements HasForms
         $body = ($result['mode'] ?? 'journal') === 'journal'
             ? sprintf(
                 'Nur aufgezeichnet, es wurde nichts gebucht: %d neu im Journal, %d schon bekannt, '
-                . '%d davon mit erkannter pretix-Bestellnummer.',
+                . '%d mit pretix-Bestellnummer, davon %d Erstattungen. %d Abbuchungen ohne '
+                . 'Bestellnummer wurden übergangen.',
                 $result['recorded'] ?? 0,
                 $result['known'] ?? 0,
                 $result['with_order'] ?? 0,
+                $result['refunds'] ?? 0,
+                $result['dropped'] ?? 0,
             )
             : "{$result['imported']} neu importiert, {$result['matched']} zugeordnet.";
 

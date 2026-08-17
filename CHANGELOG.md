@@ -4,6 +4,25 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.58.1] - 2026-08-17
+
+### Geändert
+- **Abbuchungen werden gar nicht erst aufgezeichnet – ausser sie sind Erstattungen.** Diese
+  Anwendung beobachtet Ticketgeld. Kartengebühren, Tankstellen und Daueraufträge gehören nicht in
+  ihre Bücher, und sie mitzuschreiben würde den einen Eintrag, auf den es ankommt, unter hunderten
+  begraben, die niemand braucht.
+  - **Die Ausnahme ist der Punkt:** Eine Abbuchung **mit** offener pretix-Bestellnummer im
+    Verwendungszweck ist eine **Erstattung** genau dieser Bestellung – und so wichtig wie die
+    Zahlung vorher. Sie zu verwerfen liesse einen erstatteten Auftrag als bezahlt dastehen,
+    während das Geld zurückgegangen ist.
+  - **Verworfen statt aufgezeichnet-und-versteckt:** Eine Zeile, die niemand ansieht, ist eine
+    Zeile, die irgendwann versehentlich abgefragt wird. Wie viele übergangen wurden, steht in der
+    Meldung nach jedem Abruf – die Zahl ist nie stumm.
+  - Im späteren Importbetrieb bekommen die Bücher **dieselbe** Auswahl. Dem Importer alles zu
+    übergeben hiesse: Journal sagt „übergangen", Kontoumsätze enthalten die Tankstelle.
+  - Die Liste kennzeichnet Erstattungen eigens – in einer Spalte voller Eingänge liest sich ein
+    einzelner negativer Betrag sonst wie ein Zahlendreher.
+
 ## [0.58.0] - 2026-08-17
 
 ### Geändert

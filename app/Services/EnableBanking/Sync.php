@@ -102,8 +102,17 @@ class Sync
 
         $mode = (string) config('bank.enablebanking.mode');
 
+        /*
+         * THE IMPORT SEES THE KEPT ENTRIES, not all of them.
+         *
+         * The journal decides what is relevant - money in, plus refunds
+         * recognisable by an order code - and the books have to contain the same
+         * set. Handing the importer everything would put card fees and petrol
+         * stations into the reconciliation while the journal claims they were
+         * dropped: one screen saying one thing, the books another.
+         */
         $import = $mode === 'import'
-            ? $this->importer->importEntries($mapped['entries'])
+            ? $this->importer->importEntries($journal['kept'])
             : ['imported' => 0, 'matched' => 0, 'pretix_proposed' => 0];
 
         $connection->forceFill([
@@ -116,6 +125,8 @@ class Sync
             'recorded' => $journal['recorded'],
             'known' => $journal['known'],
             'with_order' => $journal['with_order'],
+            'dropped' => $journal['dropped'],
+            'refunds' => $journal['refunds'],
             'imported' => $import['imported'],
             'matched' => $import['matched'],
             'pretix_proposed' => $import['pretix_proposed'] ?? 0,

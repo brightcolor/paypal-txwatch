@@ -101,6 +101,18 @@ class EnableBankingJournalResource extends Resource
                     ->tooltip(fn ($record) => $record->purpose)
                     ->wrap(),
 
+                /*
+                 * Refunds are marked, because in a list of credits a single
+                 * negative amount reads as a typo. It is the one kind of debit
+                 * that gets recorded at all - and the one that has to reverse a
+                 * payment later.
+                 */
+                Tables\Columns\TextColumn::make('art')
+                    ->label('Art')
+                    ->badge()
+                    ->state(fn ($record) => (float) $record->amount < 0 ? 'Erstattung' : 'Eingang')
+                    ->color(fn ($state) => $state === 'Erstattung' ? 'danger' : 'success'),
+
                 Tables\Columns\TextColumn::make('pretix_order_code')
                     ->label('pretix-Auftrag')
                     ->badge()

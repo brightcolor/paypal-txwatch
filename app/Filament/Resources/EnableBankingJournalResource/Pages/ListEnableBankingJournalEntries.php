@@ -24,8 +24,15 @@ class ListEnableBankingJournalEntries extends ListRecords
     {
         return 'Aufzeichnung des Bankabrufs über Enable Banking – vier Abrufe am Tag, alle sechs Stunden. '
             . 'Diese Einträge werden bewusst NICHT gebucht: sie wirken in keinem Bericht, in keiner EÜR und '
-            . 'in keiner Zuordnung. Die Spalte „pretix-Auftrag" zeigt, wo eine offene Bestellnummer im '
-            . 'Verwendungszweck steht – daran lässt sich vorab beurteilen, ob die spätere automatische '
-            . 'Zahlungsmeldung greifen wird.';
+            . 'in keiner Zuordnung. '
+            // Says what is NOT here, because a list is also read by what it lacks:
+            // someone looking for a card fee should learn that it was dropped on
+            // purpose, not wonder whether the pull missed it.
+            . 'Aufgezeichnet werden nur Geldeingänge sowie Abbuchungen, die eine offene '
+            . 'pretix-Bestellnummer im Verwendungszweck tragen – das sind Erstattungen. Alle übrigen '
+            . 'Abbuchungen (Kartengebühren, Tankstellen, Daueraufträge) werden übergangen und gar nicht '
+            . 'erst aufgezeichnet; wie viele es waren, steht in der Meldung nach jedem Abruf. '
+            . 'Die Spalte „pretix-Auftrag" zeigt, wo eine offene Bestellnummer erkannt wurde – daran '
+            . 'lässt sich vorab beurteilen, ob die spätere automatische Zahlungsmeldung greifen wird.';
     }
 }

@@ -25,13 +25,16 @@ class JournalWriter
 {
     /**
      * @param  array<int, array<string, mixed>>  $entries  normalized, from TransactionMapper
-     * @return array{recorded: int, known: int, with_order: int}
+     * @return array{recorded: int, known: int, with_order: int, dropped: int, refunds: int, kept: array<int, array<string, mixed>>}
      */
     public function record(array $entries): array
     {
         $recorded = 0;
         $known = 0;
         $withOrder = 0;
+        $dropped = 0;
+        $refunds = 0;
+        $kept = [];
 
         // Loaded once, not per entry: the candidate lookup runs over the same
         // small set of pending orders for every line.
@@ -40,6 +43,36 @@ class JournalWriter
         foreach ($entries as $entry) {
             $hash = self::hash($entry);
             $code = $this->orderCodeIn((string) ($entry['purpose'] ?? ''), $candidates);
+
+            /*
+             * MONEY OUT IS DROPPED - unless it carries an order code.
+             *
+             * This application watches ticket money. A card fee, a petrol station,
+             * a standing order: none of it belongs in the books it keeps, and
+             * recording it would bury the one entry that matters under hundreds
+             * that do not. Recorded, everything would still have to be read by
+             * someone.
+             *
+             * THE EXCEPTION IS THE POINT: a debit WITH an order code is a refund
+             * of exactly that order, and that is as relevant as the payment was.
+             * Dropping it would leave a settled order looking paid when the money
+             * went back.
+             *
+             * Dropped ENTIRELY rather than recorded-and-hidden: a row nobody looks
+             * at is a row someone will eventually query by accident. What was
+             * dropped is counted and reported, so the number is never silent.
+             */
+            if ((float) ($entry['amount'] ?? 0) < 0 && blank($code)) {
+                $dropped++;
+
+                continue;
+            }
+
+            $kept[] = $entry;
+
+            if ((float) ($entry['amount'] ?? 0) < 0) {
+                $refunds++;
+            }
 
             /*
              * firstOrCreate on the unique hash, so two pulls racing (a scheduled
@@ -65,7 +98,19 @@ class JournalWriter
             }
         }
 
-        return ['recorded' => $recorded, 'known' => $known, 'with_order' => $withOrder];
+        return [
+            'recorded' => $recorded,
+            'known' => $known,
+            'with_order' => $withOrder,
+            'dropped' => $dropped,
+            'refunds' => $refunds,
+            /*
+             * The kept entries go back to the caller so the later import mode sees
+             * the SAME set. One place decides relevance - otherwise the journal
+             * would show one thing and the books would contain another.
+             */
+            'kept' => $kept,
+        ];
     }
 
     /**
