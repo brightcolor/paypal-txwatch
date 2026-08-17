@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.57.4] - 2026-08-17
+
+### Behoben
+- **Ein Deploy konnte die Anwendung unten lassen.** Der Scheduler-Container lief als
+  `sh -c "while true; do … sleep 60; done"`. Diese Schleife nimmt kein SIGTERM an, also wartete
+  Docker die volle Nachfrist ab und tötete hart – und in genau diesem Fenster wollte Compose den
+  Container schon neu anlegen. Ergebnis: „removal of container … is already in progress", der
+  `up -d` brach **mitten im Lauf** ab, und `app` und `web` blieben stehen. Zweimal am 17.08.2026
+  passiert, beim zweiten Mal mit 502 nach draussen.
+  - Jetzt `php artisan schedule:work`: dieselbe Aufgabe – die fälligen Befehle einmal pro Minute –
+    aber ein Prozess, der Signale behandelt und auf SIGTERM sofort aussteigt.
+  - Der Queue-Dienst war nie betroffen, der ruft `queue:work` direkt auf.
+
 ## [0.57.3] - 2026-08-17
 
 ### Behoben

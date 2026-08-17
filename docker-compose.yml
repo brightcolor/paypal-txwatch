@@ -65,7 +65,20 @@ services:
   scheduler:
     image: ghcr.io/brightcolor/paypal-txwatch:latest
     restart: unless-stopped
-    command: sh -c "while true; do php artisan schedule:run --verbose --no-interaction; sleep 60; done"
+    # Laravel's own scheduler loop instead of a shell `while true; sleep 60`.
+    #
+    # THE SHELL LOOP CAUSED TWO OUTAGES on 2026-08-17, and the mechanism is worth
+    # writing down: `sh` was PID 1 and sat in `sleep 60`. It does not act on
+    # SIGTERM, so `docker compose up -d` waited out the full stop grace period,
+    # then killed the container hard - and while that removal was still in
+    # progress compose already tried to recreate it. Result: "removal of container
+    # ... is already in progress", the whole `up -d` aborted MIDWAY, and app plus
+    # web stayed down. A deploy that leaves the site dead because a sleeping shell
+    # ignored a signal.
+    #
+    # `schedule:work` does the same job - run the due tasks once a minute - but it
+    # is a real signal-handling process and exits on SIGTERM straight away.
+    command: php artisan schedule:work --no-interaction
     env_file: .env
     environment:
       DB_CONNECTION: pgsql
