@@ -4,6 +4,25 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.57.3] - 2026-08-17
+
+### Behoben
+- **Der Schlüssel liess sich gar nicht hochladen** – die Seite war in zwei Punkten gleichzeitig
+  unbenutzbar, und beides fiel erst beim wirklichen Versuch auf:
+  - **Der Dateityp-Filter wies die richtige Datei ab** („must be a file of type:
+    application/x-pem-file …"). Eine `.pem` hat keinen verlässlichen MIME-Typ; Windows meldet
+    `application/octet-stream`. Der Filter ist weg – und das ist keine Lockerung, sondern die
+    richtige Prüfstelle: Der Medientyp kommt vom Browser und sagt nichts über den Inhalt. Geprüft
+    wird der Schlüssel selbst (PEM-Kopf, RSA, Länge), mit eigenem Satz für die beiden häufigen
+    Verwechslungen Zertifikat und öffentlicher Teil.
+  - **Die Maske war verklemmt.** Das Bankfeld war Pflicht, liess sich aber ohne Schlüssel nicht
+    füllen – und der Schlüssel wird durch Speichern hinterlegt. „The bank field is required" neben
+    einem gesperrten Feld, ohne Ausweg. Pflicht ist es jetzt erst, wenn eine Bank überhaupt
+    wählbar ist.
+  - Vier Tests halten das fest: Schlüssel speichern **ohne** gewählte Bank, `.pem` mit generischem
+    Medientyp, Zertifikat wird abgewiesen, und Bank wieder Pflicht sobald ein Schlüssel liegt.
+    Der Smoke-Test fand das nicht – die Seite ZEICHNETE sich einwandfrei, nur abschicken ging nicht.
+
 ## [0.57.2] - 2026-08-17
 
 ### Geändert

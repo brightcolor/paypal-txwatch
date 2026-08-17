@@ -88,7 +88,23 @@ class EnableBankingPage extends Page implements HasForms
                          * the one the vault writes with mode 0600.
                          */
                         ->storeFiles(false)
-                        ->acceptedFileTypes(['application/x-pem-file', 'application/x-x509-ca-cert', 'text/plain'])
+                        /*
+                         * NO MIME FILTER, and that is deliberate after it broke
+                         * the upload outright: `.pem` has no dependable media
+                         * type. Windows reports application/octet-stream, some
+                         * browsers send an empty type, and a filter listing
+                         * x-pem-file rejects the very file the control panel
+                         * hands out - "must be a file of type…" on a perfectly
+                         * good key.
+                         *
+                         * The media type is the wrong gate anyway: it comes from
+                         * the client and says nothing about the content. What
+                         * decides is KeyVault::validate(), which parses the key,
+                         * insists on RSA and checks the length - and names the
+                         * two usual mix-ups (certificate, public half) by name.
+                         * A size cap stays, because that is cheap and catches the
+                         * "wrong file entirely" case before it is read.
+                         */
                         ->maxSize(128)
                         ->helperText('Die Datei aus dem Control Panel heisst z. B. txwatch_prod_<Kennung>.pem oder prod_<Kennung>.pem – die Kennung liest TxWatch aus dem Namen mit, umbenennen ist nicht nötig.'),
 
@@ -127,8 +143,21 @@ class EnableBankingPage extends Page implements HasForms
                         ->disabled(fn () => ! $this->vault()->isReady())
                         ->helperText(fn () => $this->vault()->isReady()
                             ? 'Mindestens zwei Buchstaben tippen, dann erscheinen Vorschläge. Die Liste kommt live von Enable Banking und enthält nur Banken, die dort angebunden sind.'
-                            : 'Erst den Schlüssel oben hinterlegen – ohne ihn lässt sich die Bankenliste nicht abrufen.')
-                        ->required(),
+                            : 'Erst den Schlüssel oben hinterlegen und speichern – ohne ihn lässt sich die Bankenliste nicht abrufen.')
+                        /*
+                         * ONLY MANDATORY ONCE A BANK CAN ACTUALLY BE PICKED.
+                         *
+                         * An unconditional required() deadlocked the whole page:
+                         * the field cannot be filled without a key, the key is
+                         * stored by saving the form, and saving failed on this
+                         * very field being empty. "The bank field is required"
+                         * next to a disabled dropdown, with no way out.
+                         *
+                         * The consent action guards the same condition anyway
+                         * (`filled(aspsp_name)`), so nothing is lost by letting
+                         * the first save carry only the key.
+                         */
+                        ->required(fn () => $this->vault()->isReady()),
 
                     Forms\Components\TextInput::make('iban')
                         ->label('Konto (IBAN, optional)')
