@@ -25,6 +25,7 @@ class EnableBankingJournalEntry extends Model
         'counterparty_name', 'counterparty_iban', 'end_to_end_id', 'bank_ref',
         'pretix_order_code', 'raw', 'pulled_at', 'promoted_at', 'bank_transaction_id',
         'match_method', 'match_score', 'match_candidates', 'match_haystack',
+        'pretix_order_status', 'possible_double_payment',
     ];
 
     protected function casts(): array
@@ -35,6 +36,7 @@ class EnableBankingJournalEntry extends Model
             'amount' => 'decimal:2',
             'raw' => 'array',
             'match_candidates' => 'array',
+            'possible_double_payment' => 'boolean',
             'pulled_at' => 'datetime',
             'promoted_at' => 'datetime',
         ];
@@ -80,6 +82,41 @@ class EnableBankingJournalEntry extends Model
         return $this->promoted_at !== null;
     }
 
+    /**
+     * Is there anything to DO for this entry?
+     *
+     * The distinction the journal was missing: a recognised order whose state is
+     * still open is work. A recognised order that is already paid is information -
+     * and of 1025 orders, 986 are in that state. Without separating the two, almost
+     * every entry looked like an unexplained gap.
+     */
+    public function isActionable(): bool
+    {
+        return $this->pretix_order_status === 'n'
+            // A second credit on one order is work even though the order is settled -
+            // very likely a refund is owed.
+            || (bool) $this->possible_double_payment
+            || $this->hasSuggestion();
+    }
+
+    /** Recognised, but nothing follows from it. */
+    public function isSettled(): bool
+    {
+        return $this->pretix_order_code !== null && $this->pretix_order_status === 'p';
+    }
+
+    /** One short phrase for what this entry means. */
+    public function stateLabel(): string
+    {
+        return match (true) {
+            (bool) $this->possible_double_payment => 'mögliche Doppelzahlung',
+            $this->pretix_order_status === 'n' => 'offen – zu buchen',
+            $this->isSettled() => 'bereits bezahlt',
+            $this->pretix_order_code !== null => 'zugeordnet',
+            $this->hasSuggestion() => 'Vorschlag',
+            default => 'keine Zuordnung',
+        };
+    }
     /**
      * The normalized entry as the shared import pipeline expects it.
      *

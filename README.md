@@ -353,12 +353,27 @@ DB-Fehler nicht zurück in die DB, damit das Logging nie den Request killt oder 
   Registrierung bei der Deutschen Kreditwirtschaft. Admin lädt einmalig den Anwendungsschlüssel aus dem
   Enable-Banking-Control-Panel hoch (die Kennung steckt im Dateinamen und wird mitgelesen), wählt die Bank
   und wird zu ihr geleitet; die Freigabe erfolgt **auf der Seite der Bank**. TxWatch sieht PIN und TAN nie,
-  nur einen Leseschlüssel. Danach zieht `enablebanking:sync` täglich die Umsätze über dieselbe Pipeline.
-  - Der Preis: ein Dritter zwischen Bank und Buchhaltung, und PSD2 begrenzt die Zustimmung auf **höchstens
-    90 Tage**. TxWatch warnt 14 Tage vorher und nicht erst, wenn sie abgelaufen ist.
+  nur einen Leseschlüssel. Danach zieht `enablebanking:sync` die Umsätze **alle sechs Stunden** über
+  dieselbe Pipeline – PSD2 erlaubt vier unbeaufsichtigte Abrufe je Konto und Tag, und vier sind es damit
+  genau.
+  - Der Preis: ein Dritter zwischen Bank und Buchhaltung, und die Zustimmung ist befristet (gemessen
+    **180 Tage**; ältere Anleitungen nennen 90). TxWatch warnt 14 Tage vorher und nicht erst, wenn sie
+    abgelaufen ist.
   - Der **Selbsttest** prüft die Angabe, an der es am häufigsten scheitert: ob die Rückkehr-Adresse dieser
     Installation im Control Panel eingetragen ist. Fehlt sie, bricht die Freigabe ab, bevor die Bank
     überhaupt erreicht wird.
+- **Bank-Journal** (Bank → Bank-Journal, Admin): Der Abruf **bucht zunächst nichts**
+  (`ENABLEBANKING_MODE=journal`, Voreinstellung). Jeder Umsatz wird aufgezeichnet, mit einem Protokoll
+  darüber, was der Abruf lieferte und was die Erkennung daraus gemacht hat. Kein Bericht, keine EÜR und
+  keine Zuordnung liest diese Zeilen – erst `ENABLEBANKING_MODE=import` übergibt sie an dieselbe
+  Import-Pipeline wie den Dateiimport (gleicher `import_hash`, also keine Dubletten).
+  - Aufgezeichnet werden **Geldeingänge** und solche **Abbuchungen, die eine Bestellnummer tragen** –
+    das sind Erstattungen. Kartengebühren, Tankstellen und Daueraufträge werden übergangen; wie viele es
+    waren, steht in der Meldung nach jedem Abruf.
+  - Die Spalte **Zustand** sagt, was aus einer Zuordnung folgt: `offen – zu buchen`, `bereits bezahlt`
+    (nichts zu tun), `mögliche Doppelzahlung` (ein zweiter Eingang auf dieselbe Bestellung),
+    `Vorschlag` (ein Zeichen weicht ab, wird **nicht** automatisch gebucht) oder `keine Zuordnung`.
+    Der Filter **„Zu tun"** zeigt ausschliesslich die Einträge, die eine Entscheidung brauchen.
 - **Automatischer Bankabruf via FinTS/HBCI** – **stillgelegt** (`FINTS_ENABLED`, ohne Angabe aus). Direkte
   Anbindung an die Bank ohne Drittanbieter, vollständig gebaut, aber nicht benutzbar: Ohne bei der Deutschen
   Kreditwirtschaft freigeschaltete Registrierungsnummer weist der Bankrechner jeden Dialog mit „9078" ab –

@@ -28,6 +28,22 @@
                 <td style="white-space: normal;">{{ $entry->purpose ?: '–' }}</td>
             </tr>
             <tr>
+                <td class="lbl">Zustand</td>
+                {{-- Was aus der Zuordnung folgt. Steht ueber dem Verlauf, weil es die
+                     Frage beantwortet, mit der dieses Fenster geoeffnet wurde: muss
+                     ich hier etwas tun? --}}
+                <td>
+                    <strong>{{ $entry->stateLabel() }}</strong>
+                    @if ($entry->possible_double_payment)
+                        <span class="neg text-xs">· zweiter Geldeingang auf dieselbe Bestellung</span>
+                    @elseif ($entry->pretix_order_status === 'n')
+                        <span class="text-xs text-gray-400">· Zahlungsmeldung an pretix fällig</span>
+                    @elseif ($entry->isSettled())
+                        <span class="text-xs text-gray-400">· nichts zu tun</span>
+                    @endif
+                </td>
+            </tr>
+            <tr>
                 <td class="lbl">durchsucht als</td>
                 {{-- Das ist der Text, in dem gesucht wurde – Trenn- und
                      Leerzeichen entfernt. Ohne ihn bleibt jede Frage nach einem
@@ -50,6 +66,7 @@
                     <tr>
                         <th>Bestellung</th>
                         <th>im Zweck stand</th>
+                        <th>Zustand</th>
                         <th>Betrag der Bestellung</th>
                         <th>Betrag passt</th>
                         <th class="num">Sicherheit</th>
@@ -60,6 +77,11 @@
                         <tr>
                             <td><strong>{{ $c['code'] }}</strong></td>
                             <td><code class="text-xs">{{ $c['found'] }}</code></td>
+                            {{-- Ein Vorschlag zu einer bezahlten Bestellung ist kaum je
+                                 gemeint; ohne diese Spalte sahen beide gleich aus. --}}
+                            <td class="{{ ($c['order_open'] ?? false) ? 'net' : '' }}">
+                                {{ ($c['order_open'] ?? false) ? 'offen' : ((($c['order_status'] ?? null) === 'p') ? 'bezahlt' : '–') }}
+                            </td>
                             <td>{{ $c['order_total'] !== null ? number_format((float) $c['order_total'], 2, ',', '.') . ' EUR' : '–' }}</td>
                             <td class="{{ ($c['amount_matches'] ?? false) ? 'net' : 'neg' }}">
                                 {{ ($c['amount_matches'] ?? false) ? 'ja' : 'nein' }}
@@ -72,7 +94,7 @@
         </div>
         <p class="mt-2 text-xs text-gray-400">
             Ein passender Betrag ist die stärkste Bestätigung: Bei den gemessenen Tippfehlern engte er
-            über tausend offene Bestellungen auf genau eine ein. Passt er nicht, ist der Vorschlag
+            über tausend Bestellungen auf genau eine ein. Passt er nicht, ist der Vorschlag
             wahrscheinlich falsch.
         </p>
     </div>

@@ -23,6 +23,13 @@ namespace App\Services\EnableBanking;
  * those spaces will eventually land inside a code - but it is insurance, not a
  * measured improvement.
  *
+ * A DOUBLE PAYMENT IS NOT DECIDED HERE. The first attempt asked whether the order
+ * was already paid and the amount fitted. Measured against the 166 real credits
+ * that flagged 140 of them - because an order is marked paid PRECISELY BECAUSE
+ * that transfer arrived. The criterion described the normal case. The real signal
+ * is a SECOND credit on the same order, and only JournalWriter can see it: it
+ * needs the other entries, not the purpose text.
+ *
  * WHY FUZZY ONLY SUGGESTS. Codes are five characters. Across 1025 of them only 3
  * pairs sit one edit apart, so the space is sparse - but the risk is not code
  * against code, it is an arbitrary five-character window of a hundred-character
@@ -75,7 +82,7 @@ class PurposeMatcher
     }
 
     /**
-     * @param  array<string, array{code: string, total: float|null}>  $orders  uppercase code => order
+     * @param  array<string, array{code: string, total: float|null, status: string|null}>  $orders  uppercase code => order
      * @return array{method: string, code: ?string, score: int, candidates: array<int, array<string, mixed>>, haystack: string}
      */
     public function match(?string $purpose, array $orders, ?float $amount = null): array
@@ -100,29 +107,17 @@ class PurposeMatcher
          * from the normalised pass: a hit here needs no explanation, and it is what
          * 142 of 166 real transfers do.
          */
-        foreach ($orders as $code => $order) {
-            if (str_contains($raw, (string) $code)) {
-                return [
-                    'method' => self::EXACT,
-                    'code' => (string) $code,
-                    'score' => 100,
-                    'candidates' => [self::candidate($code, $order, self::EXACT, 100, $amount, (string) $code)],
-                    'haystack' => $haystack,
-                ];
-            }
+        $exact = $this->allContaining($raw, $orders, self::EXACT, 100, $amount);
+
+        if ($exact !== []) {
+            return $this->best(self::EXACT, $exact, $haystack);
         }
 
         // Stage two: exact after the separators and stray spaces are gone.
-        foreach ($orders as $code => $order) {
-            if (str_contains($haystack, (string) $code)) {
-                return [
-                    'method' => self::NORMALISED,
-                    'code' => (string) $code,
-                    'score' => 95,
-                    'candidates' => [self::candidate($code, $order, self::NORMALISED, 95, $amount, (string) $code)],
-                    'haystack' => $haystack,
-                ];
-            }
+        $normalised = $this->allContaining($haystack, $orders, self::NORMALISED, 95, $amount);
+
+        if ($normalised !== []) {
+            return $this->best(self::NORMALISED, $normalised, $haystack);
         }
 
         /*
@@ -154,8 +149,14 @@ class PurposeMatcher
             return $result;
         }
 
-        // Best first, so the UI can show the most plausible proposal at the top.
-        usort($candidates, fn (array $a, array $b) => $b['score'] <=> $a['score']);
+        /*
+         * OPEN ORDERS FIRST, then score. A proposal for a settled order is
+         * information; a proposal for an open one is work. Sorting by score alone
+         * would bury the actionable one under the merely interesting.
+         */
+        usort($candidates, function (array $a, array $b) {
+            return [$b['order_open'], $b['score']] <=> [$a['order_open'], $a['score']];
+        });
 
         return [
             'method' => self::FUZZY,
@@ -172,6 +173,53 @@ class PurposeMatcher
         ];
     }
 
+    /**
+     * Every order whose code literally occurs in $text.
+     *
+     * COLLECTS INSTEAD OF RETURNING THE FIRST, and that is not pedantry: with all
+     * orders in play - 1025 of them, 986 already paid - the first hit in an
+     * arbitrary iteration order could be a settled order while an open one also
+     * matches. Whichever came first out of the database would then decide, and the
+     * same purpose could resolve differently after an import.
+     *
+     * @param  array<string, array{code: string, total: float|null, status: string|null}>  $orders
+     * @return array<int, array<string, mixed>>
+     */
+    private function allContaining(string $text, array $orders, string $method, int $score, ?float $amount): array
+    {
+        $found = [];
+
+        foreach ($orders as $code => $order) {
+            if (str_contains($text, (string) $code)) {
+                $found[] = self::candidate((string) $code, $order, $method, $score, $amount, (string) $code);
+            }
+        }
+
+        return $found;
+    }
+
+    /**
+     * The most relevant of several literal hits: open before settled, then amount.
+     *
+     * @param  array<int, array<string, mixed>>  $candidates
+     * @return array{method: string, code: ?string, score: int, candidates: array<int, array<string, mixed>>, haystack: string}
+     */
+    private function best(string $method, array $candidates, string $haystack): array
+    {
+        usort($candidates, function (array $a, array $b) {
+            return [$b['order_open'], $b['amount_matches']] <=> [$a['order_open'], $a['amount_matches']];
+        });
+
+        return [
+            'method' => $method,
+            // A literal hit IS an assignment, no matter what state the order is in -
+            // whether anything follows from it is decided by `order_status`.
+            'code' => $candidates[0]['code'],
+            'score' => $candidates[0]['score'],
+            'candidates' => array_slice($candidates, 0, 5),
+            'haystack' => $haystack,
+        ];
+    }
     /**
      * The window of $haystack that is one edit away from $code - or null.
      *
@@ -207,7 +255,7 @@ class PurposeMatcher
      * Never reaches the 95/100 of an exact hit, so a proposal can never look as
      * good as a finding.
      *
-     * @param  array{code: string, total: float|null}  $order
+     * @param  array{code: string, total: float|null, status: string|null}  $order
      */
     private function fuzzyScore(string $code, string $window, ?float $amount, array $order): int
     {
@@ -250,7 +298,7 @@ class PurposeMatcher
     }
 
     /**
-     * @param  array{code: string, total: float|null}  $order
+     * @param  array{code: string, total: float|null, status: string|null}  $order
      * @return array<string, mixed>
      */
     private static function candidate(
@@ -261,14 +309,27 @@ class PurposeMatcher
         ?float $amount,
         string $found,
     ): array {
+        $amountMatches = $amount !== null && $order['total'] !== null
+            && abs((float) $order['total'] - abs($amount)) <= 0.01;
+
+        $status = $order['status'] ?? null;
+        $open = $status === 'n';
+
         return [
             'code' => $code,
             'method' => $method,
             'score' => $score,
             'found' => $found,
             'order_total' => $order['total'],
-            'amount_matches' => $amount !== null && $order['total'] !== null
-                && abs((float) $order['total'] - abs($amount)) <= 0.01,
+            'amount_matches' => $amountMatches,
+            /*
+             * THE STATUS DECIDES WHETHER THERE IS ANYTHING TO DO. Measured on the
+             * real data: 986 of 1025 orders are already paid, 5 are open. Without
+             * this the journal reported "no assignment" for almost everything and
+             * a real gap looked exactly like a settled order.
+             */
+            'order_status' => $status,
+            'order_open' => $open,
         ];
     }
 }

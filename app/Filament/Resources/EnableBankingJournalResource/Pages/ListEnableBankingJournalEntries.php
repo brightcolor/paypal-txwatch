@@ -32,7 +32,9 @@ class ListEnableBankingJournalEntries extends ListRecords
             . 'pretix-Bestellnummer im Verwendungszweck tragen – das sind Erstattungen. Alle übrigen '
             . 'Abbuchungen (Kartengebühren, Tankstellen, Daueraufträge) werden übergangen und gar nicht '
             . 'erst aufgezeichnet; wie viele es waren, steht in der Meldung nach jedem Abruf. '
-            . 'Die Spalte „pretix-Auftrag" zeigt, wo eine offene Bestellnummer erkannt wurde – daran '
-            . 'lässt sich vorab beurteilen, ob die spätere automatische Zahlungsmeldung greifen wird.';
+            . 'Die Spalte „pretix-Auftrag" zeigt, welche Bestellnummer erkannt wurde, die Spalte '
+            . '„Zustand", was daraus folgt: „offen – zu buchen" ist Arbeit, „bereits bezahlt" nur '
+            . 'Information, „mögliche Doppelzahlung" ein Fall zum Prüfen. Der Filter „Zu tun" zeigt '
+            . 'ausschliesslich die erste und die letzte Gruppe.';
     }
 }

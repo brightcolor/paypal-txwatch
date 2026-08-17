@@ -40,9 +40,9 @@ class JournalWriter
         $refunds = 0;
         $kept = [];
 
-        // Loaded once, not per entry: the lookup runs over the same set of pending
+        // Loaded once, not per entry: the lookup runs over the same set of known
         // orders for every line.
-        $orders = $this->pendingOrders();
+        $orders = $this->knownOrders();
 
         foreach ($entries as $entry) {
             $hash = self::hash($entry);
@@ -95,6 +95,7 @@ class JournalWriter
                 ['import_hash' => $hash],
                 array_merge($entry, [
                     'pretix_order_code' => $code,
+                    'pretix_order_status' => self::statusOf($match),
                     'match_method' => $match['method'],
                     'match_score' => $match['score'],
                     'match_candidates' => $match['candidates'],
@@ -107,6 +108,7 @@ class JournalWriter
             if ($journal->wasRecentlyCreated) {
                 $recorded++;
                 $this->protocol($journal, 'pulled', $entry, $match);
+                $this->flagSecondCredit($journal);
             } else {
                 $known++;
                 /*
@@ -181,8 +183,13 @@ class JournalWriter
      */
     private function reexamine(EnableBankingJournalEntry $journal, array $match): void
     {
-        $before = [$journal->match_method, $journal->pretix_order_code, $journal->match_score];
-        $after = [$match['method'], $match['code'], $match['score']];
+        /*
+         * THE STATE IS PART OF THE COMPARISON. An order that got paid between two
+         * pulls changes nothing about the code but everything about what is to be
+         * done - and that change belongs in the protocol.
+         */
+        $before = [$journal->match_method, $journal->pretix_order_code, $journal->match_score, $journal->pretix_order_status];
+        $after = [$match['method'], $match['code'], $match['score'], self::statusOf($match)];
 
         if ($before === $after) {
             return;
@@ -190,6 +197,7 @@ class JournalWriter
 
         $journal->forceFill([
             'pretix_order_code' => $match['code'] ?? $journal->pretix_order_code,
+            'pretix_order_status' => self::statusOf($match) ?? $journal->pretix_order_status,
             'match_method' => $match['method'],
             'match_score' => $match['score'],
             'match_candidates' => $match['candidates'],
@@ -201,6 +209,9 @@ class JournalWriter
         $event['message'] = 'Erneut geprüft, Ergebnis geändert: ' . $event['message'];
 
         $journal->events()->create($event);
+
+        // An entry that only NOW carries a code can only now collide with another.
+        $this->flagSecondCredit($journal);
     }
 
     /**
@@ -217,11 +228,22 @@ class JournalWriter
     {
         $codes = implode(', ', array_column($match['candidates'], 'code'));
 
+        // What FOLLOWS from a hit depends on the order's state, and that is what the
+        // protocol has to say - not merely that something was found.
+        $first = $match['candidates'][0] ?? null;
+        $folge = match (true) {
+            $first === null => '',
+            ($first['order_open'] ?? false) => ' Die Bestellung ist offen – hier wäre etwas zu buchen.',
+            ($first['order_status'] ?? null) === 'p' => ' Die Bestellung ist bereits bezahlt, es ist nichts zu tun.',
+            default => sprintf(' Zustand der Bestellung: %s.', $first['order_status'] ?? 'unbekannt'),
+        };
+
         $message = match ($match['method']) {
-            PurposeMatcher::EXACT => sprintf('Bestellnummer %s im Verwendungszweck gefunden.', $codes),
+            PurposeMatcher::EXACT => sprintf('Bestellnummer %s im Verwendungszweck gefunden.%s', $codes, $folge),
             PurposeMatcher::NORMALISED => sprintf(
-                'Bestellnummer %s erst nach Entfernen von Trenn- und Leerzeichen gefunden.',
+                'Bestellnummer %s erst nach Entfernen von Trenn- und Leerzeichen gefunden.%s',
                 $codes,
+                $folge,
             ),
             PurposeMatcher::FUZZY => sprintf(
                 'Keine Bestellnummer wörtlich gefunden. %d Vorschlag/Vorschläge mit einem abweichenden '
@@ -252,7 +274,13 @@ class JournalWriter
     }
 
     /**
-     * The orders still waiting for a bank transfer, with their amount.
+     * EVERY known order with amount and state - not just the open ones.
+     *
+     * MEASURED WHY: of 1025 orders, 986 are already paid and 5 are open. Looking at
+     * open ones only meant almost every incoming transfer came out as "nothing
+     * recognised", indistinguishable from a real gap - and that was the normal case,
+     * not the exception. With all of them the journal can say "belongs to X, already
+     * paid" instead of shrugging.
      *
      * DELIBERATELY NOT A REGULAR EXPRESSION over the purpose text. A pattern like
      * "five capitals" matches half of every SEPA reference - measured on the real
@@ -263,9 +291,9 @@ class JournalWriter
      * proposal: in both real typo cases it narrowed 1025 orders down to exactly
      * one.
      *
-     * @return array<string, array{code: string, total: float|null}>
+     * @return array<string, array{code: string, total: float|null, status: string|null, provider: string}>
      */
-    private function pendingOrders(): array
+    private function knownOrders(): array
     {
         if (! $this->pretixAvailable()) {
             return [];
@@ -274,27 +302,33 @@ class JournalWriter
         $orders = [];
 
         PretixOrder::query()
-            ->where('status', 'n')
             ->whereNotNull('order_code')
-            ->select(['order_code', 'payment_provider', 'total'])
+            ->select(['order_code', 'payment_provider', 'total', 'status'])
             ->cursor()
             ->each(function (PretixOrder $order) use (&$orders): void {
-                $provider = strtolower((string) $order->payment_provider);
-
-                if (! str_contains($provider, 'banktransfer') && $provider !== 'manual') {
-                    return;
-                }
-
                 $code = (string) $order->order_code;
 
                 // Under four characters a code is too short to appear in a purpose
                 // by intent rather than by accident.
-                if (mb_strlen($code) >= 4) {
-                    $orders[mb_strtoupper($code)] = [
-                        'code' => $code,
-                        'total' => $order->total !== null ? (float) $order->total : null,
-                    ];
+                if (mb_strlen($code) < 4) {
+                    return;
                 }
+
+                /*
+                 * THE PAYMENT METHOD NO LONGER FILTERS, only the state does.
+                 *
+                 * It used to restrict to banktransfer/manual, which is right for
+                 * BOOKING - a PayPal order is not settled by a transfer. But for
+                 * RECOGNISING it was wrong: a transfer that carries the code of a
+                 * PayPal order is worth knowing about, and silently dropping it left
+                 * the entry looking like an unexplained gap.
+                 */
+                $orders[mb_strtoupper($code)] = [
+                    'code' => $code,
+                    'total' => $order->total !== null ? (float) $order->total : null,
+                    'status' => $order->status,
+                    'provider' => strtolower((string) $order->payment_provider),
+                ];
             });
 
         return $orders;
@@ -316,6 +350,86 @@ class JournalWriter
         }
     }
 
+    /**
+     * The state of the recognised order, or null when nothing was recognised.
+     *
+     * @param  array<string, mixed>  $match
+     */
+    private static function statusOf(array $match): ?string
+    {
+        if (blank($match['code'] ?? null)) {
+            return null;
+        }
+
+        return $match['candidates'][0]['order_status'] ?? null;
+    }
+
+    /**
+     * TWO CREDITS ON ONE ORDER - the only honest sign of a double payment.
+     *
+     * MEASURED, AND THE FIRST ATTEMPT WAS WRONG. It asked whether the order was
+     * already paid and the amount fitted; against the 166 real credits that flagged
+     * 140, because an order is marked paid PRECISELY BECAUSE that transfer arrived.
+     * It described the normal case and would have put a warning on five out of six
+     * entries - a column nobody reads after the first day.
+     *
+     * A second credit on the same order flags 1 of 166: order XDUBJ, 5,00 EUR and
+     * 58,30 EUR on the same day against a total of 58,30.
+     *
+     * BOTH ENTRIES GET MARKED, not only the newer one. A pair is only readable as a
+     * pair; marking one leaves the other looking like an ordinary payment, and
+     * whoever opens that one wonders what the warning on its sibling meant.
+     *
+     * DELIBERATELY NOT COMPARED AGAINST bank_transactions. The same payment can sit
+     * there from a hand-imported statement file, and flagging that would report a
+     * duplicate where there is one payment seen twice. Journal entries are
+     * deduplicated by `import_hash`, so two of them sharing an order code really are
+     * two different transactions.
+     */
+    private function flagSecondCredit(EnableBankingJournalEntry $journal): void
+    {
+        // A refund carries the same code and is the opposite of a double payment.
+        if (blank($journal->pretix_order_code) || (float) $journal->amount <= 0) {
+            return;
+        }
+
+        $sibling = EnableBankingJournalEntry::query()
+            ->where('pretix_order_code', $journal->pretix_order_code)
+            ->where('amount', '>', 0)
+            ->where('id', '!=', $journal->id)
+            ->orderBy('id')
+            ->first();
+
+        if ($sibling === null) {
+            return;
+        }
+
+        foreach ([$sibling, $journal] as $betroffen) {
+            if ((bool) $betroffen->possible_double_payment) {
+                continue;
+            }
+
+            $betroffen->forceFill(['possible_double_payment' => true])->save();
+
+            $betroffen->events()->create([
+                'kind' => 'changed',
+                'message' => sprintf(
+                    'MÖGLICHE DOPPELZAHLUNG: Auf Bestellung %s gibt es einen zweiten Geldeingang '
+                    . '(%s EUR am %s und %s EUR am %s). Bitte prüfen, ob eine Erstattung fällig ist.',
+                    $journal->pretix_order_code,
+                    number_format((float) $sibling->amount, 2, ',', '.'),
+                    $sibling->booked_on?->format('d.m.Y') ?? '?',
+                    number_format((float) $journal->amount, 2, ',', '.'),
+                    $journal->booked_on?->format('d.m.Y') ?? '?',
+                ),
+                'context' => [
+                    'order_code' => $journal->pretix_order_code,
+                    'entries' => [$sibling->id, $journal->id],
+                ],
+                'at' => now(),
+            ]);
+        }
+    }
     /**
      * The identity of an entry - byte for byte as BankStatementImporter computes it.
      *

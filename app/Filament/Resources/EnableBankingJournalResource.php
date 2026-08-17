@@ -64,7 +64,13 @@ class EnableBankingJournalResource extends Resource
     /** How many entries are still only recorded - shown as a badge in the menu. */
     public static function getNavigationBadge(): ?string
     {
-        $open = static::getModel()::query()->whereNull('promoted_at')->count();
+        // Counts what needs a DECISION, not everything unpromoted: with 986 of 1025
+        // orders already paid, the old count was essentially the table size and told
+        // nobody anything.
+        $open = static::getModel()::query()
+            ->where(fn ($q) => $q->where('pretix_order_status', 'n')->orWhere('possible_double_payment', true))
+            ->whereNull('promoted_at')
+            ->count();
 
         return $open > 0 ? (string) $open : null;
     }
@@ -146,11 +152,11 @@ class EnableBankingJournalResource extends Resource
                         $suggestion = $record->bestSuggestion();
 
                         if (! $suggestion) {
-                            return 'Keine offene Bestellnummer erkennbar.';
+                            return 'Keine Bestellnummer erkennbar – auch nicht mit einem Zeichen Abweichung.';
                         }
 
                         return sprintf(
-                            'VORSCHLAG, nicht zugeordnet: im Zweck steht „%s", die offene Bestellung heisst '
+                            'VORSCHLAG, nicht zugeordnet: im Zweck steht „%s", die Bestellung heisst '
                             . '„%s" – ein Zeichen weicht ab. Betrag %s. Sicherheit %d von 100.',
                             $suggestion['found'],
                             $suggestion['code'],
@@ -159,6 +165,32 @@ class EnableBankingJournalResource extends Resource
                         );
                     }),
 
+                /*
+                 * WHAT FOLLOWS FROM THE ASSIGNMENT - the column the journal was
+                 * missing. Recognising an order says nothing about whether there is
+                 * work: 986 of 1025 orders are already paid. Without this column
+                 * "recognised but settled" and "nothing recognised" looked the same.
+                 */
+                Tables\Columns\TextColumn::make('zustand')
+                    ->label('Zustand')
+                    ->badge()
+                    ->state(fn ($record) => $record->stateLabel())
+                    ->color(fn ($record) => match (true) {
+                        (bool) $record->possible_double_payment => 'danger',
+                        $record->pretix_order_status === 'n' => 'warning',
+                        $record->isSettled() => 'success',
+                        $record->hasSuggestion() => 'warning',
+                        default => 'gray',
+                    })
+                    ->tooltip(fn ($record) => match (true) {
+                        (bool) $record->possible_double_payment => 'Auf diese Bestellung gibt es einen '
+                            . 'zweiten Geldeingang. Bitte prüfen – möglicherweise ist eine Erstattung fällig. '
+                            . 'Das Protokoll nennt beide Umsätze.',
+                        $record->pretix_order_status === 'n' => 'Die Bestellung ist offen. Hier wäre eine '
+                            . 'Zahlungsmeldung an pretix fällig.',
+                        $record->isSettled() => 'Zugeordnet, aber die Bestellung ist längst bezahlt – nichts zu tun.',
+                        default => null,
+                    }),
                 /*
                  * How it was recognised. Hidden by default - it matters when
                  * something looks wrong, not in everyday use.
@@ -193,6 +225,14 @@ class EnableBankingJournalResource extends Resource
                 Tables\Columns\TextColumn::make('bank_ref')
                     ->label('Bankreferenz')->toggleable(isToggledHiddenByDefault: true)->copyable(),
             ])
+            /*
+             * THE PARAMETER MUST BE CALLED $query. Filament injects the table
+             * query BY PARAMETER NAME and throws the return value away. A closure
+             * named $q gets a fresh, model-less builder from the container instead,
+             * so the filter modifies a throwaway object and silently filters
+             * NOTHING - no error, no warning, just a filter that appears to work.
+             * FilamentFilterParameterTest holds this for every filter in the app.
+             */
             ->filters([
                 Tables\Filters\TernaryFilter::make('pretix_order_code')
                     ->label('Mit pretix-Bestellnummer')
@@ -214,7 +254,7 @@ class EnableBankingJournalResource extends Resource
 
                 Tables\Filters\Filter::make('nur_eingaenge')
                     ->label('Nur Eingänge')
-                    ->query(fn (Builder $q) => $q->where('amount', '>', 0)),
+                    ->query(fn (Builder $query) => $query->where('amount', '>', 0)),
 
                 /*
                  * The most useful filter of them all: everything with a proposal
@@ -222,11 +262,36 @@ class EnableBankingJournalResource extends Resource
                  * need nobody, and entries without any candidate need a look at the
                  * purpose, not a click.
                  */
+                /*
+                 * THE WORK LIST: everything where something is actually to be done -
+                 * an open order, or a proposal awaiting a decision. Settled
+                 * assignments are information and stay out of it.
+                 */
+                Tables\Filters\Filter::make('zu_tun')
+                    ->label('Zu tun')
+                    ->query(fn (Builder $query) => $query->where(fn (Builder $gruppe) => $gruppe
+                        ->where('pretix_order_status', 'n')
+                        ->orWhere('possible_double_payment', true)
+                        ->orWhere(fn (Builder $vorschlag) => $vorschlag
+                            ->whereNull('pretix_order_code')
+                            ->where('match_method', \App\Services\EnableBanking\PurposeMatcher::FUZZY))),
+                    ),
+
                 Tables\Filters\Filter::make('offene_vorschlaege')
-                    ->label('Offene Vorschläge')
-                    ->query(fn (Builder $q) => $q
+                    ->label('Nur Vorschläge')
+                    ->query(fn (Builder $query) => $query
                         ->whereNull('pretix_order_code')
                         ->where('match_method', \App\Services\EnableBanking\PurposeMatcher::FUZZY)),
+
+                /*
+                 * Two credits on one order - the one finding here that costs money if
+                 * it goes unnoticed. Measured: 1 of 166 real credits, against 140 that
+                 * the first criterion ("order paid and amount fits") would have
+                 * flagged wrongly.
+                 */
+                Tables\Filters\Filter::make('doppelzahlungen')
+                    ->label('Mögliche Doppelzahlungen')
+                    ->query(fn (Builder $query) => $query->where('possible_double_payment', true)),
             ])
             /*
              * THE PROTOCOL, reachable per row. Not a separate page: the question

@@ -113,7 +113,7 @@ class EnableBankingJournalTest extends TestCase
      * because pretix_orders has a foreign key on it. Guessing the required columns
      * one error message at a time is how the first version of this fixture went.
      */
-    private function pendingOrder(string $code): string
+    private function pendingOrder(string $code, string $status = 'n', float $total = 120.00): string
     {
         $connection = \App\Models\PretixConnection::create([
             'name' => 'Verein',
@@ -127,9 +127,9 @@ class EnableBankingJournalTest extends TestCase
             'pretix_connection_id' => $connection->id,
             'event_slug' => 'musterevent',
             'order_code' => $code,
-            'status' => 'n',
+            'status' => $status,
             'payment_provider' => 'banktransfer',
-            'total' => 120.00,
+            'total' => $total,
             'currency' => 'EUR',
             'url' => 'https://pretix.eu/control/order/musterevent/' . $code . '/',
             'raw_payload' => [],
@@ -250,7 +250,8 @@ class EnableBankingJournalTest extends TestCase
     }
 
     /** @param array<string, mixed> $overrides */
-    private static function entry(array $overrides): array
+    /** Shared with EnableBankingJournalTableTest - one fixture recipe, not two. */
+    public static function entry(array $overrides): array
     {
         return array_replace([
             'booked_on' => '2026-05-20',
@@ -264,5 +265,226 @@ class EnableBankingJournalTest extends TestCase
             'bank_ref' => 'REF-1',
             'source_format' => 'enablebanking',
         ], $overrides);
+    }
+    /**
+     * A SETTLED ORDER IS RECOGNISED TOO - and marked as needing nothing.
+     *
+     * This is the case that used to vanish: 986 of 1025 orders are already paid, so
+     * almost every incoming transfer came out as "nothing recognised" and looked
+     * exactly like a real gap.
+     */
+    public function test_a_settled_order_is_recognised_but_not_actionable(): void
+    {
+        $this->pendingOrder('PAIDX', 'p', 63.80);
+
+        app(JournalWriter::class)->record([
+            self::entry(['amount' => 63.80, 'purpose' => 'GAG-WISMAR-2026-PAIDX', 'bank_ref' => 'S1']),
+        ]);
+
+        $e = EnableBankingJournalEntry::first();
+
+        $this->assertSame('PAIDX', $e->pretix_order_code);
+        $this->assertSame('p', $e->pretix_order_status);
+        $this->assertTrue($e->isSettled());
+        $this->assertFalse($e->isActionable(), 'Eine bezahlte Bestellung ist keine Arbeit.');
+    }
+
+    /** An open order is work, and says so. */
+    public function test_an_open_order_is_actionable(): void
+    {
+        $this->pendingOrder('OPENX', 'n', 63.80);
+
+        app(JournalWriter::class)->record([
+            self::entry(['amount' => 63.80, 'purpose' => 'GAG-WISMAR-2026-OPENX', 'bank_ref' => 'S2']),
+        ]);
+
+        $e = EnableBankingJournalEntry::first();
+
+        $this->assertSame('n', $e->pretix_order_status);
+        $this->assertTrue($e->isActionable());
+        $this->assertSame('offen – zu buchen', $e->stateLabel());
+        $this->assertFalse((bool) $e->possible_double_payment);
+    }
+
+    /**
+     * A SECOND CREDIT ON ONE ORDER IS FLAGGED - on both entries.
+     *
+     * Measured against 166 real credits, this fires exactly once: order XDUBJ with
+     * 5,00 and 58,30 EUR on the same day against a total of 58,30.
+     */
+    public function test_a_second_credit_on_one_order_is_flagged(): void
+    {
+        $this->pendingOrder('XDUBJ', 'p', 58.30);
+
+        app(JournalWriter::class)->record([
+            self::entry(['amount' => 58.30, 'purpose' => 'Zahlung XDUBJ', 'bank_ref' => 'S3a']),
+            self::entry(['amount' => 5.00, 'purpose' => 'Nachzahlung XDUBJ', 'bank_ref' => 'S3b']),
+        ]);
+
+        $entries = EnableBankingJournalEntry::query()->orderBy('id')->get();
+
+        $this->assertCount(2, $entries);
+
+        // BOTH, not just the second: a pair is only readable as a pair.
+        foreach ($entries as $e) {
+            $this->assertTrue(
+                (bool) $e->possible_double_payment,
+                'Beide Umsätze des Paares müssen markiert sein, nicht nur der zweite.',
+            );
+            $this->assertSame('mögliche Doppelzahlung', $e->stateLabel());
+            $this->assertTrue($e->isActionable(), 'Eine Doppelzahlung ist Arbeit, auch wenn die Bestellung bezahlt ist.');
+        }
+
+        // The protocol names both amounts, otherwise the warning cannot be checked.
+        $messages = $entries->first()->events->pluck('message')->implode(' ');
+        $this->assertStringContainsString('58,30', $messages);
+        $this->assertStringContainsString('5,00', $messages);
+    }
+
+    /**
+     * THE NORMAL CASE IS NOT A DOUBLE PAYMENT - the guard against 140 false alarms.
+     *
+     * The first criterion asked whether the order was already paid and the amount
+     * fitted. That is what a SUCCESSFUL payment looks like: the order is marked paid
+     * precisely because this transfer arrived. Against the 166 real credits it
+     * flagged 140. Without this test the mistake comes back the moment someone finds
+     * the state field and thinks it is enough.
+     */
+    public function test_a_single_payment_on_a_settled_order_is_no_double_payment(): void
+    {
+        $this->pendingOrder('ONEPY', 'p', 63.80);
+
+        app(JournalWriter::class)->record([
+            self::entry(['amount' => 63.80, 'purpose' => 'Zahlung ONEPY', 'bank_ref' => 'S3c']),
+        ]);
+
+        $e = EnableBankingJournalEntry::first();
+
+        $this->assertSame('ONEPY', $e->pretix_order_code);
+        $this->assertFalse(
+            (bool) $e->possible_double_payment,
+            'Bezahlte Bestellung plus passender Betrag ist der Normalfall einer erfolgreichen Zahlung.',
+        );
+        $this->assertSame('bereits bezahlt', $e->stateLabel());
+        $this->assertFalse($e->isActionable());
+    }
+
+    /**
+     * A refund alongside the payment is not a second credit.
+     *
+     * Same code, same amount, opposite direction - and the pair is the RESOLUTION of
+     * the payment, not a duplicate of it.
+     */
+    public function test_a_refund_alongside_the_payment_is_no_double_payment(): void
+    {
+        $this->pendingOrder('BACKP', 'p', 63.80);
+
+        app(JournalWriter::class)->record([
+            self::entry(['amount' => 63.80, 'purpose' => 'Zahlung BACKP', 'bank_ref' => 'S3d']),
+            self::entry(['amount' => -63.80, 'purpose' => 'Erstattung BACKP', 'bank_ref' => 'S3e']),
+        ]);
+
+        $this->assertCount(2, EnableBankingJournalEntry::all());
+        $this->assertSame(
+            0,
+            EnableBankingJournalEntry::query()->where('possible_double_payment', true)->count(),
+        );
+    }
+
+    /** A refund of a settled order is recorded and carries no warning. */
+    public function test_a_refund_is_not_a_double_payment(): void
+    {
+        $this->pendingOrder('REFND', 'p', 63.80);
+
+        app(JournalWriter::class)->record([
+            self::entry(['amount' => -63.80, 'purpose' => 'Erstattung REFND', 'bank_ref' => 'S4']),
+        ]);
+
+        $e = EnableBankingJournalEntry::first();
+
+        $this->assertNotNull($e, 'Eine Abbuchung mit Bestellnummer muss aufgezeichnet werden.');
+        $this->assertFalse((bool) $e->possible_double_payment);
+    }
+
+    /**
+     * A credit quoting a settled order with a DIFFERENT amount is not a double
+     * payment either - far more likely a different payment that happens to carry the
+     * code.
+     */
+    public function test_a_wrong_amount_is_no_double_payment(): void
+    {
+        $this->pendingOrder('OTHER', 'p', 63.80);
+
+        app(JournalWriter::class)->record([
+            self::entry(['amount' => 500.00, 'purpose' => 'Sammelzahlung OTHER und weitere', 'bank_ref' => 'S5']),
+        ]);
+
+        $e = EnableBankingJournalEntry::first();
+
+        $this->assertSame('OTHER', $e->pretix_order_code);
+        $this->assertFalse((bool) $e->possible_double_payment);
+    }
+
+    /** An open order beats a settled one when both codes occur. */
+    public function test_an_open_order_wins_over_a_settled_one(): void
+    {
+        $this->pendingOrder('PAIDA', 'p', 63.80);
+        $this->pendingOrder('OPENB', 'n', 63.80);
+
+        app(JournalWriter::class)->record([
+            self::entry(['amount' => 63.80, 'purpose' => 'Sammel PAIDA und OPENB', 'bank_ref' => 'S6']),
+        ]);
+
+        $this->assertSame('OPENB', EnableBankingJournalEntry::first()->pretix_order_code);
+    }
+
+    /** The protocol says what follows, not merely that something was found. */
+    public function test_the_protocol_says_what_follows(): void
+    {
+        $this->pendingOrder('OPENC', 'n', 63.80);
+
+        app(JournalWriter::class)->record([
+            self::entry(['amount' => 63.80, 'purpose' => 'GAG-2026-OPENC', 'bank_ref' => 'S7']),
+        ]);
+
+        $messages = EnableBankingJournalEntry::first()->events->pluck('message')->implode(' | ');
+
+        $this->assertStringContainsString('OPENC', $messages);
+        $this->assertStringContainsString('offen', $messages);
+    }
+    /**
+     * THE PROTOCOL VIEW ACTUALLY RENDERS - for every state.
+     *
+     * It only ever appears in a modal, so no other test touches it: a Blade error in
+     * there would surface when a human clicks "Protokoll", not in CI. Rendered once
+     * per state because the template branches on all three.
+     */
+    public function test_the_protocol_view_renders_for_every_state(): void
+    {
+        $this->pendingOrder('OPEND', 'n', 63.80);
+        $this->pendingOrder('PAIDD', 'p', 63.80);
+
+        app(JournalWriter::class)->record([
+            self::entry(['amount' => 63.80, 'purpose' => 'GAG-2026-OPEND', 'bank_ref' => 'V1']),
+            self::entry(['amount' => 63.80, 'purpose' => 'Zahlung PAIDD', 'bank_ref' => 'V2']),
+            self::entry(['amount' => 63.80, 'purpose' => 'Zahlung OPENE', 'bank_ref' => 'V3']),
+            self::entry(['amount' => 12.00, 'purpose' => 'PayPal Auszahlung', 'bank_ref' => 'V4']),
+        ]);
+
+        $states = [];
+
+        foreach (EnableBankingJournalEntry::with('events')->get() as $entry) {
+            $html = view('filament.bank.journal-protocol', [
+                'entry' => $entry,
+                'events' => $entry->events,
+            ])->render();
+
+            $this->assertStringContainsString($entry->stateLabel(), $html);
+            $states[] = $entry->stateLabel();
+        }
+
+        // Guard against the fixture quietly collapsing into one state - the test would
+        // still pass while covering a single branch.
+        $this->assertGreaterThanOrEqual(3, count(array_unique($states)), 'Zu wenige Zustände abgedeckt: ' . implode(', ', $states));
     }
 }

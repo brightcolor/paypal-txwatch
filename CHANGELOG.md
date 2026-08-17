@@ -4,6 +4,53 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.60.0] - 2026-08-18
+
+### Hinzugefügt
+- **Das Journal sagt jetzt, ob etwas zu tun ist – nicht nur, ob etwas erkannt wurde.**
+  Die Zuordnung suchte bisher nur unter den **offenen** Bestellungen. Am echten Bestand sind von
+  1025 Bestellungen **986 bezahlt und 5 offen**: von 166 Geldeingängen fand die Suche damit so gut
+  wie nichts, und jeder eingegangene Betrag sah aus wie eine ungeklärte Lücke. Gesucht wird jetzt
+  unter **allen** Bestellungen, und eine neue Spalte **Zustand** sagt, was daraus folgt:
+  - `offen – zu buchen` – hier wäre eine Zahlungsmeldung fällig.
+  - `bereits bezahlt` – zugeordnet, aber längst erledigt. Nichts zu tun.
+  - `mögliche Doppelzahlung` – siehe unten.
+  - `Vorschlag` / `keine Zuordnung` – wie bisher.
+  Gemessen an denselben 166 Eingängen: **142 erkennen ihre Bestellung** (140 davon bereits bezahlt),
+  2 sind Vorschläge, 22 treffen richtigerweise nichts – PayPal-Auszahlungen und eigene Rechnungen.
+- **Der Filter „Zu tun" zeigt ausschliesslich Einträge, die eine Entscheidung brauchen** – offene
+  Bestellungen, Doppelzahlungen und Vorschläge. Erledigtes bleibt draussen. Auch der Zähler im Menü
+  zählt jetzt Entscheidungen statt Zeilen; vorher entsprach er praktisch der Tabellengrösse.
+- **Zweiter Geldeingang auf dieselbe Bestellung wird gemeldet.** Beide Umsätze werden markiert, und
+  das Protokoll nennt beide Beträge mit Datum. Im echten Bestand trifft das **genau einen Fall**:
+  eine Bestellung über 58,30 € mit zwei Eingängen von 58,30 € und 5,00 € am selben Tag.
+- **Das Protokoll nennt die Folge, nicht nur den Fund.** Statt „Bestellnummer gefunden" steht dort
+  jetzt, ob gebucht werden muss, ob nichts zu tun ist oder ob ein zweiter Eingang existiert.
+
+### Behoben
+- **Vier Journal-Filter filterten nichts.** Filament spritzt die Tabellenabfrage **über den
+  Parameternamen** ein und verwirft den Rückgabewert der Closure. Ein Filter, der seinen Parameter
+  nicht `$query` nennt, bekommt einen frisch erzeugten Builder ohne Modell und verändert damit ein
+  Wegwerf-Objekt: das Häkchen liess sich setzen, die Liste blieb unverändert – ohne Fehler, ohne
+  Warnung. Betroffen waren „Nur Eingänge", „Nur Vorschläge", „Zu tun" und „Mögliche Doppelzahlungen".
+  Ein Test prüft das jetzt für **jeden Filter jeder Ressource** der Anwendung.
+
+### Geändert
+- **Das Kriterium für eine Doppelzahlung war falsch und ist ersetzt.** Der erste Ansatz fragte, ob die
+  Bestellung bezahlt ist und der Betrag passt – am echten Bestand hätte das **140 von 166 Eingängen**
+  markiert, denn eine Bestellung gilt ja gerade deshalb als bezahlt, weil dieser Umsatz eingegangen
+  ist. Das Merkmal beschrieb den Normalfall. Gemeldet wird jetzt der **zweite Eingang auf dieselbe
+  Bestellung**: ein Fund statt 140 Fehlalarmen.
+- Bei mehreren möglichen Bestellungen im selben Verwendungszweck gewinnt die **offene** vor der
+  bezahlten, danach der passende Betrag. Vorher entschied die Reihenfolge aus der Datenbank, sodass
+  derselbe Text nach einem Import anders aufgelöst werden konnte.
+- Die Zahlungsart filtert die Zuordnung nicht mehr, nur der Zustand tut es: eine Überweisung, die die
+  Nummer einer PayPal-Bestellung trägt, ist eine Information und keine Lücke.
+
+### Intern
+- Tabelle und Protokollansicht des Journals werden erstmals von Tests gerendert. Beide erschienen
+  ausschliesslich in der Oberfläche, sodass ein Fehler darin erst beim Klick aufgefallen wäre.
+- 336 Tests (vorher 290).
 ## [0.59.0] - 2026-08-17
 
 ### Hinzugefügt
