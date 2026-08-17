@@ -31,23 +31,34 @@ jobs:
           key: composer-${{ hashFiles('composer.lock') }}
           restore-keys: composer-
 
-      # WHY THIS STEP EXISTS: `composer install --prefer-dist` pulls zipballs
-      # from codeload.github.com, which GitHub rate-limits PER SOURCE IP and far
-      # more strictly for unauthenticated requests. Hosted runners share their
-      # egress addresses with everyone else's jobs, so a build can collect a
-      # "HTTP/2 429" without having done anything itself - measured on
-      # 2026-08-17, when three runs in a row died in the middle of the install.
+      # WHY THIS STEP HAS A FALLBACK: `--prefer-dist` pulls zipballs from
+      # codeload.github.com, which GitHub throttles PER SOURCE IP - and hosted
+      # runners share their egress addresses with everyone else's jobs, so a
+      # build collects a "HTTP/2 429" without having done anything itself.
+      # Measured on 2026-08-17: four runs in a row died mid-install.
       #
-      # Two counter-measures, both cheap:
-      #   - the token every workflow already has, so the download is no longer
-      #     anonymous;
-      #   - fewer parallel downloads (default is 12), because that burst is what
-      #     trips the abuse detection in the first place.
+      # WHAT DOES NOT HELP, tried and discarded: handing Composer the workflow's
+      # own GITHUB_TOKEN. That token is scoped to THIS repository, so it cannot
+      # fetch zipballs of symfony, phpunit and the rest - Composer falls back to
+      # codeload anyway and nothing changes. A personal access token in a secret
+      # WOULD raise the limit (even one without scopes); this workflow
+      # deliberately does not require one, so that a fork builds without extra
+      # setup.
+      #
+      # So: fewer parallel downloads (the burst is what trips the abuse
+      # detection), and if the dist install still fails, install from git
+      # instead. Cloning is slower but is not subject to the same throttle - it
+      # is what got this project's dependencies installed on the day the dist
+      # path was unusable.
       - name: Install Composer dependencies
         env:
-          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.GITHUB_TOKEN }}"}}'
           COMPOSER_MAX_PARALLEL_HTTP: '6'
-        run: composer install --prefer-dist --no-interaction --no-progress
+        run: |
+          composer install --prefer-dist --no-interaction --no-progress \
+            || {
+              echo "::warning::dist-Download fehlgeschlagen (meist 429 von codeload) - weiche auf git aus"
+              composer install --prefer-source --no-interaction --no-progress
+            }
 
       - name: Prepare environment
         run: |
