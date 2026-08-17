@@ -52,6 +52,20 @@ class EnableBankingSyncCommand extends Command
             return self::SUCCESS;
         }
 
+        /*
+         * THE QUOTA GUARD, and it belongs here rather than in the scheduler
+         * expression: `everySixHours()` is exactly the four accesses PSD2 grants
+         * without the account holder present, but a scheduler that gets restarted
+         * fires again on the next tick. Two extra runs and the bank refuses until
+         * midnight - the feed would be dead for the rest of the day, and nobody
+         * would connect that to a container recreation hours earlier.
+         */
+        if ($reason = $sync->tooSoon($connection)) {
+            $this->info($reason);
+
+            return self::SUCCESS;
+        }
+
         $result = $sync->syncSafely($connection);
 
         if (! empty($result['needs_reauth'])) {
@@ -71,7 +85,22 @@ class EnableBankingSyncCommand extends Command
             return self::SUCCESS;
         }
 
-        $this->info("Abruf fertig: {$result['imported']} neu, {$result['matched']} zugeordnet.");
+        /*
+         * Reports what actually happened, and the journal mode is named as such.
+         * "0 neu importiert" on a pull that recorded forty transactions would look
+         * like a failure, when it is exactly the configured behaviour.
+         */
+        if (($result['mode'] ?? 'journal') === 'journal') {
+            $this->info(sprintf(
+                'Abruf fertig (Journal, es wird nichts gebucht): %d neu aufgezeichnet, %d schon bekannt, '
+                . '%d mit erkannter pretix-Bestellnummer.',
+                $result['recorded'] ?? 0,
+                $result['known'] ?? 0,
+                $result['with_order'] ?? 0,
+            ));
+        } else {
+            $this->info("Abruf fertig: {$result['imported']} neu, {$result['matched']} zugeordnet.");
+        }
 
         /*
          * A cap that bit is escalated to the admins, not just written to a log

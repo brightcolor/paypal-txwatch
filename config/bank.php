@@ -95,12 +95,49 @@ return [
         'consent_days' => 180,
 
         /*
+         * WHAT HAPPENS WITH A PULLED TRANSACTION.
+         *
+         *   'journal' - recorded in enable_banking_journal and nothing else. No
+         *               report, no EÜR, no reconciliation, no pretix booking
+         *               reads it. This is where a new bank path belongs until it
+         *               has proven what it delivers: an interpretation error is
+         *               then untangled out of a log, not out of the books.
+         *   'import'  - through BankStatementImporter, i.e. into
+         *               bank_transactions with automatic reconciliation and
+         *               pretix proposal, exactly like the file import.
+         *
+         * Switching to 'import' is the whole change needed later; the journal
+         * keeps its entries either way, so the trail of what arrived when stays.
+         */
+        'mode' => env('ENABLEBANKING_MODE', 'journal'),
+
+        /*
          * How far back the first pull reaches, and how much every later pull
          * re-covers so late bookings are not missed. Same values the FinTS sync
          * uses, for the same reason.
          */
         'first_pull_days' => 90,
         'overlap_days' => 3,
+
+        /*
+         * MINIMUM GAP BETWEEN TWO UNATTENDED PULLS, in hours.
+         *
+         * PSD2 allows an aggregator FOUR accesses per day per account without the
+         * account holder present. The scheduler is set to every six hours, which
+         * is exactly four - but a scheduler that gets restarted (container
+         * recreation, a Watchtower round) would fire again on the next tick and
+         * burn the quota. Once it is used up the bank simply refuses, and the
+         * feed is dead until midnight.
+         *
+         * Five hours rather than six: the scheduler does not fire to the second,
+         * and a gap of exactly six would reject a run that is thirty seconds
+         * early.
+         *
+         * A MANUAL "Jetzt abrufen" IS NOT AFFECTED. With the operator in front of
+         * the screen the access counts as attended and does not fall under the
+         * limit.
+         */
+        'min_hours_between_pulls' => 5,
 
         /*
          * Hard ceiling on transactions per account and pull, plus a page limit.

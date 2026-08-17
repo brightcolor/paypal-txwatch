@@ -4,6 +4,38 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.58.0] - 2026-08-17
+
+### Geändert
+- **Der Bankabruf läuft alle sechs Stunden, also viermal am Tag.** Das ist keine Vorliebe, sondern
+  die Regel: PSD2 gewährt einem Vermittler **vier Zugriffe je Konto und Tag ohne anwesenden
+  Kontoinhaber**. Häufiger zu fragen holt nichts – die Bank weist ab, und ist das Kontingent
+  verbraucht, liegt der Abruf bis Mitternacht tot.
+  - Zusätzlich prüft der Befehl den Abstand zum letzten Abruf. Ein neu gestarteter Scheduler
+    (Container-Neuanlage, Watchtower-Runde) würde beim nächsten Tick sonst erneut feuern und das
+    Kontingent von allein verbrauchen – und niemand verbindet das Stunden später mit einem
+    Neustart. Ein **manueller** Abruf zählt nicht mit: mit Anwender davor gilt der Zugriff als
+    begleitet.
+- **Die Umsätze werden vorerst nur aufgezeichnet, nicht gebucht.** Neu unter
+  **Bank → Bank-Journal (Enable Banking)**. Diese Einträge wirken in **keinem** Bericht, in keiner
+  EÜR und in keiner Zuordnung.
+  - **Eigene Tabelle statt Merkmal an den Kontoumsätzen.** Ein Merkmal wäre billiger und
+    gefährlicher: Jede Auswertung müsste daran denken, diese Zeilen auszunehmen, und die eine
+    Abfrage, die es vergisst, holt ungeprüfte Bankdaten lautlos in die Bücher. Eine eigene Tabelle
+    kann nicht auslaufen.
+  - Der Weg nach vorn ist vorbereitet, nicht improvisiert: `ENABLEBANKING_MODE=import` schaltet auf
+    den gemeinsamen Importweg um. Die Journalzeilen tragen denselben `import_hash` wie der
+    Dateiimport, eine Übernahme kann also keine Dublette eines schon eingelesenen Auszugs
+    erzeugen. Ein Test hält die beiden Hash-Verfahren gegeneinander – gehen sie auseinander,
+    entstünde genau diese Dublette.
+  - Die Spalte **„pretix-Auftrag"** zeigt schon jetzt, wo eine **offene** Bestellnummer im
+    Verwendungszweck steht. Damit lässt sich vorab beurteilen, ob die spätere automatische
+    Zahlungsmeldung greifen wird, bevor sie etwas bucht.
+  - **Kein regulärer Ausdruck auf den Verwendungszweck.** Gesucht werden Bestellnummern, die
+    wirklich existieren und wirklich offen sind – dasselbe Verfahren wie im bestehenden Abgleich.
+    Ein Muster „vier bis sechs Großbuchstaben" hätte `MV070` in einer Sparkassen-Gebührenreferenz
+    getroffen und eine Ticketzahlung behauptet, die es nie gab.
+
 ## [0.57.5] - 2026-08-17
 
 ### Behoben

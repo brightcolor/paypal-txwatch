@@ -51,6 +51,7 @@ class AdminPagesSmokeTest extends TestCase
         SettlementResource::class,
         \App\Filament\Resources\ErrorLogEntryResource::class,
         \App\Filament\Resources\LoginEventResource::class,
+        \App\Filament\Resources\EnableBankingJournalResource::class,
         \App\Filament\Resources\BankTransactionResource::class,
     ];
 

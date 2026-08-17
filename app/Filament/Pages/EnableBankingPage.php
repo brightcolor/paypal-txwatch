@@ -566,7 +566,20 @@ class EnableBankingPage extends Page implements HasForms
             return;
         }
 
-        $body = "{$result['imported']} neu importiert, {$result['matched']} zugeordnet.";
+        /*
+         * In journal mode "0 neu importiert" would read like a failure, when it is
+         * exactly what was configured. So the mode is named, and what the journal
+         * did is reported instead.
+         */
+        $body = ($result['mode'] ?? 'journal') === 'journal'
+            ? sprintf(
+                'Nur aufgezeichnet, es wurde nichts gebucht: %d neu im Journal, %d schon bekannt, '
+                . '%d davon mit erkannter pretix-Bestellnummer.',
+                $result['recorded'] ?? 0,
+                $result['known'] ?? 0,
+                $result['with_order'] ?? 0,
+            )
+            : "{$result['imported']} neu importiert, {$result['matched']} zugeordnet.";
 
         if (($result['skipped_pending'] ?? 0) > 0) {
             // Named rather than hidden: a vorgemerkte Buchung is not an error,

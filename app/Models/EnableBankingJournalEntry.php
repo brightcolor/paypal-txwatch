@@ -1,0 +1,76 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * One transaction as the bank reported it - recorded, not booked.
+ *
+ * THIS IS THE HOLDING AREA. Nothing reads it for reports, for the EÜR or for the
+ * reconciliation, and that is the whole point of the current stage: the pull runs,
+ * the data can be looked at, and no figure in the books moves because of it.
+ *
+ * `promoted_at` and `bank_transaction_id` stay empty until that changes. When it
+ * does, the entries go through the SAME importer the file import uses - they share
+ * `import_hash` with it, so an entry cannot become a duplicate of a statement line
+ * that was already imported by hand.
+ */
+class EnableBankingJournalEntry extends Model
+{
+    protected $table = 'enable_banking_journal';
+
+    protected $fillable = [
+        'import_hash', 'booked_on', 'valued_on', 'amount', 'currency', 'purpose',
+        'counterparty_name', 'counterparty_iban', 'end_to_end_id', 'bank_ref',
+        'pretix_order_code', 'raw', 'pulled_at', 'promoted_at', 'bank_transaction_id',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'booked_on' => 'date',
+            'valued_on' => 'date',
+            'amount' => 'decimal:2',
+            'raw' => 'array',
+            'pulled_at' => 'datetime',
+            'promoted_at' => 'datetime',
+        ];
+    }
+
+    /** Money in - the direction that can settle a ticket order. */
+    public function scopeCredits($query)
+    {
+        return $query->where('amount', '>', 0);
+    }
+
+    public function isPromoted(): bool
+    {
+        return $this->promoted_at !== null;
+    }
+
+    /**
+     * The normalized entry as the shared import pipeline expects it.
+     *
+     * Rebuilt from the stored columns rather than from `raw`, so a promotion uses
+     * exactly the values a human reviewed in the journal - not a second, possibly
+     * different interpretation of the payload.
+     *
+     * @return array<string, mixed>
+     */
+    public function toImportEntry(): array
+    {
+        return [
+            'booked_on' => $this->booked_on?->format('Y-m-d'),
+            'valued_on' => $this->valued_on?->format('Y-m-d'),
+            'amount' => (float) $this->amount,
+            'currency' => $this->currency,
+            'purpose' => $this->purpose,
+            'counterparty_name' => $this->counterparty_name,
+            'counterparty_iban' => $this->counterparty_iban,
+            'end_to_end_id' => $this->end_to_end_id,
+            'bank_ref' => $this->bank_ref,
+            'source_format' => 'enablebanking',
+        ];
+    }
+}

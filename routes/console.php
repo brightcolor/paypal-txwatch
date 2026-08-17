@@ -35,14 +35,22 @@ Schedule::command('disputes:check')->everySixHours()->withoutOverlapping(30);
 // normally a no-op that says so once in the log (see config/bank.php).
 Schedule::command('bank:sync')->dailyAt('06:30')->withoutOverlapping(30);
 
-// Daily bank pull via Enable Banking (PSD2) - the path that needs no DK product
+// Bank pull via Enable Banking (PSD2) - the path that needs no DK product
 // registration. No-op unless a bank was connected.
 //
-// SIX MINUTES AFTER THE FinTS RUN, not at the same time: both end in the same
-// import + reconcile pipeline, and two concurrent runs would race on the dedupe
-// hash of the very same transactions. Sequential costs nothing here, since each
-// run takes seconds.
-Schedule::command('enablebanking:sync')->dailyAt('06:36')->withoutOverlapping(30);
+// FOUR TIMES A DAY, AND THAT NUMBER IS THE RULE, not a preference: PSD2 grants an
+// aggregator four accesses per account per day WITHOUT the account holder present.
+// Every six hours is exactly those four. Asking more often does not fetch more;
+// the bank refuses, and once the quota is spent the feed is dead until midnight.
+//
+// The command additionally checks the gap to the last pull (Sync::tooSoon), because
+// a restarted scheduler fires again on the next tick and would burn the quota on
+// its own. A manual "Jetzt abrufen" is attended and does not count.
+//
+// AT :36 rather than on the hour: the 06:30 FinTS run ends in the same import
+// pipeline, and two concurrent runs would race on the dedupe hash of the very same
+// transactions.
+Schedule::command('enablebanking:sync')->cron('36 */6 * * *')->withoutOverlapping(30);
 
 // Keep the error log from growing forever: drop resolved errors last seen more
 // than 30 days ago (unresolved ones stay until handled).

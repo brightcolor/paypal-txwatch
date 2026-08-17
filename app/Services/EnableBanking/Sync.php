@@ -18,11 +18,45 @@ class Sync
         private readonly Client $client,
         private readonly TransactionMapper $mapper,
         private readonly BankStatementImporter $importer,
+        private readonly JournalWriter $journal,
     ) {
     }
 
     /**
-     * @return array{imported: int, matched: int, pretix_proposed: int, skipped_pending: int, truncation_notice: ?string}
+     * Is an unattended pull allowed right now?
+     *
+     * PSD2 grants four accesses a day without the account holder present, which
+     * is why the scheduler runs every six hours. But a restarted scheduler fires
+     * again on the next tick, and once the quota is spent the bank refuses until
+     * midnight - the feed would be dead for the rest of the day for no reason.
+     *
+     * Returns the reason to skip, or null when the way is clear. Only the
+     * SCHEDULED path asks; a manual pull counts as attended and is not limited.
+     */
+    public function tooSoon(EnableBankingConnection $connection): ?string
+    {
+        $gap = (int) config('bank.enablebanking.min_hours_between_pulls');
+
+        if ($gap <= 0 || $connection->last_synced_at === null) {
+            return null;
+        }
+
+        $next = $connection->last_synced_at->copy()->addHours($gap);
+
+        if ($next->isFuture()) {
+            return sprintf(
+                'Letzter Abruf war %s. PSD2 erlaubt vier Abrufe am Tag ohne Anwender; der nächste '
+                . 'planmässige ist ab %s möglich.',
+                $connection->last_synced_at->format('d.m.Y H:i'),
+                $next->format('d.m.Y H:i'),
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{recorded: int, known: int, with_order: int, imported: int, matched: int, pretix_proposed: int, skipped_pending: int, truncation_notice: ?string, mode: string}
      */
     public function sync(EnableBankingConnection $connection): array
     {
@@ -57,7 +91,20 @@ class Sync
         $page = $this->client->transactions($accountUid, $from, $to);
 
         $mapped = $this->mapper->map($page->transactions);
-        $import = $this->importer->importEntries($mapped['entries']);
+
+        /*
+         * THE JOURNAL IS WRITTEN IN BOTH MODES, and on purpose: it is the record
+         * of what the bank actually sent, and that record should not disappear the
+         * day the entries start counting. In 'import' mode the same entries
+         * additionally go through the shared pipeline.
+         */
+        $journal = $this->journal->record($mapped['entries']);
+
+        $mode = (string) config('bank.enablebanking.mode');
+
+        $import = $mode === 'import'
+            ? $this->importer->importEntries($mapped['entries'])
+            : ['imported' => 0, 'matched' => 0, 'pretix_proposed' => 0];
 
         $connection->forceFill([
             'status' => EnableBankingConnection::STATUS_ACTIVE,
@@ -66,10 +113,14 @@ class Sync
         ])->save();
 
         return [
+            'recorded' => $journal['recorded'],
+            'known' => $journal['known'],
+            'with_order' => $journal['with_order'],
             'imported' => $import['imported'],
             'matched' => $import['matched'],
             'pretix_proposed' => $import['pretix_proposed'] ?? 0,
             'skipped_pending' => $mapped['skipped_pending'],
+            'mode' => $mode,
             /*
              * PASSED ALL THE WAY UP, not swallowed here. If a cap bit, the
              * caller has to be able to say so - a pull that reports "40 new"
