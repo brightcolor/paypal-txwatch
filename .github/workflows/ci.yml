@@ -19,7 +19,34 @@ jobs:
           extensions: intl, zip, gd, pdo_sqlite, sqlite3
           coverage: none
 
+      # Composer's package cache, keyed on the lock file. THE BIGGEST LEVER
+      # AGAINST THE 429s below: with a warm cache almost nothing is fetched from
+      # codeload at all, so the run neither trips the rate limit nor waits on it.
+      # restore-keys lets a changed lock file still reuse the previous cache and
+      # only fetch the delta.
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer/files
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      # WHY THIS STEP EXISTS: `composer install --prefer-dist` pulls zipballs
+      # from codeload.github.com, which GitHub rate-limits PER SOURCE IP and far
+      # more strictly for unauthenticated requests. Hosted runners share their
+      # egress addresses with everyone else's jobs, so a build can collect a
+      # "HTTP/2 429" without having done anything itself - measured on
+      # 2026-08-17, when three runs in a row died in the middle of the install.
+      #
+      # Two counter-measures, both cheap:
+      #   - the token every workflow already has, so the download is no longer
+      #     anonymous;
+      #   - fewer parallel downloads (default is 12), because that burst is what
+      #     trips the abuse detection in the first place.
       - name: Install Composer dependencies
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.GITHUB_TOKEN }}"}}'
+          COMPOSER_MAX_PARALLEL_HTTP: '6'
         run: composer install --prefer-dist --no-interaction --no-progress
 
       - name: Prepare environment
