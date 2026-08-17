@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.57.5] - 2026-08-17
+
+### Behoben
+- **Der Bankabruf holte die Umsätze und verlor sie beim Speichern.** `bank_transactions.source_format`
+  war auf 10 Zeichen bemessen – passend zu `camt`, `mt940` und `fints`. Der neue Weg schreibt
+  `enablebanking`, also 13, und PostgreSQL wies den ganzen Einfügevorgang ab: „value too long for
+  type character varying(10)". Der Abruf war korrekt, nur der letzte Schritt fiel um. Die Spalte
+  fasst jetzt 20 Zeichen.
+  - **Verbreitert statt gekürzt:** `eb` hätte ohne Migration gepasst, aber diese Spalte liest ein
+    Mensch – im Export und wenn jemand fragt, woher eine Buchung kommt. Nichts im Code verzweigt
+    auf ihren Wert, also ist ein kryptisches Kürzel der schlechtere Tausch.
+  - **Warum die Tests das nicht fanden:** Sie laufen auf SQLite, und SQLite ignoriert
+    varchar-Längen vollständig. Der Einfügevorgang ging dort durch und scheiterte nur auf
+    PostgreSQL. Der neue Test liest deshalb die Spaltenbreite aus den Migrationen und hält sie
+    gegen jeden `source_format`-Wert im Code – treiberunabhängig, und er fängt auch den nächsten.
+
 ## [0.57.4] - 2026-08-17
 
 ### Behoben
