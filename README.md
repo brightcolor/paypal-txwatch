@@ -349,12 +349,21 @@ DB-Fehler nicht zurück in die DB, damit das Logging nie den Request killt oder 
   **PayPal-Auszahlungen** (kam die Auszahlung aufs Konto an?) und gegen **pretix-Überweisungen** (Bestellcode
   im Verwendungszweck). Offene Eingänge sind als Badge sichtbar; manuelles Ignorieren/Zurücksetzen und ein
   „Erneut abgleichen" sind möglich.
-- **Automatischer Bankabruf via FinTS/HBCI** (Bank → Auto-Abruf (FinTS), Admin): direkte Anbindung an die
-  Sparkasse ohne Drittanbieter. Zugangsdaten + FinTS-Server-Daten (fints.org) + **DK-Registrierungsnummer**
-  eintragen, TAN-Verfahren wählen, einmal per TAN anmelden – danach zieht `bank:sync` täglich die Umsätze und
-  gleicht sie über dieselbe Pipeline ab. Zugangsdaten/Session verschlüsselt. Verlangt die Bank erneut eine
-  TAN, meldet TxWatch „neu anmelden nötig". (Die DK-Registrierungsnummer muss vorab beantragt werden und kann
-  einige Wochen bis zur Aktivierung am Bankserver brauchen.)
+- **Automatischer Bankabruf via Enable Banking** (Bank → Bank verbinden, Admin): der Weg über PSD2, ohne
+  Registrierung bei der Deutschen Kreditwirtschaft. Admin lädt einmalig den Anwendungsschlüssel aus dem
+  Enable-Banking-Control-Panel hoch (die Kennung steckt im Dateinamen und wird mitgelesen), wählt die Bank
+  und wird zu ihr geleitet; die Freigabe erfolgt **auf der Seite der Bank**. TxWatch sieht PIN und TAN nie,
+  nur einen Leseschlüssel. Danach zieht `enablebanking:sync` täglich die Umsätze über dieselbe Pipeline.
+  - Der Preis: ein Dritter zwischen Bank und Buchhaltung, und PSD2 begrenzt die Zustimmung auf **höchstens
+    90 Tage**. TxWatch warnt 14 Tage vorher und nicht erst, wenn sie abgelaufen ist.
+  - Der **Selbsttest** prüft die Angabe, an der es am häufigsten scheitert: ob die Rückkehr-Adresse dieser
+    Installation im Control Panel eingetragen ist. Fehlt sie, bricht die Freigabe ab, bevor die Bank
+    überhaupt erreicht wird.
+- **Automatischer Bankabruf via FinTS/HBCI** – **stillgelegt** (`FINTS_ENABLED`, ohne Angabe aus). Direkte
+  Anbindung an die Bank ohne Drittanbieter, vollständig gebaut, aber nicht benutzbar: Ohne bei der Deutschen
+  Kreditwirtschaft freigeschaltete Registrierungsnummer weist der Bankrechner jeden Dialog mit „9078" ab –
+  und zwar erst **nach** erfolgreicher Anmeldung, was wie ein Fehler von TxWatch aussieht. Gespeicherte
+  Zugangsdaten bleiben erhalten und gelten wieder, sobald `FINTS_ENABLED=1` gesetzt wird.
 - **Export-Vorschau**: Auf der Transaktionsliste zeigt „Vorschau" die ersten Zeilen samt Summe, bevor
   exportiert wird. **Dashboard**: Umsatz-Vergleiche (Vormonat/Vorjahr) und Top-Events.
 

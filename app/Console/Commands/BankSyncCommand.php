@@ -21,6 +21,19 @@ class BankSyncCommand extends Command
 
     public function handle(FintsSync $sync): int
     {
+        /*
+         * Checked here as well as in FintsSync, and not because one of them is
+         * redundant: this one keeps the daily 06:30 run from touching the
+         * database or writing a "last_error" for something that is a
+         * configuration decision, not a failure. It also reads as a plain line
+         * in the scheduler log instead of a stack trace.
+         */
+        if ($reason = FintsSync::disabledReason()) {
+            $this->info($reason);
+
+            return self::SUCCESS;
+        }
+
         $connection = FintsConnection::current();
 
         if (! $connection->isActive()) {

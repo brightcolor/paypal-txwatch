@@ -20,7 +20,20 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        /*
+         * The Enable Banking key vault needs to be told WHERE the key lives, and
+         * a plain string cannot be auto-resolved - without this binding every
+         * page that touches it dies with "Unresolvable dependency resolving
+         * [Parameter #0 <required> string $directory]".
+         *
+         * A singleton, because the vault caches nothing: it reads the key fresh
+         * from disk on every call by design, so one instance per request is
+         * enough and there is nothing to go stale.
+         */
+        $this->app->singleton(
+            \App\Services\EnableBanking\KeyVault::class,
+            fn () => new \App\Services\EnableBanking\KeyVault(config('bank.enablebanking.key_dir')),
+        );
     }
 
     /**

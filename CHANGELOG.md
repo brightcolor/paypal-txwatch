@@ -4,6 +4,59 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.57.0] - 2026-08-17
+
+### Hinzugefügt
+- **Bank verbinden ohne PIN – über Enable Banking (PSD2).** Ein zweiter Weg zum Kontoumsatz, unter
+  **Bank → Bank verbinden**. Der Unterschied zu FinTS ist nicht die Bequemlichkeit, sondern wer die
+  Zugangsdaten sieht: Du meldest dich bei **deiner** Bank an und erlaubst dort den Lesezugriff.
+  TxWatch bekommt PIN und TAN nie zu Gesicht, nur einen Leseschlüssel für Umsätze und Salden.
+  - **Der Preis steht genauso deutlich da:** Ein Dritter sitzt zwischen Bank und Buchhaltung und
+    sieht jeden Umsatz mit. Und PSD2 begrenzt die Zustimmung auf höchstens 90 Tage – danach ist sie
+    erneut zu erteilen, sonst reisst der Abruf ab.
+  - **Zweimal gewarnt, nicht einmal:** Der tägliche Lauf meldet nicht nur, wenn die Zustimmung
+    abgelaufen **ist**, sondern schon 14 Tage vorher, dass sie ausläuft. Erneuern geht nur mit
+    Anmeldung bei der Bank – das am Morgen des Ablaufs zu erfahren heisst, dass die Umsätze schon
+    eine Lücke haben.
+  - Die Umsätze landen in derselben Pipeline wie Kontoauszug-Import und FinTS
+    (`BankStatementImporter`), erben also Dublettenschutz, automatischen Abgleich und die
+    pretix-Zahlungsmeldung unverändert.
+- **Der Schlüssel wird über die Oberfläche hinterlegt und getauscht.** Anwendungskennung und
+  privater Schlüssel kamen vorher nur aus Umgebungsvariablen – wer tauschen wollte, brauchte Zugriff
+  auf die `compose.yml` und einen Neustart. Jetzt lädt ein Admin die `.pem` aus dem Control Panel
+  direkt hoch.
+  - **Die Kennung steckt im Dateinamen** (`prod_<Kennung>.pem`) und wird mitgelesen, statt abgetippt.
+    Ein Tippfehler in einer UUID äussert sich als nackter 401 ohne weitere Auskunft.
+  - **Geprüft wird vor dem Schreiben:** Zertifikat statt Schlüssel, öffentlicher statt privater Teil,
+    kein RSA, zu kurz – jeder Fall bekommt einen eigenen Satz. Ein unbrauchbarer Schlüssel, der den
+    bisherigen überschrieben hat, macht aus einer laufenden Installation eine kaputte.
+  - **Auf der Platte mit 0600, nicht in der Datenbank.** Ein Datenbankabzug wandert auf Sicherungshosts
+    und Laptops; der nächtliche `pg_dump` enthält damit keinen Bankzugang.
+  - **Selbsttest mit dem eigentlichen Befund:** Er prüft nicht nur, ob Kennung und Schlüssel
+    zusammenpassen, sondern ob die **Rückkehr-Adresse dieser Installation** im Control Panel steht.
+    Das ist der häufigste Einrichtungsfehler und der einzige, den man aus der Fehlermeldung nicht
+    erraten kann – die Bank wird dabei nie erreicht.
+  - **Umgebungsvariablen gehen weiter vor.** Sind `ENABLEBANKING_APPLICATION_ID` oder
+    `ENABLEBANKING_KEY_PATH` gesetzt, gelten sie, und die Seite sagt das oben – sonst lädt jemand
+    hoch, sieht „hinterlegt" und sucht danach, warum die Bank den alten Schlüssel sieht.
+
+### Geändert
+- **FinTS ist stillgelegt** (`FINTS_ENABLED`, ohne Angabe aus). Der Grund ist keine technische
+  Schwäche, sondern die fehlende Freischaltung: Ohne bei der Deutschen Kreditwirtschaft
+  registrierte Nummer weist der Bankrechner jeden Dialog mit „9078 – Banking-Programm ist nicht
+  registriert" ab, und zwar **nach** erfolgreicher Anmeldung. Von aussen sieht das wie ein Fehler
+  von TxWatch aus: Zugangsdaten stimmen, Abruf kommt trotzdem nicht. Eine Maske, die ausnahmslos
+  dort endet, ist schlechter als keine.
+  - **Stillgelegt, nicht abgerissen.** Zugangsdaten, TAN-Verfahren, gespeicherte Sitzung und
+    Bankliste bleiben unangetastet und gelten wieder, sobald `FINTS_ENABLED=1` gesetzt ist. Die
+    Einrichtungsseite bleibt erreichbar und erklärt oben, warum sie ruht.
+  - **Die Sperre sitzt am Engpass**, nämlich in `FintsSync::sync()`, nicht an den Schaltflächen.
+    Jeder Weg zur Bank läuft dort durch – auch der tägliche Lauf um 06:30, der andernfalls
+    munter weiter angeklopft hätte, während die Oberfläche „stillgelegt" anzeigte.
+- **Der Menüpunkt heisst jetzt „Auto-Abruf (FinTS, stillgelegt)".** Die Seitenleiste ist die Stelle,
+  an der jemand *vor* dem Öffnen hinsieht; ein unverändertes Etikett schickt ihn in eine Sackgasse,
+  die er erst drinnen erkennt.
+
 ## [0.56.1] - 2026-07-28
 
 ### Behoben

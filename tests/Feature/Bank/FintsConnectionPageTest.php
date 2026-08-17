@@ -25,9 +25,64 @@ class FintsConnectionPageTest extends TestCase
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
 
+        /*
+         * FinTS IS SWITCHED OFF BY DEFAULT (see config/bank.php), and a closed
+         * path refuses to save - which is exactly what these four tests tripped
+         * over when the switch was introduced.
+         *
+         * Turned on HERE and not globally in phpunit.xml: this class tests the
+         * saving mechanics (masking, trimming, closure parameter names), and
+         * those have to keep working for the day the path is opened again. That
+         * the switch itself refuses is asserted separately below, with the
+         * default left alone.
+         */
+        config(['bank.fints.enabled' => true]);
+
         $admin = User::factory()->create(['is_active' => true]);
         $admin->assignRole(Role::findByName('admin'));
         $this->actingAs($admin);
+    }
+
+    /**
+     * With FinTS switched off, saving writes nothing.
+     *
+     * NOT MERELY COSMETIC. The form is hidden while the path is closed, but a
+     * browser tab left open from before the switch was flipped still holds a
+     * live Livewire component, and its "Speichern" would otherwise go through -
+     * storing credentials for a path that cannot be used.
+     */
+    public function test_saving_is_refused_while_fints_is_switched_off(): void
+    {
+        config(['bank.fints.enabled' => false]);
+
+        Livewire::test(FintsConnectionPage::class)
+            ->fillForm([
+                'bank_code' => '14051000',
+                'fints_url' => 'https://banking-mv6.s-fints-pt-mv.de/fints30',
+                'product_id' => 'TEST-DK-NUMMER',
+                'product_version' => '1.0',
+                'username' => 'testuser',
+                'pin' => 'geheim',
+            ])
+            ->call('save');
+
+        $this->assertNull(FintsConnection::current()->bank_code);
+        $this->assertNull(FintsConnection::current()->username);
+    }
+
+    /** Switched off, the page offers no actions at all - not disabled ones. */
+    public function test_no_header_actions_while_switched_off(): void
+    {
+        config(['bank.fints.enabled' => false]);
+
+        $page = new FintsConnectionPage();
+
+        $this->assertNotNull($page->getDisabledReasonProperty());
+        $this->assertStringContainsString('Bank verbinden', (string) $page->getDisabledReasonProperty());
+
+        config(['bank.fints.enabled' => true]);
+
+        $this->assertNull((new FintsConnectionPage())->getDisabledReasonProperty());
     }
 
     public function test_saving_the_form_stores_the_settings(): void

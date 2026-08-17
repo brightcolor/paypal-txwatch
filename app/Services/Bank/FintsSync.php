@@ -20,10 +20,45 @@ class FintsSync
     }
 
     /**
+     * Reason the FinTS path is closed, or null while it is open.
+     *
+     * Public and static because three very different callers need the exact same
+     * sentence: the settings page (as a notice), the console command (as a log
+     * line) and this service (as an exception). Three hand-written variants of
+     * one explanation drift apart, and the one the operator happens to read is
+     * then the outdated one.
+     */
+    public static function disabledReason(): ?string
+    {
+        if (config('bank.fints.enabled')) {
+            return null;
+        }
+
+        return 'Der FinTS-Abruf ist stillgelegt: Ohne bei der Deutschen Kreditwirtschaft '
+            . 'freigeschaltete Registrierungsnummer weist der Bankrechner jeden Abruf ab – auch bei '
+            . 'richtigen Zugangsdaten, und erst nach erfolgreicher Anmeldung. Kontoumsätze kommen '
+            . 'über „Bank verbinden" (Enable Banking) oder den Kontoauszug-Import herein.';
+    }
+
+    /**
      * @return array{imported: int, matched: int, pretix_proposed: int}
      */
     public function sync(FintsConnection $connection): array
     {
+        /*
+         * THE CHOKE POINT, and that is why the guard sits here rather than on
+         * the buttons.
+         *
+         * Every route to the bank runs through this method: the "Jetzt abrufen"
+         * action, the daily `bank:sync` command and the scheduler behind it. A
+         * check placed only on the settings page would leave the scheduler
+         * happily dialling the bank every morning at 06:30 - the kind of second
+         * door that makes a switch look like it works while it doesn't.
+         */
+        if ($reason = self::disabledReason()) {
+            throw new \RuntimeException($reason);
+        }
+
         if (! $connection->isActive()) {
             throw new \RuntimeException('Keine aktive FinTS-Bankverbindung.');
         }

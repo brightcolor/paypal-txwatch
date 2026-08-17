@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\EnableBankingCallbackController;
 use App\Http\Controllers\PretixWebhookController;
 use App\Http\Controllers\SharedFilterController;
 use App\Http\Controllers\TwoFactorChallengeController;
@@ -16,6 +17,22 @@ Route::post('/webhooks/pretix/{secret}', PretixWebhookController::class)
 Route::middleware('auth')
     ->get('/f/{token}', SharedFilterController::class)
     ->name('filters.shared');
+
+/*
+ * The bank's return address for Enable Banking.
+ *
+ * THE PATH IS PART OF THE CONTRACT: it is registered in the Enable Banking
+ * control panel and has to match character for character. The route name is set
+ * explicitly rather than derived, because the setup page builds the address from
+ * it - an auto-generated name would change silently when the controller is
+ * renamed, and the registered entry would stop matching.
+ *
+ * Behind `auth` on purpose; see the controller for why that works with a
+ * SameSite=lax session cookie.
+ */
+Route::middleware('auth')
+    ->get('/bank/enablebanking/callback', EnableBankingCallbackController::class)
+    ->name('enablebanking.callback');
 
 Route::middleware('auth')->group(function () {
     Route::get('/two-factor-challenge', [TwoFactorChallengeController::class, 'show'])

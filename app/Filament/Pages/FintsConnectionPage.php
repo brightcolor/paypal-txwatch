@@ -30,7 +30,17 @@ class FintsConnectionPage extends Page implements HasForms
 
     protected static ?string $navigationGroup = 'Bank';
 
-    protected static ?string $navigationLabel = 'Auto-Abruf (FinTS)';
+    /**
+     * The label carries the state, because the sidebar is where someone looks
+     * BEFORE opening the page. "Auto-Abruf (FinTS)" next to a path that cannot
+     * be walked sends people into a dead end they only recognise once inside.
+     */
+    public static function getNavigationLabel(): string
+    {
+        return FintsSync::disabledReason()
+            ? 'Auto-Abruf (FinTS, stillgelegt)'
+            : 'Auto-Abruf (FinTS)';
+    }
 
     protected static ?string $title = 'Bank-Auto-Abruf (FinTS/HBCI)';
 
@@ -161,7 +171,8 @@ class FintsConnectionPage extends Page implements HasForms
         ])->statePath('data');
     }
 
-    public function save(): void
+    /** The actual write; reached through save(), which guards it. */
+    private function store(): void
     {
         $state = $this->form->getState();
         $c = FintsConnection::current();
@@ -193,8 +204,42 @@ class FintsConnectionPage extends Page implements HasForms
         return FintsConnection::current();
     }
 
+    /** Blade reads this as `$this->disabledReason`; null while FinTS is open. */
+    public function getDisabledReasonProperty(): ?string
+    {
+        return FintsSync::disabledReason();
+    }
+
+    /**
+     * Saving is refused while the path is closed.
+     *
+     * Not merely cosmetic: the form is hidden, but a browser tab left open from
+     * before the switch was flipped still holds a live Livewire component, and
+     * its "Speichern" would go through.
+     */
+    public function save(): void
+    {
+        if ($reason = FintsSync::disabledReason()) {
+            Notification::make()->title('Stillgelegt')->body($reason)->warning()->persistent()->send();
+
+            return;
+        }
+
+        $this->store();
+    }
+
     protected function getHeaderActions(): array
     {
+        /*
+         * No actions at all while stillgelegt - not disabled ones. A greyed-out
+         * "Login / Bank verbinden" says "almost ready"; it is not, and no click
+         * will change that. The reason lives in the section at the top of the
+         * page instead, where there is room to explain it.
+         */
+        if (FintsSync::disabledReason()) {
+            return [];
+        }
+
         return [
             Action::make('tanModes')
                 ->label('TAN-Verfahren anzeigen')
