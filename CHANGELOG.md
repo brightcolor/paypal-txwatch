@@ -4,6 +4,51 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.59.0] - 2026-08-17
+
+### Hinzugefügt
+- **Die Zuordnung erkennt auch krumm geschriebene Bestellnummern – und schlägt vor, statt zu buchen.**
+  Am echten Bestand gemessen, nicht am Wunschbild (166 Eingänge gegen 1025 Bestellnummern): 142 stehen
+  wörtlich im Verwendungszweck, 22 sind PayPal-Auszahlungen und eigene Rechnungen und treffen
+  richtigerweise nichts – und **2 sind vertippt**:
+  - `RSYBQ` statt `R9YBQ` (S statt 9) und `…20269JCW` statt `G9JCW`.
+  - Beide werden jetzt als **Vorschlag** erkannt, eindeutig, und in beiden Fällen bestätigt der Betrag
+    genau eine Bestellung. **Zugeordnet werden sie trotzdem nicht:** Ein Zeichen Abweichung ist eine
+    Vermutung, und auf Vermutungen wird kein Geld gebucht. Der Vorschlag steht mit Sicherheitswert und
+    Begründung da, die Entscheidung bleibt beim Menschen.
+  - Verwechslungspaare (S/9, O/0, I/1, B/8, G/6, Z/2 …) zählen höher als eine beliebige Abweichung, ein
+    passender Betrag noch höher. Ein Vorschlag erreicht **höchstens 90 von 100**, ein wörtlicher Treffer
+    100 – ein Vorschlag kann also nie so gut aussehen wie ein Befund.
+  - Neuer Filter **„Offene Vorschläge"**: das ist die Arbeitsliste. Zugeordnetes braucht niemanden,
+    und was gar keinen Kandidaten hat, braucht einen Blick auf den Zweck und keinen Klick.
+- **Bereinigung vor der Suche** (Trenn- und Leerzeichen raus). **Gemessen brachte das null zusätzliche
+  Treffer**, und das steht hier statt einer Erfolgsmeldung: Die Leerzeichen, die die Bank in ihre Felder
+  streut (`GAG-Wismar -2026-…`, `ACFRIEND- S2026…`), fielen bisher zufällig **neben** die Codes. Es
+  bleibt drin, weil es eine Zeile kostet und dieselbe Feldumbrucherei irgendwann mitten in einen Code
+  fällt – aus denselben Auszügen: `Be trag`, `76793 0`. Vorsorge, nicht Verbesserung.
+- **Protokoll je Umsatz**, Knopf „Protokoll" in der Journalliste. Festgehalten wird, was der Abruf
+  geliefert hat, was die Erkennung daraus gemacht hat, **welcher Text durchsucht wurde**, welche
+  Vorschläge es gab – und was sich bei späteren Abrufen geändert hat.
+  - **Eigene Tabelle, nur angehängt.** Eine Spalte hielte nur die letzte Antwort; gefragt wird aber
+    meist „seit wann sieht das so aus". Ein bekannter Eintrag wird bei jedem Abruf **erneut geprüft** –
+    eine Bestellung, die erst nach dem letzten Abruf importiert wurde, macht aus „nichts gefunden" einen
+    Vorschlag. Ohne das bliebe genau die Überweisung, die vor ihrer Bestellung eintraf, für immer
+    unzugeordnet. Geschrieben wird nur bei Änderung; vier Abrufe am Tag füllten das Protokoll sonst mit
+    „unverändert".
+  - Der **durchsuchte Text** steht mit im Protokoll. Er ist das Einzige, was die Frage „warum wurde
+    nichts gefunden" beantwortet, ohne zu raten, welche Bereinigung damals lief.
+- **Restrisiko, festgehalten statt weggewünscht:** Bestellnummern sind fünf Zeichen. Steckt eine davon
+  zufällig in einer Bankreferenz – `MV070` sitzt wirklich in einer Sparkassen-Gebührenrechnung –, wird
+  sie wörtlich gefunden, und das ist richtig: Die Zeichenfolge steht da. Eine Trennzeichenregel hilft
+  nicht, weil echte Codes ohne Trennzeichen angeklebt werden (`ACFRIENDS2026RN9FK`). Was die Fälle
+  scheidet, ist der **Betrag** – deshalb trägt jeder Kandidat, ob er passt, und ein Test hält fest, dass
+  eine solche Kollision **erkennbar** bleibt.
+
+### Behoben
+- Der Changelog-Eintrag zu dieser Fassung fehlte zunächst: Das Skript, das ihn einfügen sollte, brach an
+  einem Anführungszeichen ab, Commit und Tag liefen aber durch. Der Tag bleibt, wo er ist – nachträglich
+  verschobene Tags haben in dieser Sitzung schon genug Verwirrung gestiftet.
+
 ## [0.58.1] - 2026-08-17
 
 ### Geändert
