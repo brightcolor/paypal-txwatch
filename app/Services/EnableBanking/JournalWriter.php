@@ -23,6 +23,10 @@ use Illuminate\Support\Facades\DB;
  */
 class JournalWriter
 {
+    public function __construct(private readonly PurposeMatcher $matcher)
+    {
+    }
+
     /**
      * @param  array<int, array<string, mixed>>  $entries  normalized, from TransactionMapper
      * @return array{recorded: int, known: int, with_order: int, dropped: int, refunds: int, kept: array<int, array<string, mixed>>}
@@ -36,13 +40,22 @@ class JournalWriter
         $refunds = 0;
         $kept = [];
 
-        // Loaded once, not per entry: the candidate lookup runs over the same
-        // small set of pending orders for every line.
-        $candidates = $this->pendingOrderCodes();
+        // Loaded once, not per entry: the lookup runs over the same set of pending
+        // orders for every line.
+        $orders = $this->pendingOrders();
 
         foreach ($entries as $entry) {
             $hash = self::hash($entry);
-            $code = $this->orderCodeIn((string) ($entry['purpose'] ?? ''), $candidates);
+
+            $match = $this->matcher->match(
+                $entry['purpose'] ?? null,
+                $orders,
+                isset($entry['amount']) ? (float) $entry['amount'] : null,
+            );
+
+            // Only an EXACT hit becomes an assignment; fuzzy stays a proposal in
+            // `match_candidates`. See PurposeMatcher for why.
+            $code = $match['code'];
 
             /*
              * MONEY OUT IS DROPPED - unless it carries an order code.
@@ -82,6 +95,10 @@ class JournalWriter
                 ['import_hash' => $hash],
                 array_merge($entry, [
                     'pretix_order_code' => $code,
+                    'match_method' => $match['method'],
+                    'match_score' => $match['score'],
+                    'match_candidates' => $match['candidates'],
+                    'match_haystack' => $match['haystack'],
                     'raw' => $entry,
                     'pulled_at' => now(),
                 ]),
@@ -89,8 +106,20 @@ class JournalWriter
 
             if ($journal->wasRecentlyCreated) {
                 $recorded++;
+                $this->protocol($journal, 'pulled', $entry, $match);
             } else {
                 $known++;
+                /*
+                 * A KNOWN ENTRY IS RE-EXAMINED, and that is the point of doing it
+                 * on every pull: an order that only became due after the last pull
+                 * turns "nothing found" into a proposal. Without this the very
+                 * transfer that arrived before its order was imported would stay
+                 * unmatched forever.
+                 *
+                 * Written only when something actually changed - four pulls a day
+                 * would otherwise fill the protocol with "still the same".
+                 */
+                $this->reexamine($journal, $match);
             }
 
             if (filled($code)) {
@@ -114,31 +143,142 @@ class JournalWriter
     }
 
     /**
-     * The order codes of orders that are still waiting for a bank transfer.
+     * Writes one protocol line for a freshly recorded entry.
+     *
+     * TWO EVENTS, NOT ONE: what the pull delivered, and what the recognition made
+     * of it. Merged into a single line the two would be indistinguishable later -
+     * and the question "did the bank change the text or did our matching change" is
+     * exactly the one that comes up.
+     *
+     * @param  array<string, mixed>  $entry
+     * @param  array<string, mixed>  $match
+     */
+    private function protocol(EnableBankingJournalEntry $journal, string $kind, array $entry, array $match): void
+    {
+        $journal->events()->create([
+            'kind' => $kind,
+            'message' => sprintf(
+                'Abgerufen: %s über %s EUR%s. Verwendungszweck %d Zeichen.',
+                (float) ($entry['amount'] ?? 0) < 0 ? 'Abbuchung' : 'Eingang',
+                number_format(abs((float) ($entry['amount'] ?? 0)), 2, ',', '.'),
+                filled($entry['counterparty_name'] ?? null) ? ' von ' . $entry['counterparty_name'] : '',
+                mb_strlen((string) ($entry['purpose'] ?? '')),
+            ),
+            'context' => [
+                'bank_ref' => $entry['bank_ref'] ?? null,
+                'booked_on' => $entry['booked_on'] ?? null,
+            ],
+            'at' => now(),
+        ]);
+
+        $journal->events()->create($this->matchEvent($match));
+    }
+
+    /**
+     * Re-examines a known entry - and only writes when the picture changed.
+     *
+     * @param  array<string, mixed>  $match
+     */
+    private function reexamine(EnableBankingJournalEntry $journal, array $match): void
+    {
+        $before = [$journal->match_method, $journal->pretix_order_code, $journal->match_score];
+        $after = [$match['method'], $match['code'], $match['score']];
+
+        if ($before === $after) {
+            return;
+        }
+
+        $journal->forceFill([
+            'pretix_order_code' => $match['code'] ?? $journal->pretix_order_code,
+            'match_method' => $match['method'],
+            'match_score' => $match['score'],
+            'match_candidates' => $match['candidates'],
+            'match_haystack' => $match['haystack'],
+        ])->save();
+
+        $event = $this->matchEvent($match);
+        $event['kind'] = 'changed';
+        $event['message'] = 'Erneut geprüft, Ergebnis geändert: ' . $event['message'];
+
+        $journal->events()->create($event);
+    }
+
+    /**
+     * The protocol line for a recognition result.
+     *
+     * Says WHY, not just what: which string was searched, which stage hit, and with
+     * a proposal how many candidates there were. A protocol that only records the
+     * outcome answers no question that anyone actually asks.
+     *
+     * @param  array<string, mixed>  $match
+     * @return array<string, mixed>
+     */
+    private function matchEvent(array $match): array
+    {
+        $codes = implode(', ', array_column($match['candidates'], 'code'));
+
+        $message = match ($match['method']) {
+            PurposeMatcher::EXACT => sprintf('Bestellnummer %s im Verwendungszweck gefunden.', $codes),
+            PurposeMatcher::NORMALISED => sprintf(
+                'Bestellnummer %s erst nach Entfernen von Trenn- und Leerzeichen gefunden.',
+                $codes,
+            ),
+            PurposeMatcher::FUZZY => sprintf(
+                'Keine Bestellnummer wörtlich gefunden. %d Vorschlag/Vorschläge mit einem abweichenden '
+                . 'Zeichen: %s. Wird NICHT automatisch zugeordnet.',
+                count($match['candidates']),
+                $codes,
+            ),
+            default => 'Keine offene Bestellnummer im Verwendungszweck erkennbar.',
+        };
+
+        return [
+            'kind' => match ($match['method']) {
+                PurposeMatcher::EXACT, PurposeMatcher::NORMALISED => 'matched',
+                PurposeMatcher::FUZZY => 'suggested',
+                default => 'unmatched',
+            },
+            'message' => $message,
+            'context' => [
+                'method' => $match['method'],
+                'score' => $match['score'],
+                // The searched string, so nobody has to guess later which
+                // normalisation ran at the time.
+                'haystack' => $match['haystack'],
+                'candidates' => $match['candidates'],
+            ],
+            'at' => now(),
+        ];
+    }
+
+    /**
+     * The orders still waiting for a bank transfer, with their amount.
      *
      * DELIBERATELY NOT A REGULAR EXPRESSION over the purpose text. A pattern like
-     * "four to six capitals" matches half of every SEPA reference - including the
-     * bank's own ones. Searching for codes that ACTUALLY EXIST and are ACTUALLY
-     * open cannot invent a match. The reconciliation does it exactly this way
-     * (BankPretixReporter::findPendingOrder), and this stays consistent with it so
-     * the journal predicts what the booking step will later do.
+     * "five capitals" matches half of every SEPA reference - measured on the real
+     * data it would have taken `MV070` out of a Sparkasse fee reference. Searching
+     * for codes that ACTUALLY EXIST and are ACTUALLY open cannot invent a match.
      *
-     * @return array<string, string> uppercase code => original code
+     * The AMOUNT comes along because it is the strongest corroboration for a fuzzy
+     * proposal: in both real typo cases it narrowed 1025 orders down to exactly
+     * one.
+     *
+     * @return array<string, array{code: string, total: float|null}>
      */
-    private function pendingOrderCodes(): array
+    private function pendingOrders(): array
     {
         if (! $this->pretixAvailable()) {
             return [];
         }
 
-        $codes = [];
+        $orders = [];
 
         PretixOrder::query()
             ->where('status', 'n')
             ->whereNotNull('order_code')
-            ->select(['order_code', 'payment_provider'])
+            ->select(['order_code', 'payment_provider', 'total'])
             ->cursor()
-            ->each(function (PretixOrder $order) use (&$codes): void {
+            ->each(function (PretixOrder $order) use (&$orders): void {
                 $provider = strtolower((string) $order->payment_provider);
 
                 if (! str_contains($provider, 'banktransfer') && $provider !== 'manual') {
@@ -148,32 +288,16 @@ class JournalWriter
                 $code = (string) $order->order_code;
 
                 // Under four characters a code is too short to appear in a purpose
-                // by intent rather than by accident - same bar the reconciliation
-                // uses.
+                // by intent rather than by accident.
                 if (mb_strlen($code) >= 4) {
-                    $codes[mb_strtoupper($code)] = $code;
+                    $orders[mb_strtoupper($code)] = [
+                        'code' => $code,
+                        'total' => $order->total !== null ? (float) $order->total : null,
+                    ];
                 }
             });
 
-        return $codes;
-    }
-
-    /** @param array<string, string> $candidates */
-    private function orderCodeIn(string $purpose, array $candidates): ?string
-    {
-        if ($purpose === '' || $candidates === []) {
-            return null;
-        }
-
-        $haystack = mb_strtoupper($purpose);
-
-        foreach ($candidates as $upper => $original) {
-            if (str_contains($haystack, $upper)) {
-                return $original;
-            }
-        }
-
-        return null;
+        return $orders;
     }
 
     /**

@@ -24,6 +24,7 @@ class EnableBankingJournalEntry extends Model
         'import_hash', 'booked_on', 'valued_on', 'amount', 'currency', 'purpose',
         'counterparty_name', 'counterparty_iban', 'end_to_end_id', 'bank_ref',
         'pretix_order_code', 'raw', 'pulled_at', 'promoted_at', 'bank_transaction_id',
+        'match_method', 'match_score', 'match_candidates', 'match_haystack',
     ];
 
     protected function casts(): array
@@ -33,9 +34,39 @@ class EnableBankingJournalEntry extends Model
             'valued_on' => 'date',
             'amount' => 'decimal:2',
             'raw' => 'array',
+            'match_candidates' => 'array',
             'pulled_at' => 'datetime',
             'promoted_at' => 'datetime',
         ];
+    }
+
+    /** The protocol, oldest first - it is read as a course of events. */
+    public function events(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(EnableBankingJournalEvent::class, 'journal_entry_id')->orderBy('at');
+    }
+
+    /**
+     * Is there a proposal waiting for a decision?
+     *
+     * A proposal exists exactly when the recognition found something but did not
+     * assign it - i.e. one character was wrong or missing.
+     */
+    public function hasSuggestion(): bool
+    {
+        return $this->pretix_order_code === null
+            && is_array($this->match_candidates)
+            && $this->match_candidates !== [];
+    }
+
+    /**
+     * The best proposal, or null.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function bestSuggestion(): ?array
+    {
+        return $this->hasSuggestion() ? $this->match_candidates[0] : null;
     }
 
     /** Money in - the direction that can settle a ticket order. */

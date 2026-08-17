@@ -113,12 +113,72 @@ class EnableBankingJournalResource extends Resource
                     ->state(fn ($record) => (float) $record->amount < 0 ? 'Erstattung' : 'Eingang')
                     ->color(fn ($state) => $state === 'Erstattung' ? 'danger' : 'success'),
 
+                /*
+                 * Assignment and proposal in ONE column, but visibly different.
+                 * Two columns would look like two facts; there is only one - what
+                 * the recognition made of the purpose - and how sure it is.
+                 */
                 Tables\Columns\TextColumn::make('pretix_order_code')
                     ->label('pretix-Auftrag')
                     ->badge()
-                    ->color('warning')
+                    ->state(function ($record) {
+                        if (filled($record->pretix_order_code)) {
+                            return $record->pretix_order_code;
+                        }
+
+                        $suggestion = $record->bestSuggestion();
+
+                        // The question mark is the point: this is a proposal, not a
+                        // finding, and it must not read like one.
+                        return $suggestion ? $suggestion['code'] . ' ?' : null;
+                    })
+                    ->color(fn ($record) => filled($record->pretix_order_code) ? 'success' : 'warning')
                     ->placeholder('—')
-                    ->tooltip('Diese offene pretix-Bestellnummer steht im Verwendungszweck. Gebucht wird noch nichts.'),
+                    ->tooltip(function ($record) {
+                        if (filled($record->pretix_order_code)) {
+                            $exact = $record->match_method === \App\Services\EnableBanking\PurposeMatcher::EXACT;
+
+                            return $exact
+                                ? 'Bestellnummer steht wörtlich im Verwendungszweck.'
+                                : 'Erst nach Entfernen von Trenn- und Leerzeichen gefunden.';
+                        }
+
+                        $suggestion = $record->bestSuggestion();
+
+                        if (! $suggestion) {
+                            return 'Keine offene Bestellnummer erkennbar.';
+                        }
+
+                        return sprintf(
+                            'VORSCHLAG, nicht zugeordnet: im Zweck steht „%s", die offene Bestellung heisst '
+                            . '„%s" – ein Zeichen weicht ab. Betrag %s. Sicherheit %d von 100.',
+                            $suggestion['found'],
+                            $suggestion['code'],
+                            $suggestion['amount_matches'] ? 'passt genau' : 'passt NICHT',
+                            $suggestion['score'],
+                        );
+                    }),
+
+                /*
+                 * How it was recognised. Hidden by default - it matters when
+                 * something looks wrong, not in everyday use.
+                 */
+                Tables\Columns\TextColumn::make('match_method')
+                    ->label('Erkennung')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state) => match ($state) {
+                        \App\Services\EnableBanking\PurposeMatcher::EXACT => 'wörtlich',
+                        \App\Services\EnableBanking\PurposeMatcher::NORMALISED => 'nach Bereinigung',
+                        \App\Services\EnableBanking\PurposeMatcher::FUZZY => 'Vorschlag',
+                        default => 'nichts',
+                    })
+                    ->color(fn (?string $state) => match ($state) {
+                        \App\Services\EnableBanking\PurposeMatcher::EXACT => 'success',
+                        \App\Services\EnableBanking\PurposeMatcher::NORMALISED => 'info',
+                        \App\Services\EnableBanking\PurposeMatcher::FUZZY => 'warning',
+                        default => 'gray',
+                    })
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\IconColumn::make('promoted_at')
                     ->label('Übernommen')
@@ -155,6 +215,36 @@ class EnableBankingJournalResource extends Resource
                 Tables\Filters\Filter::make('nur_eingaenge')
                     ->label('Nur Eingänge')
                     ->query(fn (Builder $q) => $q->where('amount', '>', 0)),
+
+                /*
+                 * The most useful filter of them all: everything with a proposal
+                 * waiting for a decision. That is the work list - assigned entries
+                 * need nobody, and entries without any candidate need a look at the
+                 * purpose, not a click.
+                 */
+                Tables\Filters\Filter::make('offene_vorschlaege')
+                    ->label('Offene Vorschläge')
+                    ->query(fn (Builder $q) => $q
+                        ->whereNull('pretix_order_code')
+                        ->where('match_method', \App\Services\EnableBanking\PurposeMatcher::FUZZY)),
+            ])
+            /*
+             * THE PROTOCOL, reachable per row. Not a separate page: the question
+             * "why does this entry look like this" always arises AT the entry, and a
+             * detour through a log list would mean searching for it again.
+             */
+            ->actions([
+                Tables\Actions\Action::make('protokoll')
+                    ->label('Protokoll')
+                    ->icon('heroicon-o-list-bullet')
+                    ->color('gray')
+                    ->modalHeading('Protokoll dieses Umsatzes')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Schliessen')
+                    ->modalContent(fn ($record) => view('filament.bank.journal-protocol', [
+                        'entry' => $record,
+                        'events' => $record->events,
+                    ])),
             ]);
     }
 
