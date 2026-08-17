@@ -4,7 +4,7 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
-## [0.57.1] - 2026-08-17
+## [0.57.2] - 2026-08-17
 
 ### Geändert
 - **Die Freigabe gilt jetzt so lange, wie die Bank es erlaubt** – gemessen an der echten Bankenliste
@@ -16,6 +16,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/).
   eigene Annahme.
   - Nachgemessen am 17.08.2026: 1.109 Banken für DE, darunter Sparkasse Mecklenburg-Nordwest, alle
     mit 180 Tagen.
+
+## [0.57.1] - 2026-08-17
 
 ### Behoben
 - **„Es werden keine Banken angezeigt."** Solange kein Schlüssel hinterlegt ist, kann die Bankenliste
