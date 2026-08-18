@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.61.0] - 2026-08-18
+
+### Hinzugefügt
+- **Ein Knopf im Bank-Journal zeigt genau die Einträge, die die Zahl am Menüpunkt ergeben.** Die Zahl
+  sagte bisher, wie viel wartet, aber nicht welche Zeilen – und um sie wiederzufinden, musste man
+  wissen, welcher von sechs Filtern dieselbe Menge liefert. Ein zweiter Klick schaltet zurück auf die
+  vollständige Aufzeichnung. Gibt es nichts zu entscheiden, erscheint auch kein Knopf.
+
+### Behoben
+- **Die Zahl am Menüpunkt und der Filter „Zu tun" zählten Verschiedenes.** Die Zahl liess Vorschläge
+  weg, der Filter liess bereits übernommene Einträge stehen. Beide lesen jetzt **dieselbe** Abfrage,
+  sodass der Knopf keine andere Menge zeigen kann, als die Zahl verspricht. Ein Test hält die
+  SQL-Abfrage und die gleichbedeutende Prüfung am Einzeleintrag gegeneinander – zwei Umsetzungen einer
+  Regel laufen sonst irgendwann auseinander.
+
 ## [0.60.0] - 2026-08-18
 
 ### Hinzugefügt

@@ -373,7 +373,8 @@ DB-Fehler nicht zurück in die DB, damit das Logging nie den Request killt oder 
   - Die Spalte **Zustand** sagt, was aus einer Zuordnung folgt: `offen – zu buchen`, `bereits bezahlt`
     (nichts zu tun), `mögliche Doppelzahlung` (ein zweiter Eingang auf dieselbe Bestellung),
     `Vorschlag` (ein Zeichen weicht ab, wird **nicht** automatisch gebucht) oder `keine Zuordnung`.
-    Der Filter **„Zu tun"** zeigt ausschliesslich die Einträge, die eine Entscheidung brauchen.
+    Der Filter **„Zu tun"** und der Knopf **„Nur die N zu entscheiden"** oben rechts zeigen genau die
+    Einträge, die die Zahl am Menüpunkt ergeben – offene Bestellungen, zweite Geldeingänge und Vorschläge.
 - **Automatischer Bankabruf via FinTS/HBCI** – **stillgelegt** (`FINTS_ENABLED`, ohne Angabe aus). Direkte
   Anbindung an die Bank ohne Drittanbieter, vollständig gebaut, aber nicht benutzbar: Ohne bei der Deutschen
   Kreditwirtschaft freigeschaltete Registrierungsnummer weist der Bankrechner jeden Dialog mit „9078" ab –

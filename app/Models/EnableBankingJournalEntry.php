@@ -99,6 +99,32 @@ class EnableBankingJournalEntry extends Model
             || $this->hasSuggestion();
     }
 
+    /**
+     * THE ONE DEFINITION of "this entry needs a decision".
+     *
+     * The menu badge, the "Zu tun" filter and the button that jumps to it all read
+     * this scope. They used to carry their own variants: the badge left out
+     * proposals, the filter left in entries already taken into the books - so a
+     * button promising the badge's number would have shown a different set.
+     *
+     * Mirrors isActionable() plus "not yet promoted", in SQL. Two implementations of
+     * one rule is a liability; a test holds them against each other rather than
+     * trusting the reading.
+     */
+    public function scopeNeedsDecision($query)
+    {
+        return $query
+            ->whereNull('promoted_at')
+            ->where(fn ($q) => $q
+                ->where('pretix_order_status', 'n')
+                ->orWhere('possible_double_payment', true)
+                // A proposal is a decision waiting for someone: fuzzy is set exactly
+                // when a candidate was found and deliberately NOT assigned.
+                ->orWhere(fn ($vorschlag) => $vorschlag
+                    ->whereNull('pretix_order_code')
+                    ->where('match_method', \App\Services\EnableBanking\PurposeMatcher::FUZZY)));
+    }
+
     /** Recognised, but nothing follows from it. */
     public function isSettled(): bool
     {

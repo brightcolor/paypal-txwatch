@@ -41,6 +41,15 @@ class EnableBankingJournalResource extends Resource
 
     protected static ?string $slug = 'bank-journal';
 
+    /**
+     * The filter the button on the list activates.
+     *
+     * A constant rather than a literal in both places: Filament silently ignores a
+     * filter name that does not exist, so a typo would produce a button that appears
+     * to work and changes nothing.
+     */
+    public const FILTER_ZU_TUN = 'zu_tun';
+
     public static function canAccess(): bool
     {
         return auth()->user()?->hasRole('admin') ?? false;
@@ -61,16 +70,16 @@ class EnableBankingJournalResource extends Resource
         return false;
     }
 
-    /** How many entries are still only recorded - shown as a badge in the menu. */
+    /**
+     * The number on the menu item: entries that need a DECISION.
+     *
+     * Not everything unpromoted - with 986 of 1025 orders already paid that was
+     * essentially the table size and told nobody anything. The button on the list
+     * jumps to exactly this set, which is why both read the same scope.
+     */
     public static function getNavigationBadge(): ?string
     {
-        // Counts what needs a DECISION, not everything unpromoted: with 986 of 1025
-        // orders already paid, the old count was essentially the table size and told
-        // nobody anything.
-        $open = static::getModel()::query()
-            ->where(fn ($q) => $q->where('pretix_order_status', 'n')->orWhere('possible_double_payment', true))
-            ->whereNull('promoted_at')
-            ->count();
+        $open = static::getModel()::query()->needsDecision()->count();
 
         return $open > 0 ? (string) $open : null;
     }
@@ -263,19 +272,14 @@ class EnableBankingJournalResource extends Resource
                  * purpose, not a click.
                  */
                 /*
-                 * THE WORK LIST: everything where something is actually to be done -
-                 * an open order, or a proposal awaiting a decision. Settled
+                 * THE WORK LIST, and it is exactly what the menu badge counts: an open
+                 * order, a second credit, or a proposal awaiting a decision. Settled
                  * assignments are information and stay out of it.
                  */
-                Tables\Filters\Filter::make('zu_tun')
+                Tables\Filters\Filter::make(self::FILTER_ZU_TUN)
                     ->label('Zu tun')
-                    ->query(fn (Builder $query) => $query->where(fn (Builder $gruppe) => $gruppe
-                        ->where('pretix_order_status', 'n')
-                        ->orWhere('possible_double_payment', true)
-                        ->orWhere(fn (Builder $vorschlag) => $vorschlag
-                            ->whereNull('pretix_order_code')
-                            ->where('match_method', \App\Services\EnableBanking\PurposeMatcher::FUZZY))),
-                    ),
+                    // Same scope as the menu badge - see EnableBankingJournalEntry.
+                    ->query(fn (Builder $query) => $query->needsDecision()),
 
                 Tables\Filters\Filter::make('offene_vorschlaege')
                     ->label('Nur Vorschläge')

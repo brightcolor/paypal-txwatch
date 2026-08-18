@@ -145,8 +145,9 @@ class EnableBankingJournalTableTest extends TestCase
     {
         $this->fourStates();
 
-        // T1 (open) plus both halves of the double payment - not T3, not T4.
-        $this->assertSame('3', EnableBankingJournalResource::getNavigationBadge());
+        // T1 (open), both halves of the double payment, and the proposal T3.
+        // NOT T4 - nothing was recognised there and clicking will not change that.
+        $this->assertSame('4', EnableBankingJournalResource::getNavigationBadge());
     }
 
     /** The remaining filters still execute after the rewrite. */
@@ -160,5 +161,106 @@ class EnableBankingJournalTableTest extends TestCase
                 ->filterTable($filter)
                 ->assertOk();
         }
+    }
+    /**
+     * THE BUTTON SHOWS EXACTLY WHAT THE NUMBER PROMISES.
+     *
+     * The point of the whole change: badge, filter and button read one scope. They
+     * used to carry three variants - the badge left out proposals, the filter left in
+     * entries already taken into the books - so a button on the number would have
+     * shown a different set than the number claimed. This test is what keeps them
+     * from drifting apart again.
+     */
+    public function test_the_button_shows_exactly_what_the_badge_counts(): void
+    {
+        $this->actingAs($this->admin());
+        $this->fourStates();
+
+        $badge = (int) EnableBankingJournalResource::getNavigationBadge();
+
+        $page = Livewire::test(ListEnableBankingJournalEntries::class)
+            ->callAction('zu_entscheiden');
+
+        $gefiltert = $page->instance()->getFilteredTableQuery()->count();
+
+        $this->assertSame($badge, $gefiltert, 'Die Zahl am Menüpunkt und die gefilterte Liste weichen ab.');
+        $this->assertGreaterThan(0, $badge, 'Ohne offene Punkte prüft dieser Test nichts.');
+
+        // And it is genuinely a subset, not the whole table.
+        $this->assertLessThan(EnableBankingJournalEntry::count(), $gefiltert);
+    }
+
+    /** A second click takes the filter off again. */
+    public function test_the_button_switches_back_to_everything(): void
+    {
+        $this->actingAs($this->admin());
+        $this->fourStates();
+
+        $page = Livewire::test(ListEnableBankingJournalEntries::class)
+            ->callAction('zu_entscheiden')
+            ->callAction('zu_entscheiden');
+
+        $this->assertSame(
+            EnableBankingJournalEntry::count(),
+            $page->instance()->getFilteredTableQuery()->count(),
+        );
+    }
+
+    /** With nothing to decide there is no button - and no badge either. */
+    public function test_without_anything_to_decide_there_is_no_button(): void
+    {
+        $this->actingAs($this->admin());
+
+        // A single, cleanly settled payment: recognised, nothing to do.
+        $connection = \App\Models\PretixConnection::create([
+            'name' => 'Verein', 'base_url' => 'https://pretix.eu', 'organizer_slug' => 'verein',
+            'api_token' => 'tok', 'is_active' => true,
+        ]);
+        \App\Models\PretixOrder::create([
+            'pretix_connection_id' => $connection->id,
+            'event_slug' => 'musterevent', 'order_code' => 'CLEAN', 'status' => 'p',
+            'payment_provider' => 'banktransfer', 'total' => 63.80, 'currency' => 'EUR',
+            'url' => 'https://pretix.eu/control/order/musterevent/CLEAN/', 'raw_payload' => [],
+        ]);
+
+        app(JournalWriter::class)->record([
+            EnableBankingJournalTest::entry(['amount' => 63.80, 'purpose' => 'Zahlung CLEAN', 'bank_ref' => 'N1']),
+        ]);
+
+        $this->assertNull(EnableBankingJournalResource::getNavigationBadge());
+
+        // Not "hidden" but absent: with nothing to decide the header stays empty
+        // rather than offering a filter that would return no rows.
+        Livewire::test(ListEnableBankingJournalEntries::class)
+            ->assertOk()
+            ->assertActionDoesNotExist('zu_entscheiden');
+    }
+
+    /**
+     * THE SQL SCOPE AND THE PHP PREDICATE AGREE.
+     *
+     * `needsDecision()` (SQL, for badge/filter/button) and `isActionable()` (PHP, for
+     * the row's own colouring) express one rule twice. Two implementations of one
+     * rule drift; this compares them row by row instead of trusting the reading.
+     */
+    public function test_the_scope_agrees_with_the_model_predicate(): void
+    {
+        $this->fourStates();
+
+        $ausSql = EnableBankingJournalEntry::query()
+            ->needsDecision()
+            ->pluck('bank_ref')
+            ->sort()
+            ->values()
+            ->all();
+
+        $ausPhp = EnableBankingJournalEntry::all()
+            ->filter(fn ($e) => $e->isActionable() && ! $e->isPromoted())
+            ->pluck('bank_ref')
+            ->sort()
+            ->values()
+            ->all();
+
+        $this->assertSame($ausPhp, $ausSql, 'needsDecision() und isActionable() sind auseinandergelaufen.');
     }
 }
