@@ -66,6 +66,10 @@ class EnableBankingSyncCommand extends Command
             return self::SUCCESS;
         }
 
+        // Read before the pull: a successful one clears the streak, so afterwards
+        // there is nothing left to report about it.
+        $before = ['failure_count' => (int) $connection->failure_count];
+
         $result = $sync->syncSafely($connection);
 
         if (! empty($result['needs_reauth'])) {
@@ -82,7 +86,52 @@ class EnableBankingSyncCommand extends Command
         if (isset($result['error'])) {
             $this->error('Abruf fehlgeschlagen: ' . $result['error']);
 
+            /*
+             * A FAILED PULL RAISES THE ALARM - the omission that cost six days.
+             *
+             * From 21.08. to 26.08.2026 not a single transaction came in, and this
+             * branch wrote one console line per run into a scheduler nobody reads.
+             * The consent was fine, the session at the bank was AUTHORIZED; only a
+             * status flag of our own was in the way. Nothing said so.
+             *
+             * NOT ON THE FIRST FAILURE. A single blip - the host lost its network
+             * for a minute that day - fixes itself on the next run six hours later,
+             * and a warning for every one of those is a warning nobody reads either.
+             * From the second consecutive failure on, roughly twelve hours, it is no
+             * longer a blip.
+             */
+            $streak = (int) ($result['failure_count'] ?? 0);
+
+            if ($streak >= 2) {
+                $stunden = (int) ($result['failing_for_hours'] ?? 0);
+
+                AdminNotifier::warn(
+                    'Bankabruf schlägt fehl',
+                    sprintf(
+                        '%s kommen keine Umsätze mehr herein (%d Versuche in Folge). '
+                        . 'Der erste Fehler lautete: %s',
+                        // Under an hour "seit 0 Stunden" reads like a broken message
+                        // rather than a young one.
+                        $stunden >= 1 ? sprintf('Seit %d Stunden', $stunden) : 'Seit dem letzten erfolgreichen Abruf',
+                        $streak,
+                        $result['first_error'] ?? $result['error'],
+                    ),
+                    url(self::SETTINGS_URL),
+                );
+            }
+
             return self::SUCCESS;
+        }
+
+        /*
+         * A pull that worked again after a streak says so. Otherwise the warning
+         * stands in the inbox and nothing ever takes it back.
+         */
+        if ((int) ($before['failure_count'] ?? 0) >= 2) {
+            $this->info(sprintf(
+                'Abruf läuft wieder – zuvor %d Fehlversuche in Folge.',
+                (int) $before['failure_count'],
+            ));
         }
 
         /*

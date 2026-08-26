@@ -45,6 +45,7 @@ class EnableBankingConnection extends Model
         'aspsp_name', 'aspsp_country', 'session_id', 'accounts', 'iban',
         'access_valid_until', 'pending_state', 'pending_state_expires_at',
         'status', 'last_synced_at', 'last_error',
+        'failed_since', 'failure_count', 'first_error',
     ];
 
     protected function casts(): array
@@ -55,6 +56,7 @@ class EnableBankingConnection extends Model
             'access_valid_until' => 'datetime',
             'pending_state_expires_at' => 'datetime',
             'last_synced_at' => 'datetime',
+            'failed_since' => 'datetime',
         ];
     }
 
@@ -63,12 +65,59 @@ class EnableBankingConnection extends Model
         return static::query()->firstOrCreate([]);
     }
 
-    /** Connected and usable for an unattended pull. */
+    /** Did the last pull work? A statement about the PAST. */
     public function isActive(): bool
     {
         return $this->status === self::STATUS_ACTIVE
             && filled($this->session_id)
             && ! $this->consentExpired();
+    }
+
+    /**
+     * MAY WE TRY AGAIN? A statement about the NEXT pull - and deliberately not the
+     * same question as isActive().
+     *
+     * THE BUG THIS EXISTS FOR (21.08. - 26.08.2026): the pull was gated on
+     * `status === active`, which is a record of how the LAST run went. A single
+     * network timeout on the host set the status to `error`, and from that moment
+     * every run refused before touching the network - the refusal setting the very
+     * status it was refusing on. Six days without a single transaction, from one
+     * blip, and the session at the bank was AUTHORIZED the whole time.
+     *
+     * What actually decides whether a pull can work is whether we hold a session
+     * and whether the consent still runs. If the session is dead after all, the API
+     * says so - and that answer is worth more than a flag we set ourselves.
+     */
+    public function canPull(): bool
+    {
+        return filled($this->session_id)
+            && $this->status !== self::STATUS_NEW
+            // An expired consent is the one state a retry cannot fix: it needs the
+            // account holder at their bank's login.
+            && $this->status !== self::STATUS_EXPIRED
+            && ! $this->consentExpired();
+    }
+
+    /** Has the pull been failing? */
+    public function isFailing(): bool
+    {
+        return $this->failed_since !== null;
+    }
+
+    /** Whole hours since the streak began, or null when nothing is failing. */
+    public function failingForHours(): ?int
+    {
+        return $this->failed_since?->diffInHours(now());
+    }
+
+    /**
+     * The message that STARTED the streak - the one worth reading.
+     *
+     * A follow-up error usually describes the consequence, not the cause.
+     */
+    public function rootError(): ?string
+    {
+        return $this->first_error ?: $this->last_error;
     }
 
     /**

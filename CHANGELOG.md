@@ -4,6 +4,28 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.62.1] - 2026-08-26
+
+### Behoben
+- **Ein einziger fehlgeschlagener Bankabruf legte die Verbindung dauerhaft still.** Der Abruf verlangte
+  den Zustand „aktiv" – der aber nur festhält, wie der **letzte** Lauf ausgegangen ist, und nichts
+  darüber sagt, ob der **nächste** gelingen kann. Ein Netzwerkaussetzer setzte den Zustand auf „Fehler",
+  und ab da verweigerte jeder Lauf den Dienst, **bevor** er die Bank überhaupt fragte – wobei die
+  Verweigerung genau den Zustand schrieb, auf den sie sich berief. Sechs Tage ohne einen einzigen Umsatz
+  aus einem Aussetzer von einer Minute; die Sitzung bei der Bank war die ganze Zeit gültig. Entscheidend
+  ist jetzt, ob eine Sitzung vorliegt und die Zustimmung läuft. Ist die Sitzung doch tot, sagt das die
+  Bank – und diese Antwort ist mehr wert als ein Merker, den wir uns selbst gesetzt haben.
+- **Die ursprüngliche Fehlermeldung überlebt die Folgefehler.** Bisher überschrieb jeder Lauf die
+  Meldung des vorherigen, sodass nach sechs Stunden nur noch die Folge dastand und nicht mehr die
+  Ursache. Die erste Meldung einer Fehlerserie bleibt jetzt erhalten, bis ein Abruf wieder gelingt; die
+  neueste steht daneben.
+- **Ein fehlgeschlagener Abruf schlägt Alarm.** Bisher gab es dafür eine Konsolenzeile im
+  Zeitplan-Container – gewarnt wurde nur bei abgelaufener Freigabe und bei abgeschnittenem Abruf. Ab
+  dem **zweiten** Fehlschlag in Folge (rund zwölf Stunden) geht eine Benachrichtigung an die
+  Administratoren, mit der ursprünglichen Ursache im Text. Beim ersten nicht: ein einzelner Aussetzer
+  erledigt sich mit dem nächsten Lauf, und eine Warnung dafür liest bald niemand mehr.
+- Unter **Bank → Bank verbinden** steht jetzt, **seit wann** und nach **wie vielen Versuchen** nichts
+  mehr hereinkommt, und die **Ursache** statt der Folgemeldung. Ein Datum allein liest sich harmlos.
 ## [0.62.0] - 2026-08-18
 
 ### Hinzugefügt

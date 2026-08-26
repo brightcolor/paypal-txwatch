@@ -103,8 +103,24 @@
                         </td></tr>
                     @endif
 
-                    <tr><td class="lbl">Letzter Abruf</td><td>{{ $c->last_synced_at ? $c->last_synced_at->format('d.m.Y H:i') : '–' }}</td></tr>
-                    @if ($c->last_error)
+                    <tr><td class="lbl">Letzter Abruf</td><td>
+                        {{ $c->last_synced_at ? $c->last_synced_at->format('d.m.Y H:i') : '–' }}
+                        @if ($c->isFailing())
+                            {{-- WIE LANGE SCHON. Ein Datum allein liest sich harmlos;
+                                 „seit 137 Stunden" liest sich nicht harmlos. --}}
+                            <span class="neg">– seit {{ $c->failingForHours() }} Stunden ohne Erfolg,
+                                {{ $c->failure_count }} Versuche</span>
+                        @endif
+                    </td></tr>
+
+                    @if ($c->isFailing())
+                        {{-- Die ERSTE Meldung der Strähne. Jede spätere beschreibt in
+                             aller Regel die Folge, nicht die Ursache. --}}
+                        <tr><td class="lbl">Ursache</td><td class="neg">{{ $c->rootError() }}</td></tr>
+                        @if ($c->last_error && $c->last_error !== $c->rootError())
+                            <tr><td class="lbl">zuletzt</td><td>{{ $c->last_error }}</td></tr>
+                        @endif
+                    @elseif ($c->last_error)
                         <tr><td class="lbl">Letzter Fehler</td><td class="neg">{{ $c->last_error }}</td></tr>
                     @endif
                 </tbody>

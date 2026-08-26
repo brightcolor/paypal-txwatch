@@ -61,11 +61,17 @@ class Sync
      */
     public function sync(EnableBankingConnection $connection): array
     {
-        if (! $connection->isActive()) {
+        /*
+         * ASKS WHETHER A PULL CAN WORK, not whether the last one did. Gating on the
+         * stored status turned one failed run into a permanent lockout: the refusal
+         * wrote the status it was refusing on, so nothing could ever clear it. See
+         * EnableBankingConnection::canPull().
+         */
+        if (! $connection->canPull()) {
             throw new EnableBankingException(
                 $connection->consentExpired()
                     ? 'Die Zustimmung der Bank ist abgelaufen. Bitte die Bank unter „Bank verbinden" erneut freigeben.'
-                    : 'Keine aktive Bankverbindung über Enable Banking.'
+                    : 'Keine Bankverbindung über Enable Banking hinterlegt. Bitte unter „Bank verbinden" einrichten.'
             );
         }
 
@@ -127,6 +133,10 @@ class Sync
             'status' => EnableBankingConnection::STATUS_ACTIVE,
             'last_synced_at' => now(),
             'last_error' => null,
+            // A successful pull ends the streak - and only a successful pull does.
+            'failed_since' => null,
+            'failure_count' => 0,
+            'first_error' => null,
         ])->save();
 
         return [
@@ -172,11 +182,20 @@ class Sync
                 || ($e instanceof EnableBankingException
                     && in_array($e->errorCode, ['SESSION_EXPIRED', 'SESSION_INVALID'], true));
 
+            /*
+             * THE FIRST MESSAGE OF A STREAK IS KEPT. A follow-up error describes the
+             * consequence - the six-day outage left behind "Keine aktive
+             * Bankverbindung", which said nothing about the network timeout that
+             * started it. `last_error` still carries the newest one.
+             */
             $connection->forceFill([
                 'status' => $expired
                     ? EnableBankingConnection::STATUS_EXPIRED
                     : EnableBankingConnection::STATUS_ERROR,
                 'last_error' => $e->getMessage(),
+                'failed_since' => $connection->failed_since ?? now(),
+                'failure_count' => (int) $connection->failure_count + 1,
+                'first_error' => $connection->first_error ?: $e->getMessage(),
             ])->save();
 
             return [
@@ -184,6 +203,11 @@ class Sync
                 'matched' => 0,
                 'needs_reauth' => $expired,
                 'error' => $e->getMessage(),
+                // Handed up so the caller can decide to raise the alarm - a console
+                // line is not a warning, and six days proved it.
+                'failure_count' => (int) $connection->failure_count,
+                'first_error' => $connection->first_error,
+                'failing_for_hours' => $connection->failingForHours(),
             ];
         }
     }
