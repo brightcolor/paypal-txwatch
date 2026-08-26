@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.62.2] - 2026-08-26
+
+### Behoben
+- **„Jetzt abrufen" verschwand genau dann, wenn man es gebraucht hätte.** Der Knopf hing an derselben
+  Bedingung wie der automatische Abruf: am Zustand des **letzten** Laufs. Während der sechs Tage
+  Stillstand war er damit unsichtbar – die Automatik hing fest und die Handkurbel war mit ihr
+  verschwunden. Er erscheint jetzt, solange ein Abruf überhaupt möglich ist. Nur bei abgelaufener
+  Zustimmung bleibt er weg, weil Abrufen daran nichts ändert.
+
 ## [0.62.1] - 2026-08-26
 
 ### Behoben

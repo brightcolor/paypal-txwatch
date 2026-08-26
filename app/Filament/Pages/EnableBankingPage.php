@@ -396,7 +396,14 @@ class EnableBankingPage extends Page implements HasForms
             Action::make('sync')
                 ->label('Jetzt abrufen')
                 ->icon('heroicon-o-arrow-down-tray')
-                ->visible(fn () => EnableBankingConnection::current()->isActive())
+                /*
+                 * canPull(), NOT isActive() - the same mistake as in Sync, in the one
+                 * place where it hurt most. isActive() asks how the LAST pull went, so
+                 * during the six-day outage this button was invisible: the automation
+                 * was stuck and the manual way out had disappeared with it. A pull by
+                 * hand is exactly what a broken automation calls for.
+                 */
+                ->visible(fn () => EnableBankingConnection::current()->canPull())
                 ->action(function () {
                     $result = app(Sync::class)->syncSafely(EnableBankingConnection::current());
                     $this->reportSync($result);

@@ -174,6 +174,47 @@ class EnableBankingRecoveryTest extends TestCase
     }
 
     /**
+     * THE MANUAL WAY OUT MUST SURVIVE THE OUTAGE.
+     *
+     * "Jetzt abrufen" was gated on isActive() too, so during the six-day outage the
+     * button was gone - the automation was stuck AND the hand crank had vanished
+     * with it. A pull by hand is exactly what a broken automation calls for.
+     */
+    public function test_the_manual_pull_button_stays_visible_while_failing(): void
+    {
+        $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
+        $admin = \App\Models\User::factory()->create(['is_active' => true]);
+        $admin->assignRole(\Spatie\Permission\Models\Role::findByName('admin'));
+        $this->actingAs($admin);
+
+        $this->connection([
+            'status' => EnableBankingConnection::STATUS_ERROR,
+            'last_error' => 'cURL error 28: Timeout was reached',
+            'failed_since' => now()->subDays(6),
+            'failure_count' => 24,
+        ]);
+
+        \Livewire\Livewire::test(\App\Filament\Pages\EnableBankingPage::class)
+            ->assertOk()
+            ->assertActionVisible('sync');
+    }
+
+    /** With an expired consent a pull cannot help - then the button may go. */
+    public function test_the_manual_pull_button_is_gone_when_the_consent_expired(): void
+    {
+        $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
+        $admin = \App\Models\User::factory()->create(['is_active' => true]);
+        $admin->assignRole(\Spatie\Permission\Models\Role::findByName('admin'));
+        $this->actingAs($admin);
+
+        $this->connection(['access_valid_until' => now()->subDay()]);
+
+        \Livewire\Livewire::test(\App\Filament\Pages\EnableBankingPage::class)
+            ->assertOk()
+            ->assertActionHidden('sync');
+    }
+
+    /**
      * A Sync whose pull always throws, one message per call.
      *
      * Built by subclassing rather than mocking so `syncSafely()` - the part under
