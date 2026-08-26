@@ -92,10 +92,18 @@ class PretixConnectionResource extends Resource
                         ->label('Auch PayPal-Bestellungen importieren')
                         ->helperText('Standard: aus – PayPal-Zahlungen kommen bereits über den PayPal-Sync (Doppelzählung vermeiden).')
                         ->default(false),
-                    Forms\Components\Toggle::make('auto_confirm_bank_transfers')
-                        ->label('Banküberweisungen automatisch in pretix bestätigen')
-                        ->helperText('Standard: aus. Wenn an, werden eindeutig zugeordnete Kontoeingänge (Betrag exakt, Bestellcode im Zweck) beim Bankabruf sofort in pretix als bezahlt gemeldet (löst Ticket-Versand aus). Aus = nur Vorschlag mit 1-Klick-Bestätigung. Der API-Token braucht dafür das Recht „Bestellungen ändern".')
-                        ->default(false),
+                    /*
+                     * THE SWITCH MOVED TO THE EVENT and this one no longer decides
+                     * anything. Shown as a note rather than removed silently: whoever
+                     * set it once has to find out where it went, and a toggle that
+                     * quietly stops working is worse than one that is gone.
+                     */
+                    Forms\Components\Placeholder::make('auto_confirm_hinweis')
+                        ->label('Banküberweisungen automatisch bestätigen')
+                        ->content('Wird jetzt PRO EVENT geschaltet: Events → Event öffnen → „Zahlungen '
+                            . 'automatisch melden". Ein Schalter für den ganzen Veranstalter konnte weder ein '
+                            . 'abgelaufenes Event ausnehmen noch eines, dessen Zahlungen anderswo laufen. '
+                            . 'Der API-Token braucht dafür weiterhin das Recht „Bestellungen ändern".'),
                 ]),
 
             Forms\Components\Section::make('Webhook (near-realtime Import)')

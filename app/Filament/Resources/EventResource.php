@@ -51,6 +51,26 @@ class EventResource extends Resource
                     Forms\Components\Toggle::make('is_active')->label('Aktiv')->default(true),
                 ]),
 
+            /*
+             * ITS OWN SECTION, not a toggle among the master data. This one does not
+             * describe the event - it lets TxWatch write into a stranger's order and
+             * send out tickets. A switch with that reach has to be found on purpose,
+             * not flipped in passing next to the venue.
+             */
+            Forms\Components\Section::make('Zahlungen automatisch melden')
+                ->description('Wenn eine Überweisung eingeht, deren Verwendungszweck die Bestellnummer '
+                    . 'enthält und deren Betrag auf den Cent stimmt, setzt TxWatch die Bestellung in pretix '
+                    . 'selbstständig auf bezahlt – der Gast bekommt daraufhin seine Tickets.')
+                ->schema([
+                    Forms\Components\Toggle::make('auto_mark_paid')
+                        ->label('Bestellungen dieses Events bei Geldeingang automatisch auf bezahlt setzen')
+                        ->default(false)
+                        ->helperText('Gemeldet wird nur bei offener Bestellung, exakt passendem Betrag und '
+                            . 'offener Überweisungs-Zahlung in pretix – und höchstens einmal je Bestellung. '
+                            . 'Jede Meldung UND jede Verweigerung steht mit Begründung unter '
+                            . '„pretix → Zahlungsmeldungen".'),
+                ]),
+
             Forms\Components\Section::make('PDF-Darstellung')
                 ->columns(1)
                 ->schema([
@@ -77,6 +97,19 @@ class EventResource extends Resource
                 Tables\Columns\TextColumn::make('venue')->label('Ort'),
                 Tables\Columns\TextColumn::make('transactions_count')->label('Transaktionen')->counts('transactions'),
                 Tables\Columns\IconColumn::make('is_active')->label('Aktiv')->boolean(),
+
+                // Visible in the list, because "which events write to pretix on their own"
+                // is a question one asks about ALL of them, not one at a time.
+                Tables\Columns\IconColumn::make('auto_mark_paid')
+                    ->label('Auto-Zahlung')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-bolt')
+                    ->falseIcon('heroicon-o-minus-small')
+                    ->trueColor('warning')
+                    ->falseColor('gray')
+                    ->tooltip(fn ($record) => $record->auto_mark_paid
+                        ? 'Geldeingang setzt Bestellungen dieses Events selbstständig auf bezahlt.'
+                        : 'Zahlungen dieses Events werden nur von Hand gemeldet.'),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active')

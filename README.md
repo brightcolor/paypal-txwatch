@@ -349,6 +349,20 @@ DB-Fehler nicht zurück in die DB, damit das Logging nie den Request killt oder 
   **PayPal-Auszahlungen** (kam die Auszahlung aufs Konto an?) und gegen **pretix-Überweisungen** (Bestellcode
   im Verwendungszweck). Offene Eingänge sind als Badge sichtbar; manuelles Ignorieren/Zurücksetzen und ein
   „Erneut abgleichen" sind möglich.
+- **Bestellungen bei Geldeingang automatisch auf bezahlt setzen** – **pro Event** schaltbar (Events →
+  Event öffnen → „Zahlungen automatisch melden", Voreinstellung **aus**). Geht eine Überweisung ein,
+  deren Verwendungszweck die Bestellnummer enthält und deren Betrag auf den Cent stimmt, meldet TxWatch
+  die Zahlung an pretix; der Gast bekommt daraufhin seine Tickets.
+  - Gemeldet wird nur bei **offener** Bestellung, **exakt** passendem Betrag, **offener
+    Überweisungs-Zahlung in pretix** – und **höchstens einmal je Bestellung**. Abbuchungen und
+    Erstattungen melden nie. Der API-Token braucht das Recht „Bestellungen ändern".
+  - Der Schalter gilt für die **Automatik**. Eine Bestätigung von Hand ist davon unberührt – wer klickt,
+    hat entschieden.
+  - **Jede Meldung UND jede Verweigerung** steht mit Begründung unter **pretix → Zahlungsmeldungen**:
+    welches Geld, welcher Verwendungszweck, welcher Schalter, was pretix geantwortet hat. Nichts dort
+    lässt sich ändern oder löschen. Auch „warum wurde NICHT gemeldet" ist damit beantwortbar.
+  - Ausgelöst wird sowohl vom Bankabruf (Enable Banking) als auch von importierten Kontoumsätzen. Der
+    Abruf meldet auch im Journal-Modus: eine Bestellung als bezahlt zu melden ist keine Buchung.
 - **Automatischer Bankabruf via Enable Banking** (Bank → Bank verbinden, Admin): der Weg über PSD2, ohne
   Registrierung bei der Deutschen Kreditwirtschaft. Admin lädt einmalig den Anwendungsschlüssel aus dem
   Enable-Banking-Control-Panel hoch (die Kennung steckt im Dateinamen und wird mitgelesen), wählt die Bank

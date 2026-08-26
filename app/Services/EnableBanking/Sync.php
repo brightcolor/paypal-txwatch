@@ -19,6 +19,7 @@ class Sync
         private readonly TransactionMapper $mapper,
         private readonly BankStatementImporter $importer,
         private readonly JournalWriter $journal,
+        private readonly JournalPaymentReporter $payments,
     ) {
     }
 
@@ -100,6 +101,13 @@ class Sync
          */
         $journal = $this->journal->record($mapped['entries']);
 
+        /*
+         * REPORTING TO PRETIX HAPPENS IN BOTH MODES, and deliberately before the
+         * import: marking an order paid is not a booking. It is gated per event and
+         * off by default, so a pull writes to pretix only where someone armed it.
+         */
+        $reported = $this->payments->report();
+
         $mode = (string) config('bank.enablebanking.mode');
 
         /*
@@ -127,6 +135,9 @@ class Sync
             'with_order' => $journal['with_order'],
             'dropped' => $journal['dropped'],
             'refunds' => $journal['refunds'],
+            'pretix_confirmed' => $reported['confirmed'],
+            'pretix_skipped' => $reported['skipped'],
+            'pretix_failed' => $reported['failed'],
             'imported' => $import['imported'],
             'matched' => $import['matched'],
             'pretix_proposed' => $import['pretix_proposed'] ?? 0,

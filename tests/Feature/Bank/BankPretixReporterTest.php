@@ -23,6 +23,23 @@ class BankPretixReporterTest extends TestCase
         ]);
     }
 
+    /**
+     * The event behind the slug the orders use - and its switch.
+     *
+     * Needed in every test that expects a confirmation: since the switch moved from
+     * the connection to the event, an order without an Event row can never be
+     * confirmed automatically, and that is the point.
+     */
+    private function eventWithSwitch(bool $an): \App\Models\Event
+    {
+        return \App\Models\Event::create([
+            'name' => 'Sommerfest',
+            'pretix_event_slug' => 'sommerfest',
+            'is_active' => true,
+            'auto_mark_paid' => $an,
+        ]);
+    }
+
     private function pendingOrder(PretixConnection $c, string $code, float $total, string $provider = 'banktransfer'): PretixOrder
     {
         return PretixOrder::create([
@@ -97,7 +114,13 @@ class BankPretixReporterTest extends TestCase
         $this->assertSame(BankTransaction::REPORT_REPORTED, $bank->fresh()->pretix_report_status);
     }
 
-    public function test_auto_confirm_connection_reports_on_import(): void
+    /**
+     * THE EVENT'S SWITCH CONFIRMS ON IMPORT - the connection's no longer does.
+     *
+     * The behaviour change this test exists for: an organizer-wide flag could not
+     * exclude a finished event or one whose payments run elsewhere.
+     */
+    public function test_the_event_switch_reports_on_import(): void
     {
         Http::fake([
             '*/orders/ZZ123/payments/' => Http::response(['results' => [
@@ -107,6 +130,7 @@ class BankPretixReporterTest extends TestCase
         ]);
 
         $c = $this->connection(auto: true);
+        $this->eventWithSwitch(true);
         $this->pendingOrder($c, 'ZZ123', 40.00, 'manual');
 
         // Import a CAMT credit that references the order.
@@ -141,5 +165,124 @@ class BankPretixReporterTest extends TestCase
         $this->assertFalse($res['success']);
         $this->assertStringContainsString('Bestellungen ändern', $res['message']);
         $this->assertSame(BankTransaction::REPORT_FAILED, $bank->fresh()->pretix_report_status);
+    }
+    /**
+     * THE CONNECTION FLAG ALONE CONFIRMS NOTHING ANY MORE.
+     *
+     * The guard against the old rule creeping back: `auto_confirm_bank_transfers` is
+     * still on the connection and still set on this installation. If anything ever
+     * reads it again, an entire organizer starts writing to pretix without a single
+     * event having been armed.
+     */
+    public function test_the_connection_flag_alone_does_not_confirm(): void
+    {
+        Http::fake(['*' => Http::response([], 200)]);
+
+        $c = $this->connection(auto: true);
+        $this->eventWithSwitch(false);
+        $this->pendingOrder($c, 'OFFXX', 40.00, 'manual');
+        $bank = $this->credit(40.00, 'Ueberweisung OFFXX');
+
+        app(BankPretixReporter::class)->propose();
+
+        $this->assertSame(
+            BankTransaction::REPORT_PROPOSED,
+            $bank->fresh()->pretix_report_status,
+            'Ohne Event-Schalter darf nichts gemeldet werden, auch nicht mit gesetztem Verbindungs-Flag.',
+        );
+
+        $confirmation = \App\Models\PretixPaymentConfirmation::query()->latest('id')->first();
+        $this->assertNotNull($confirmation, 'Auch eine Verweigerung muss aufgezeichnet werden.');
+        $this->assertSame(\App\Models\PretixPaymentConfirmation::REASON_SWITCH_OFF, $confirmation->reason);
+    }
+
+    /**
+     * A REFUSAL IS NOT A FAILURE.
+     *
+     * "The event is not automated" is the configuration working. Marking the bank row
+     * FAILED for it would light up a red error on every credit of every non-automated
+     * event and bury the ones that really went wrong.
+     */
+    public function test_a_switched_off_event_does_not_mark_the_row_failed(): void
+    {
+        Http::fake(['*' => Http::response([], 200)]);
+
+        $c = $this->connection();
+        $this->eventWithSwitch(false);
+        $this->pendingOrder($c, 'QUIET', 15.00);
+        $bank = $this->credit(15.00, 'QUIET');
+
+        app(BankPretixReporter::class)->propose();
+
+        $this->assertNotSame(BankTransaction::REPORT_FAILED, $bank->fresh()->pretix_report_status);
+        $this->assertNull($bank->fresh()->pretix_report_error);
+    }
+
+    /**
+     * A HAND-CONFIRMED PAYMENT IS NOT BLOCKED BY THE SWITCH.
+     *
+     * The switch answers "may TxWatch do this on its own". Someone clicking confirm
+     * has answered that for this one order; refusing the click would make the switch
+     * mean something different from what it says.
+     */
+    public function test_a_manual_confirmation_ignores_the_switch(): void
+    {
+        Http::fake([
+            '*/orders/BYHAND/payments/' => Http::response(['results' => [
+                ['local_id' => 7, 'provider' => 'banktransfer', 'state' => 'pending', 'amount' => '12.00'],
+            ]], 200),
+            '*/payments/7/confirm/' => Http::response([], 200),
+        ]);
+
+        $c = $this->connection();
+        $this->eventWithSwitch(false);
+        $this->pendingOrder($c, 'BYHAND', 12.00);
+        $bank = $this->credit(12.00, 'BYHAND');
+        app(BankPretixReporter::class)->propose();
+
+        $res = app(BankPretixReporter::class)->confirm($bank->fresh());
+
+        $this->assertTrue($res['success']);
+        $this->assertSame(BankTransaction::REPORT_REPORTED, $bank->fresh()->pretix_report_status);
+
+        $confirmation = \App\Models\PretixPaymentConfirmation::query()
+            ->where('outcome', \App\Models\PretixPaymentConfirmation::OUTCOME_CONFIRMED)->first();
+
+        $this->assertNotNull($confirmation);
+        $this->assertFalse($confirmation->automatic, 'Eine Handbestätigung darf nicht als Automatik gelten.');
+    }
+
+    /**
+     * ONE CONFIRMATION PER ORDER, EVER.
+     *
+     * The double-payment case makes this real: two credits carrying the same code
+     * would otherwise confirm twice, and the second one books money the order does
+     * not owe.
+     */
+    public function test_an_order_is_never_confirmed_twice(): void
+    {
+        Http::fake([
+            '*/orders/TWICE/payments/' => Http::response(['results' => [
+                ['local_id' => 9, 'provider' => 'banktransfer', 'state' => 'pending', 'amount' => '20.00'],
+            ]], 200),
+            '*/payments/9/confirm/' => Http::response([], 200),
+        ]);
+
+        $c = $this->connection();
+        $this->eventWithSwitch(true);
+        $this->pendingOrder($c, 'TWICE', 20.00);
+
+        $first = $this->credit(20.00, 'Zahlung TWICE');
+        $second = $this->credit(20.00, 'Nochmal TWICE');
+
+        app(BankPretixReporter::class)->propose();
+        app(BankPretixReporter::class)->confirm($second->fresh(), automatic: true);
+
+        $this->assertSame(
+            1,
+            \App\Models\PretixPaymentConfirmation::query()
+                ->where('outcome', \App\Models\PretixPaymentConfirmation::OUTCOME_CONFIRMED)->count(),
+            'Eine Bestellung darf nur einmal als bezahlt gemeldet werden.',
+        );
     }
 }

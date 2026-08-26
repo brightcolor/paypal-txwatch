@@ -12,7 +12,7 @@ class Event extends Model
     use HasFactory;
     use \App\Models\Concerns\Auditable;
 
-    protected static array $auditAttributes = ['customer_id', 'name', 'display_name', 'pretix_event_slug', 'event_date', 'venue', 'is_active'];
+    protected static array $auditAttributes = ['customer_id', 'name', 'display_name', 'pretix_event_slug', 'event_date', 'venue', 'is_active', 'auto_mark_paid'];
 
     protected static string $auditLogName = 'event';
 
@@ -35,6 +35,7 @@ class Event extends Model
         'legal_notice',
         'internal_notes',
         'is_active',
+        'auto_mark_paid',
     ];
 
     protected function casts(): array
@@ -42,6 +43,7 @@ class Event extends Model
         return [
             'event_date' => 'date',
             'is_active' => 'boolean',
+            'auto_mark_paid' => 'boolean',
         ];
     }
 

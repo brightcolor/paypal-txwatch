@@ -4,7 +4,9 @@ namespace App\Services\Bank;
 
 use App\Models\BankTransaction;
 use App\Models\PretixOrder;
-use App\Services\Pretix\PretixClient;
+use App\Models\PretixPaymentConfirmation;
+use App\Services\Pretix\PaymentEvidence;
+use App\Services\Pretix\PaymentMarker;
 
 /**
  * Reports matched bank transfers to pretix as paid.
@@ -17,6 +19,13 @@ use App\Services\Pretix\PretixClient;
  * Confirming is a WRITE action (marks the order paid, triggers the ticket
  * email), so the match must be unambiguous: exact amount + order code, only
  * pending banktransfer/manual orders, one bank line per order.
+ *
+ * THE DECISION ITSELF LIVES IN PaymentMarker, not here. It is shared with the
+ * Enable Banking journal, which can trigger the same confirmation straight from a
+ * pull - and two copies of "may this order be marked paid" would be two sets of
+ * rules, with the forgotten one writing to a customer's order. This class still
+ * owns the bank row's own status columns; the reasoning and the record do not
+ * belong to it.
  */
 class BankPretixReporter
 {
@@ -60,9 +69,13 @@ class BankPretixReporter
             $claimed->put($order->pretix_connection_id . '|' . $order->order_code, true);
             $proposals++;
 
-            if ($order->connection?->auto_confirm_bank_transfers) {
-                $this->confirm($bank);
-            }
+            /*
+             * THE SWITCH MOVED FROM THE CONNECTION TO THE EVENT. All or nothing for
+             * an entire organizer could not exclude a finished event or one whose
+             * payments are handled elsewhere. PaymentMarker reads it - and records
+             * the refusal, so "why did nothing happen" has an answer too.
+             */
+            $this->confirm($bank, automatic: true);
         }
 
         return $proposals;
@@ -99,48 +112,38 @@ class BankPretixReporter
      *
      * @return array{success: bool, message: string}
      */
-    public function confirm(BankTransaction $bank): array
+    public function confirm(BankTransaction $bank, bool $automatic = false): array
     {
         if (blank($bank->pretix_order_code) || blank($bank->pretix_connection_id)) {
             return $this->fail($bank, 'Kein zugeordneter pretix-Auftrag.');
         }
 
-        $order = PretixOrder::query()
-            ->where('pretix_connection_id', $bank->pretix_connection_id)
-            ->where('event_slug', $bank->pretix_event_slug)
-            ->where('order_code', $bank->pretix_order_code)
-            ->with('connection')
-            ->first();
+        $confirmation = app(PaymentMarker::class)->mark(
+            PaymentEvidence::fromBankTransaction($bank),
+            automatic: $automatic,
+        );
 
-        if (! $order?->connection) {
-            return $this->fail($bank, 'pretix-Bestellung/Verbindung nicht gefunden.');
-        }
-
-        $client = new PretixClient($order->connection);
-        $payment = $client->pendingBankPayment($order->event_slug, $order->order_code);
-
-        if (! $payment) {
-            return $this->fail($bank, 'Keine offene Überweisungs-Zahlung in pretix (evtl. schon bezahlt/storniert).');
-        }
-
-        // Guard: only confirm if the pending amount matches the bank credit.
-        if (abs((float) $payment['amount'] - (float) $bank->amount) > self::TOLERANCE) {
-            return $this->fail($bank, 'Betrag der offenen Zahlung weicht ab – nicht automatisch bestätigt.');
-        }
-
-        $result = $client->confirmPayment($order->event_slug, $order->order_code, $payment['local_id']);
-
-        if ($result['success']) {
+        if ($confirmation->succeeded()) {
             $bank->update([
                 'pretix_report_status' => BankTransaction::REPORT_REPORTED,
                 'pretix_reported_at' => now(),
                 'pretix_report_error' => null,
             ]);
-        } else {
-            $this->fail($bank, $result['message']);
+
+            return ['success' => true, 'message' => (string) $confirmation->message];
         }
 
-        return $result;
+        /*
+         * A REFUSAL IS NOT A FAILURE. "The event's switch is off" is the automation
+         * working as configured; marking the bank row FAILED for it would light up a
+         * red error on every credit of every event that is not automated - and bury
+         * the ones that really went wrong. Only a genuine failure is recorded as one.
+         */
+        if ($confirmation->outcome === PretixPaymentConfirmation::OUTCOME_SKIPPED && $automatic) {
+            return ['success' => false, 'message' => $confirmation->reasonText()];
+        }
+
+        return $this->fail($bank, (string) ($confirmation->message ?: $confirmation->reasonText()));
     }
 
     /** @return array{success: bool, message: string} */

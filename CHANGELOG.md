@@ -4,6 +4,45 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.62.0] - 2026-08-18
+
+### Hinzugefügt
+- **TxWatch setzt Bestellungen bei Geldeingang selbstständig auf bezahlt – pro Event schaltbar.**
+  Unter Events → Event öffnen → **„Zahlungen automatisch melden"**; Voreinstellung **aus**. Geht eine
+  Überweisung ein, deren Verwendungszweck die Bestellnummer trägt und deren Betrag auf den Cent stimmt,
+  meldet TxWatch die Zahlung an pretix und der Gast bekommt seine Tickets – ohne Handgriff.
+  - Gemeldet wird nur bei **offener** Bestellung, **exakt** passendem Betrag, einer **offenen
+    Überweisungs-Zahlung in pretix** und **höchstens einmal je Bestellung**. Erstattungen und
+    Abbuchungen melden nie.
+  - Der Schalter gilt der **Automatik**. Eine Bestätigung von Hand bleibt möglich, auch wenn er aus ist:
+    wer klickt, hat entschieden.
+  - Ausgelöst vom Bankabruf **und** von importierten Kontoumsätzen. Der Abruf meldet auch im
+    Journal-Modus – eine Bestellung als bezahlt zu melden ist keine Buchung, und nur das war gefragt.
+- **Neue Ansicht „pretix → Zahlungsmeldungen": warum eine Bestellung als bezahlt gilt.** Für jede
+  Meldung steht dort, auf welches Geld hin entschieden wurde, welcher Verwendungszweck die Bestellung
+  identifiziert hat, welcher Schalter es erlaubt hat und was pretix geantwortet hat. **Auch jede
+  Verweigerung wird aufgezeichnet** – „die Automatik hat nichts getan" ist die schwerer zu klärende
+  Beschwerde, und die Begründung dafür wurde bisher vom nächsten Lauf überschrieben. Nichts dort lässt
+  sich ändern oder löschen.
+
+### Geändert
+- **Der Schalter für die automatische Bestätigung sitzt nicht mehr an der pretix-Verbindung, sondern am
+  Event.** Ein Schalter für den ganzen Veranstalter konnte weder ein abgelaufenes Event ausnehmen noch
+  eines, dessen Zahlungen anderswo laufen. Der bisherige Wert wird beim Update auf die betroffenen
+  Events übernommen, das Verhalten ändert sich dadurch nicht. An der Verbindung steht an seiner Stelle
+  jetzt ein Hinweis, wo geschaltet wird – ein Schalter, der nichts mehr tut, ist schlimmer als keiner.
+- Nach einer erfolgreichen Meldung folgt die lokale Bestellung sofort auf „bezahlt", statt bis zum
+  nächsten pretix-Import zu warten. Sonst zeigt das Bank-Journal weiter „offen – zu buchen" für etwas,
+  das TxWatch selbst gerade erledigt hat.
+
+### Intern
+- Die Entscheidung „darf diese Bestellung als bezahlt gemeldet werden" liegt an **einer** Stelle, die
+  sich beide Wege teilen. Zwei Umsetzungen wären zwei Regelwerke, und das vergessene davon schreibt in
+  die Bestellung eines Gastes.
+- Wiederholte Abrufe schreiben keine wiederholten Begründungen: nur eine **geänderte** Antwort wird
+  aufgezeichnet. Sonst stünden bei vier Abrufen täglich ein Dutzend gleichlautende Zeilen pro Tag und
+  Umsatz in genau der Liste, die lesbar bleiben muss.
+- 358 Tests (vorher 340).
 ## [0.61.0] - 2026-08-18
 
 ### Hinzugefügt
