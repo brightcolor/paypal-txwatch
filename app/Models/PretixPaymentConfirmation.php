@@ -38,6 +38,25 @@ class PretixPaymentConfirmation extends Model
     public const REASON_API = 'pretix_refused';
     public const REASON_NO_ORDER = 'order_unknown';
 
+    /**
+     * Confirmed although the amount did not fit - and someone said so by name.
+     *
+     * ITS OWN REASON, not a plain OK with a longer message. The one case where a
+     * confirmation went out WITHOUT the strongest corroboration there is has to be
+     * findable as a set, not buried in free text. The automation can never reach
+     * this value; see PaymentMarker.
+     */
+    public const REASON_FORCED_AMOUNT = 'amount_mismatch_accepted';
+
+    /**
+     * pretix accepted the call and the order still is not paid.
+     *
+     * Its own reason because it is the one failure that LOOKS like a success from
+     * the outside: the request went through, the response was 200, and the guest has
+     * no tickets. Found only by asking pretix again afterwards.
+     */
+    public const REASON_NOT_CONFIRMED = 'not_paid_after_confirm';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -79,6 +98,22 @@ class PretixPaymentConfirmation extends Model
     }
 
     /**
+     * Who set this in motion, in the words the protocol uses everywhere.
+     *
+     * One implementation for the list, the evidence view and the journal protocol:
+     * three copies of "Automatik or a name" would eventually say three things about
+     * the same row.
+     */
+    public function triggeredByLabel(): string
+    {
+        if ($this->automatic) {
+            return 'die Automatik';
+        }
+
+        return $this->user?->name ?? 'Handeingabe';
+    }
+
+    /**
      * The reason in one plain sentence.
      *
      * Kept next to the constants rather than in the view: the same wording is needed
@@ -98,8 +133,28 @@ class PretixPaymentConfirmation extends Model
             self::REASON_ALREADY => 'Für diese Bestellung wurde bereits ein Geldeingang gemeldet.',
             self::REASON_API => 'pretix hat die Meldung abgelehnt.',
             self::REASON_NO_ORDER => 'Zu dieser Bestellnummer gibt es keine Bestellung in TxWatch.',
+            self::REASON_FORCED_AMOUNT => 'Von Hand gemeldet, obwohl der Betrag abwich – die Abweichung '
+                . 'wurde ausdrücklich angenommen.',
+            self::REASON_NOT_CONFIRMED => 'pretix hat die Meldung angenommen, führt die Bestellung danach '
+                . 'aber nicht als bezahlt. Die Nachprüfung hat das aufgedeckt.',
             default => (string) $this->message,
         };
+    }
+
+    /**
+     * Reason and wording in one line, for a screen that has room for one.
+     *
+     * The reason is the RULE, the message the individual case - "der Betrag wich ab"
+     * against "31,50 statt 25,00". A notification that shows only the first leaves
+     * the reader to guess the numbers; one that shows only the second reads like a
+     * stray sentence.
+     */
+    public function explain(): string
+    {
+        $reason = $this->reasonText();
+        $message = (string) $this->message;
+
+        return $message === '' || $message === $reason ? $reason : $reason . ' ' . $message;
     }
 
     public function outcomeLabel(): string

@@ -4,7 +4,9 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\BankTransactionResource\Pages;
 use App\Models\BankTransaction;
+use App\Services\Bank\BankPretixReporter;
 use App\Services\Bank\BankReconciler;
+use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -116,17 +118,51 @@ class BankTransactionResource extends Resource
                 ]),
             ])
             ->actions([
+                /*
+                 * OFFERED ON EVERY CREDIT THAT IS NOT YET REPORTED, not only on the
+                 * matcher's proposals. The matcher proposes only where amount AND
+                 * code line up exactly - so the transfer that most needs a person,
+                 * the one with a typo in the purpose or no code at all, was the one
+                 * without a button. The order code is asked for instead of guessed;
+                 * everything after that is the same check the automation runs.
+                 */
                 Tables\Actions\Action::make('reportPretix')
                     ->label('Als bezahlt an pretix melden')
                     ->icon('heroicon-o-check-badge')->color('success')
-                    ->visible(fn (BankTransaction $r) => in_array($r->pretix_report_status, [BankTransaction::REPORT_PROPOSED, BankTransaction::REPORT_FAILED], true))
-                    ->requiresConfirmation()
-                    ->modalDescription(fn (BankTransaction $r) => "Bestellung {$r->pretix_order_code} in pretix als bezahlt bestätigen. Das löst den Ticket-Versand aus.")
-                    ->action(function (BankTransaction $r) {
-                        $res = app(\App\Services\Bank\BankPretixReporter::class)->confirm($r);
+                    ->visible(fn (BankTransaction $r) => (float) $r->amount > 0
+                        && $r->pretix_report_status !== BankTransaction::REPORT_REPORTED)
+                    ->modalHeading('Bestellung in pretix als bezahlt melden')
+                    ->modalDescription('Die Bestellung wird in pretix auf BEZAHLT gesetzt – der Gast bekommt '
+                        . 'daraufhin seine Tickets. Anschliessend wird bei pretix nachgefragt, ob es wirklich '
+                        . 'gewirkt hat. Der Vorgang wird mit deinem Namen protokolliert.')
+                    ->modalSubmitActionLabel('Jetzt melden')
+                    ->fillForm(fn (BankTransaction $r) => ['order_code' => $r->pretix_order_code])
+                    ->form([
+                        Forms\Components\TextInput::make('order_code')
+                            ->label('Bestellnummer in pretix')
+                            ->required()
+                            ->maxLength(64)
+                            ->helperText('Vorbelegt mit der zugeordneten Bestellung, falls es eine gibt.'),
+
+                        Forms\Components\Checkbox::make('allow_amount_mismatch')
+                            ->label('Abweichenden Betrag annehmen')
+                            ->helperText('Sonst wird nur gemeldet, wenn der Umsatz auf den Cent zur offenen '
+                                . 'Zahlung in pretix passt. Beide Beträge und diese Entscheidung stehen danach '
+                                . 'im Protokoll.'),
+                    ])
+                    ->action(function (BankTransaction $r, array $data) {
+                        $res = app(BankPretixReporter::class)->confirmManually(
+                            $r,
+                            orderCode: $data['order_code'] ?? null,
+                            allowAmountMismatch: (bool) ($data['allow_amount_mismatch'] ?? false),
+                        );
+
                         \Filament\Notifications\Notification::make()
                             ->title($res['success'] ? 'An pretix gemeldet' : 'Nicht gemeldet')
                             ->body($res['message'])
+                            // A refusal names what to change before the next attempt -
+                            // it must not vanish while the reader looks at the row.
+                            ->when(! $res['success'], fn ($n) => $n->persistent())
                             ->{$res['success'] ? 'success' : 'danger'}()
                             ->send();
                     }),

@@ -277,6 +277,37 @@ class PretixClient
     }
 
     /**
+     * The status pretix itself currently holds for one order ('n', 'p', 'c', 'e').
+     *
+     * THE POINT IS TO ASK AGAIN. A confirmation answers with HTTP 200, which says the
+     * request was accepted - not that the order came out paid. pretix can accept the
+     * call and still leave the order pending (a second required payment, a plugin
+     * that intervenes), and a "reported" row for an order the guest cannot use is
+     * the one failure nobody would go looking for.
+     *
+     * Returns null when the question could not be asked at all - a network failure
+     * is not an answer, and must never be read as "it did not work".
+     */
+    public function orderStatus(string $eventSlug, string $orderCode): ?string
+    {
+        $organizer = $this->connection->organizer_slug;
+
+        try {
+            $response = $this->http()->get("/organizers/{$organizer}/events/{$eventSlug}/orders/{$orderCode}/");
+
+            if (! $response->successful()) {
+                return null;
+            }
+
+            $status = $response->json('status');
+
+            return is_string($status) && $status !== '' ? $status : null;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
      * Core facts of one event straight from the pretix event endpoint:
      * dates, admission time, location, presale window, currency.
      *

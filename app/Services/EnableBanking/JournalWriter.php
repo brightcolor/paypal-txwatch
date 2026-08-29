@@ -184,6 +184,18 @@ class JournalWriter
     private function reexamine(EnableBankingJournalEntry $journal, array $match): void
     {
         /*
+         * A HAND ASSIGNMENT OUTRANKS THE RECOGNITION, and this is where that has to
+         * hold. The matcher reads the purpose text - the very text that did NOT carry
+         * the code, which is why someone assigned it themselves. Re-running it would
+         * find nothing, overwrite the method with "nichts", and file a protocol line
+         * claiming the picture had changed. Nothing here can improve on a decision a
+         * person already made about this entry.
+         */
+        if ($journal->match_method === PurposeMatcher::MANUAL) {
+            return;
+        }
+
+        /*
          * THE STATE IS PART OF THE COMPARISON. An order that got paid between two
          * pulls changes nothing about the code but everything about what is to be
          * done - and that change belongs in the protocol.

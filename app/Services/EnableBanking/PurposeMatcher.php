@@ -44,6 +44,17 @@ class PurposeMatcher
     public const FUZZY = 'fuzzy';
     public const NONE = 'none';
 
+    /**
+     * Not a recognition result at all: a person named the order.
+     *
+     * Lives among the other methods because it answers the SAME question - how does
+     * this entry come to carry that order code - and every screen that shows the
+     * origin of an assignment has to be able to show this one. It is never produced
+     * by matching; only a hand-confirmed payment writes it (see JournalPaymentReporter),
+     * and a later pull must not take it back (see JournalWriter::reexamine).
+     */
+    public const MANUAL = 'manual';
+
     /** Shortest window still worth comparing - below this everything matches everything. */
     private const MIN_WINDOW = 4;
 

@@ -19,6 +19,13 @@ use App\Services\Pretix\PaymentMarker;
  *
  * NOTHING HAPPENS WITHOUT AN EXPLICIT PER-EVENT SWITCH, off by default. The rule
  * that writes to a stranger's order is only ever armed one event at a time.
+ *
+ * THE HAND AND THE AUTOMATION TAKE THE SAME PATH. `reportEntry()` is what the
+ * button in the journal calls and what the scheduled run calls, one entry at a
+ * time. The two differ in exactly two arguments - who triggered it, and whether a
+ * deviating amount was accepted - and in nothing else: a separate manual path would
+ * be a second set of rules for writing into a guest's order, and it is the forgotten
+ * one that does the damage.
  */
 class JournalPaymentReporter
 {
@@ -49,40 +56,79 @@ class JournalPaymentReporter
             ->get();
 
         foreach ($entries as $entry) {
-            $confirmation = $this->marker->mark(PaymentEvidence::fromJournalEntry($entry));
+            $confirmation = $this->reportEntry($entry);
 
             match ($confirmation->outcome) {
                 PretixPaymentConfirmation::OUTCOME_CONFIRMED => $counts['confirmed']++,
                 PretixPaymentConfirmation::OUTCOME_FAILED => $counts['failed']++,
                 default => $counts['skipped']++,
             };
-
-            if ($confirmation->succeeded()) {
-                $this->closeEntry($entry, $confirmation);
-
-                continue;
-            }
-
-            /*
-             * A refusal only reaches the journal's own protocol when it is NEW.
-             * PaymentMarker returns the existing record unchanged when the answer has
-             * not moved, and a line saying "still switched off" four times a day is
-             * noise in the one place that has to stay readable.
-             */
-            if ($confirmation->wasRecentlyCreated) {
-                $entry->events()->create([
-                    'kind' => 'changed',
-                    'message' => 'Nicht an pretix gemeldet: ' . $confirmation->reasonText(),
-                    'context' => [
-                        'confirmation_id' => $confirmation->id,
-                        'reason' => $confirmation->reason,
-                    ],
-                    'at' => now(),
-                ]);
-            }
         }
 
         return $counts;
+    }
+
+    /**
+     * ONE entry, reported to pretix - by the scheduled pull or by a person.
+     *
+     * `$orderCode` is how a person names the order themselves: the recognition only
+     * ever reads the purpose text, and it cannot know that the guest quoted the code
+     * with a typo or left it out entirely. Passing it does NOT skip any check - the
+     * order still has to exist, be open and hold an open transfer payment in pretix.
+     *
+     * `$allowAmountMismatch` is refused for the automation inside PaymentMarker, so
+     * it cannot leak into a scheduled run from here either.
+     *
+     * The outcome is returned rather than reported: the caller is a screen that has
+     * to say what happened, or a run that counts.
+     */
+    public function reportEntry(
+        EnableBankingJournalEntry $entry,
+        bool $automatic = true,
+        ?string $orderCode = null,
+        bool $allowAmountMismatch = false,
+    ): PretixPaymentConfirmation {
+        $evidence = PaymentEvidence::fromJournalEntry($entry);
+
+        if (filled($orderCode)) {
+            $evidence = $evidence->withOrderCode($orderCode);
+        }
+
+        $confirmation = $this->marker->mark(
+            $evidence,
+            automatic: $automatic,
+            allowAmountMismatch: $allowAmountMismatch,
+        );
+
+        if ($confirmation->succeeded()) {
+            $this->closeEntry($entry, $confirmation);
+
+            return $confirmation;
+        }
+
+        /*
+         * A refusal only reaches the journal's own protocol when it is NEW.
+         * PaymentMarker returns the existing record unchanged when the answer has
+         * not moved, and a line saying "still switched off" four times a day is
+         * noise in the one place that has to stay readable. A hand-triggered attempt
+         * is always new there, so a refused click is never silent.
+         */
+        if ($confirmation->wasRecentlyCreated) {
+            $entry->events()->create([
+                'kind' => 'changed',
+                'message' => $this->who($confirmation)
+                    . 'Nicht an pretix gemeldet: ' . $confirmation->reasonText(),
+                'context' => [
+                    'confirmation_id' => $confirmation->id,
+                    'reason' => $confirmation->reason,
+                    'automatic' => $confirmation->automatic,
+                    'user_id' => $confirmation->user_id,
+                ],
+                'at' => now(),
+            ]);
+        }
+
+        return $confirmation;
     }
 
     /**
@@ -94,12 +140,48 @@ class JournalPaymentReporter
      */
     private function closeEntry(EnableBankingJournalEntry $entry, PretixPaymentConfirmation $confirmation): void
     {
-        $entry->forceFill(['pretix_order_status' => 'p'])->save();
+        /*
+         * A HAND ASSIGNMENT IS KEPT ONLY ONCE IT HELD. Someone naming an order that
+         * pretix then confirmed has proven the assignment; a mistyped code that was
+         * refused has proven nothing, and writing it onto the entry anyway would turn
+         * a slip of the finger into a permanent-looking finding.
+         */
+        $previous = $entry->pretix_order_code;
+        $handAssigned = filled($confirmation->order_code)
+            && mb_strtoupper((string) $previous) !== mb_strtoupper((string) $confirmation->order_code);
+
+        $entry->forceFill($handAssigned
+            ? [
+                'pretix_order_status' => 'p',
+                'pretix_order_code' => $confirmation->order_code,
+                // Outranks the recognition on the next pull - see JournalWriter.
+                'match_method' => PurposeMatcher::MANUAL,
+            ]
+            : ['pretix_order_status' => 'p'])->save();
+
+        if ($handAssigned) {
+            $entry->events()->create([
+                'kind' => 'changed',
+                'message' => sprintf(
+                    '%sVon Hand der Bestellung %s zugeordnet – die Erkennung hatte %s.',
+                    $this->who($confirmation),
+                    $confirmation->order_code,
+                    filled($previous) ? $previous : 'nichts zugeordnet',
+                ),
+                'context' => [
+                    'confirmation_id' => $confirmation->id,
+                    'previous_order_code' => $previous,
+                    'user_id' => $confirmation->user_id,
+                ],
+                'at' => now(),
+            ]);
+        }
 
         $entry->events()->create([
             'kind' => 'matched',
             'message' => sprintf(
-                'An pretix gemeldet: Bestellung %s auf BEZAHLT gesetzt (%s EUR). %s',
+                '%sAn pretix gemeldet: Bestellung %s auf BEZAHLT gesetzt (%s EUR). %s',
+                $this->who($confirmation),
                 $confirmation->order_code,
                 number_format((float) $confirmation->amount, 2, ',', '.'),
                 $confirmation->reasonText(),
@@ -108,8 +190,24 @@ class JournalPaymentReporter
                 'confirmation_id' => $confirmation->id,
                 'event_slug' => $confirmation->event_slug,
                 'pretix_payment_local_id' => $confirmation->pretix_payment_local_id,
+                'automatic' => $confirmation->automatic,
+                'user_id' => $confirmation->user_id,
             ],
             'at' => now(),
         ]);
+    }
+
+    /**
+     * Who did this, as a sentence opener - empty for the automation.
+     *
+     * The name belongs in the MESSAGE, not only in a context field: the protocol is
+     * read as prose, and "who marked this order paid" is the first question asked of
+     * a line that sent a guest their tickets.
+     */
+    private function who(PretixPaymentConfirmation $confirmation): string
+    {
+        return $confirmation->automatic
+            ? ''
+            : sprintf('Von Hand durch %s: ', $confirmation->triggeredByLabel());
     }
 }

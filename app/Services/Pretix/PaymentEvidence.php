@@ -32,6 +32,31 @@ class PaymentEvidence
     ) {
     }
 
+    /**
+     * The same money, but assigned to the order a PERSON named.
+     *
+     * The recognition reads the purpose text; it cannot know that the guest quoted
+     * the wrong code or none at all. Only the assignment changes - amount, purpose
+     * and origin stay exactly as the bank delivered them, because those are the
+     * evidence and must not be rewritten by whoever decides.
+     */
+    public function withOrderCode(string $orderCode): self
+    {
+        return new self(
+            source: $this->source,
+            orderCode: mb_strtoupper(trim($orderCode)),
+            amount: $this->amount,
+            purpose: $this->purpose,
+            currency: $this->currency,
+            counterpartyName: $this->counterpartyName,
+            bookedOn: $this->bookedOn,
+            connectionId: $this->connectionId,
+            eventSlug: $this->eventSlug,
+            bankTransactionId: $this->bankTransactionId,
+            journalEntryId: $this->journalEntryId,
+        );
+    }
+
     /** A row in the books - imported statement file or promoted journal entry. */
     public static function fromBankTransaction(BankTransaction $bank): self
     {

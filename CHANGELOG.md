@@ -4,6 +4,54 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.63.0] - 2026-08-29
+
+### Hinzugefügt
+- **Überweisungen lassen sich von Hand als bezahlt melden.** Neuer Knopf **„Als bezahlt melden"** an jedem
+  Geldeingang – im **Bank-Journal** und unter **Kontoumsätze**. Die Bestellung wird in pretix auf bezahlt
+  gesetzt, der Gast bekommt seine Tickets. Bisher konnte das nur die Automatik, und die braucht ein Event
+  in TxWatch, dessen Schalter an ist, und eine Bestellnummer, die sie selbst im Verwendungszweck gefunden
+  hat. Fehlte eines davon, stand der Eingang in „Zu tun" – und es gab von dort aus nichts zu tun.
+  - Die **Bestellnummer ist vorbelegt** mit dem Erkannten, beim Vorschlag mit diesem, und überschreibbar.
+    Damit wird ein **Vorschlag** („ein Zeichen weicht ab") erstmals mit einem Klick angenommen. Nach einer
+    erfolgreichen Meldung merkt sich der Journaleintrag diese Zuordnung als **„von Hand"**, und ein
+    späterer Abruf nimmt sie nicht mehr zurück. Eine Nummer ohne eindeutige Bestellung ändert **nichts**:
+    ein Vertipper darf kein Befund werden.
+  - **Alle Prüfungen bleiben stehen** – offene Bestellung, offene Überweisungs-Zahlung in pretix, höchstens
+    eine Meldung je Bestellung, nie auf eine Erstattung. Ein Klick überspringt keine davon.
+  - Das Einzige, was von Hand mehr geht: ein **abweichender Betrag** kann ausdrücklich angenommen werden
+    (Häkchen im Dialog), etwa bei mitüberwiesener Gebühr. **Die Automatik kann das nicht, auch nicht auf
+    Zuruf** – sie würde diese Entscheidung auf jede Bestellung anwenden, die ihr begegnet. Der Nachweis
+    führt beide Beträge und eine eigene Begründung.
+  - **Wer es war, steht in den Protokollen**: mit Namen im Verlauf des Journaleintrags, im Nachweis unter
+    **pretix → Zahlungsmeldungen** (neuer Filter **„Nur von Hand"**) und zusätzlich im **Prüfprotokoll**
+    (System → Audit-Log) neben allem anderen, was dieses Konto getan hat. **Auch ein abgelehnter Versuch
+    wird aufgezeichnet** – ein Klick bleibt nie stumm, und die Meldung auf dem Schirm sagt, woran es lag.
+
+### Geändert
+- **Nach jeder Meldung wird bei pretix nachgefragt, ob sie gewirkt hat.** „HTTP 200" heisst nur, dass der
+  Aufruf angenommen wurde – pretix kann ihn annehmen und die Bestellung trotzdem offen lassen. Steht sie
+  danach nicht auf bezahlt, gilt die Meldung als **fehlgeschlagen** statt als erledigt; die lokale Kopie
+  übernimmt den falschen Stand nicht. Das ist der Fehler, nach dem sonst niemand sucht: eine Zeile sagt
+  „gemeldet", und der Gast wartet auf Tickets. Konnte die Rückfrage nicht gestellt werden, steht genau das
+  im Nachweis – Schweigen wird nicht als Bestätigung gelesen.
+- **Der Knopf unter Kontoumsätze erscheint an jedem noch nicht gemeldeten Geldeingang**, nicht mehr nur an
+  den Vorschlägen der automatischen Zuordnung. Vorgeschlagen wird nur, wo Betrag **und** Bestellnummer
+  exakt zusammenpassen – ausgerechnet der Umsatz, der einen Menschen braucht, hatte also keinen Knopf.
+- Eine **abgelehnte** Meldung von Hand färbt die Kontoumsatz-Zeile nicht mehr rot. „Die Bestellung ist
+  schon bezahlt" ist eine Antwort auf eine Frage, kein Defekt an der Zeile – und die rote Markierung hätte
+  die Frage überlebt.
+
+### Intern
+- Handmeldung und Automatik gehen durch **dieselbe** Stelle (`JournalPaymentReporter::reportEntry`), die
+  sich in genau zwei Argumenten unterscheiden: wer ausgelöst hat und ob eine Abweichung angenommen wurde.
+  Ein eigener Weg für die Hand wäre ein zweites Regelwerk für Schreibzugriffe auf die Bestellung eines
+  Gastes, und Schaden richtet das vergessene an.
+- Die Freigabe für den abweichenden Betrag wird in der Entscheidung selbst entwaffnet, wenn der Aufrufer
+  automatisch ist – nicht per Prüfung abgelehnt. Ein vertauschtes Argumentpaar kann sie damit nicht scharf
+  schalten.
+- 388 Tests (vorher 366).
+
 ## [0.62.2] - 2026-08-26
 
 ### Behoben

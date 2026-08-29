@@ -92,7 +92,7 @@
                 <tr>
                     <td class="lbl">Ausgelöst durch</td>
                     <td>
-                        {{ $record->automatic ? 'die Automatik' : ($record->user?->name ?? 'Handeingabe') }}
+                        {{ $record->triggeredByLabel() }}
                         <span class="text-xs text-gray-400">· {{ $record->at?->format('d.m.Y H:i:s') }}</span>
                     </td>
                 </tr>

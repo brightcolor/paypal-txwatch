@@ -98,7 +98,7 @@ class PretixPaymentConfirmationResource extends Resource
                 Tables\Columns\TextColumn::make('automatic')
                     ->label('Ausgelöst durch')
                     ->badge()
-                    ->state(fn ($record) => $record->automatic ? 'Automatik' : ($record->user?->name ?? 'von Hand'))
+                    ->state(fn ($record) => $record->automatic ? 'Automatik' : $record->triggeredByLabel())
                     ->color(fn ($record) => $record->automatic ? 'info' : 'gray'),
 
                 Tables\Columns\TextColumn::make('source')
@@ -128,6 +128,16 @@ class PretixPaymentConfirmationResource extends Resource
                 Tables\Filters\Filter::make('nur_automatik')
                     ->label('Nur Automatik')
                     ->query(fn (Builder $query) => $query->where('automatic', true)),
+
+                /*
+                 * The other half of the same question, and the one that gets asked in
+                 * an audit: which orders did a PERSON mark paid. Reading it out of the
+                 * "Nur Automatik" filter by inverting it in one's head is exactly the
+                 * step nobody takes.
+                 */
+                Tables\Filters\Filter::make('nur_von_hand')
+                    ->label('Nur von Hand')
+                    ->query(fn (Builder $query) => $query->where('automatic', false)),
             ])
             ->actions([
                 Tables\Actions\Action::make('beleg')

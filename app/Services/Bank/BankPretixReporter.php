@@ -107,12 +107,63 @@ class BankPretixReporter
     }
 
     /**
+     * A PERSON marks this credit as the payment of that order.
+     *
+     * The difference to `confirm()` is the order code: the matcher only ever proposes
+     * where amount AND code line up exactly, so a transfer whose purpose carries a
+     * typo, a wrong code or nothing at all never becomes a proposal - and there was
+     * no way to say "it is this order" by hand. Naming it here does NOT skip a single
+     * check afterwards; it only answers the question the purpose text left open.
+     *
+     * THE ROW LEARNS THE ASSIGNMENT ONLY FOR AN ORDER THAT EXISTS. A mistyped code
+     * written onto the statement line would leave a finding behind that looks like a
+     * reconciliation and is a slip of the finger. An order that resolves but is then
+     * refused - already paid, no open payment - DOES keep the assignment: the person's
+     * statement that this credit belongs to that order stands on its own, and it is
+     * what the reconciliation view wants to show. (The journal is stricter, because
+     * the code there also decides whether an entry counts as work.)
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function confirmManually(
+        BankTransaction $bank,
+        ?string $orderCode = null,
+        bool $allowAmountMismatch = false,
+    ): array {
+        $code = filled($orderCode) ? mb_strtoupper(trim($orderCode)) : (string) $bank->pretix_order_code;
+
+        if (blank($code)) {
+            return ['success' => false, 'message' => 'Ohne Bestellnummer lässt sich nichts melden.'];
+        }
+
+        $evidence = PaymentEvidence::fromBankTransaction($bank)->withOrderCode($code);
+
+        // Resolved by PaymentMarker's own rule, ambiguity included - see there.
+        $order = app(PaymentMarker::class)->findOrder($evidence);
+
+        if (! $order) {
+            return [
+                'success' => false,
+                'message' => sprintf('Zu „%s" gibt es keine eindeutige Bestellung in TxWatch.', $code),
+            ];
+        }
+
+        $bank->update([
+            'pretix_connection_id' => $order->pretix_connection_id,
+            'pretix_event_slug' => $order->event_slug,
+            'pretix_order_code' => $order->order_code,
+        ]);
+
+        return $this->confirm($bank->refresh(), automatic: false, allowAmountMismatch: $allowAmountMismatch);
+    }
+
+    /**
      * Confirms one proposed bank transfer in pretix. Idempotent-ish: safe to
      * retry a failed one.
      *
      * @return array{success: bool, message: string}
      */
-    public function confirm(BankTransaction $bank, bool $automatic = false): array
+    public function confirm(BankTransaction $bank, bool $automatic = false, bool $allowAmountMismatch = false): array
     {
         if (blank($bank->pretix_order_code) || blank($bank->pretix_connection_id)) {
             return $this->fail($bank, 'Kein zugeordneter pretix-Auftrag.');
@@ -121,6 +172,7 @@ class BankPretixReporter
         $confirmation = app(PaymentMarker::class)->mark(
             PaymentEvidence::fromBankTransaction($bank),
             automatic: $automatic,
+            allowAmountMismatch: $allowAmountMismatch,
         );
 
         if ($confirmation->succeeded()) {
@@ -138,9 +190,14 @@ class BankPretixReporter
          * working as configured; marking the bank row FAILED for it would light up a
          * red error on every credit of every event that is not automated - and bury
          * the ones that really went wrong. Only a genuine failure is recorded as one.
+         *
+         * THE SAME HOLDS FOR A CLICK, for the same reason from the other side: an
+         * order that turns out to be settled already is an answer, not a defect, and
+         * a red statement line would outlive the question that produced it. The
+         * sentence goes back to the person who asked instead.
          */
-        if ($confirmation->outcome === PretixPaymentConfirmation::OUTCOME_SKIPPED && $automatic) {
-            return ['success' => false, 'message' => $confirmation->reasonText()];
+        if ($confirmation->outcome === PretixPaymentConfirmation::OUTCOME_SKIPPED) {
+            return ['success' => false, 'message' => $confirmation->explain()];
         }
 
         return $this->fail($bank, (string) ($confirmation->message ?: $confirmation->reasonText()));

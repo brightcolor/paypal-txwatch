@@ -358,11 +358,34 @@ DB-Fehler nicht zurück in die DB, damit das Logging nie den Request killt oder 
     Erstattungen melden nie. Der API-Token braucht das Recht „Bestellungen ändern".
   - Der Schalter gilt für die **Automatik**. Eine Bestätigung von Hand ist davon unberührt – wer klickt,
     hat entschieden.
+  - **Nach der Meldung wird bei pretix nachgefragt**, ob die Bestellung dort wirklich auf bezahlt steht.
+    Ein „HTTP 200" heisst nur, dass der Aufruf angenommen wurde; bleibt die Bestellung danach offen, gilt
+    das als **fehlgeschlagen** und nicht als gemeldet. Antwortet pretix auf die Rückfrage gar nicht, steht
+    genau das im Nachweis – Schweigen wird nicht als Bestätigung gelesen.
   - **Jede Meldung UND jede Verweigerung** steht mit Begründung unter **pretix → Zahlungsmeldungen**:
     welches Geld, welcher Verwendungszweck, welcher Schalter, was pretix geantwortet hat. Nichts dort
     lässt sich ändern oder löschen. Auch „warum wurde NICHT gemeldet" ist damit beantwortbar.
   - Ausgelöst wird sowohl vom Bankabruf (Enable Banking) als auch von importierten Kontoumsätzen. Der
     Abruf meldet auch im Journal-Modus: eine Bestellung als bezahlt zu melden ist keine Buchung.
+- **Überweisungen von Hand als bezahlt melden** – der Knopf **„Als bezahlt melden"** an jedem Geldeingang,
+  im **Bank-Journal** wie unter **Kontoumsätze**. Für alles, was die Automatik nicht selbst erledigen darf
+  oder kann: Event ohne Schalter, gar kein Event in TxWatch, oder eine Bestellnummer, die im
+  Verwendungszweck fehlt oder mit einem Tippfehler dasteht.
+  - Die **Bestellnummer** ist vorbelegt mit dem, was erkannt wurde – beim Vorschlag mit diesem – und lässt
+    sich überschreiben. Damit wird ein Vorschlag mit einem Klick angenommen. Hat die Meldung geklappt,
+    merkt sich der Journaleintrag die Zuordnung („von Hand"), und ein späterer Abruf nimmt sie nicht zurück.
+    Eine Bestellnummer, zu der es keine eindeutige Bestellung gibt, ändert **nichts** – ein Vertipper wird
+    kein Befund.
+  - **Alle übrigen Prüfungen bleiben**: offene Bestellung, offene Überweisungs-Zahlung in pretix, höchstens
+    eine Meldung je Bestellung, keine Erstattungen. Ein Klick überspringt keine davon.
+  - Das **Einzige**, was von Hand mehr geht als automatisch: ein **abweichender Betrag** lässt sich
+    ausdrücklich annehmen (Häkchen im Dialog) – etwa bei mitüberwiesener Gebühr. Die Automatik kann das
+    nicht, auch nicht auf Zuruf: eine Regel würde diese Entscheidung auf jede Bestellung anwenden. Beide
+    Beträge landen im Nachweis, unter eigener Begründung.
+  - **Wer es war, steht in beiden Protokollen**: mit Namen im Verlauf des Journaleintrags („Von Hand durch
+    …"), als Nachweis unter **pretix → Zahlungsmeldungen** (Filter **„Nur von Hand"**) – und zusätzlich im
+    **Prüfprotokoll** (System → Audit-Log), wo alles steht, was ein Benutzerkonto geändert hat. Auch ein
+    **abgelehnter** Versuch wird protokolliert; ein Klick bleibt nie stumm.
 - **Automatischer Bankabruf via Enable Banking** (Bank → Bank verbinden, Admin): der Weg über PSD2, ohne
   Registrierung bei der Deutschen Kreditwirtschaft. Admin lädt einmalig den Anwendungsschlüssel aus dem
   Enable-Banking-Control-Panel hoch (die Kennung steckt im Dateinamen und wird mitgelesen), wählt die Bank
@@ -389,6 +412,9 @@ DB-Fehler nicht zurück in die DB, damit das Logging nie den Request killt oder 
     `Vorschlag` (ein Zeichen weicht ab, wird **nicht** automatisch gebucht) oder `keine Zuordnung`.
     Der Filter **„Zu tun"** und der Knopf **„Nur die N zu entscheiden"** oben rechts zeigen genau die
     Einträge, die die Zahl am Menüpunkt ergeben – offene Bestellungen, zweite Geldeingänge und Vorschläge.
+  - Jeder Geldeingang, dessen Bestellung nicht schon bezahlt ist, trägt den Knopf **„Als bezahlt melden"**
+    (siehe oben) – damit lässt sich die Arbeitsliste auch dann abarbeiten, wenn die Automatik nichts tun
+    darf. Das Melden ist **keine** Buchung: die Zeile bleibt unübernommen, in den Büchern ändert sich nichts.
 - **Automatischer Bankabruf via FinTS/HBCI** – **stillgelegt** (`FINTS_ENABLED`, ohne Angabe aus). Direkte
   Anbindung an die Bank ohne Drittanbieter, vollständig gebaut, aber nicht benutzbar: Ohne bei der Deutschen
   Kreditwirtschaft freigeschaltete Registrierungsnummer weist der Bankrechner jeden Dialog mit „9078" ab –

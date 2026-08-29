@@ -4,6 +4,9 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\EnableBankingJournalResource\Pages;
 use App\Models\EnableBankingJournalEntry;
+use App\Services\EnableBanking\JournalPaymentReporter;
+use Filament\Forms;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -151,11 +154,17 @@ class EnableBankingJournalResource extends Resource
                     ->placeholder('—')
                     ->tooltip(function ($record) {
                         if (filled($record->pretix_order_code)) {
-                            $exact = $record->match_method === \App\Services\EnableBanking\PurposeMatcher::EXACT;
-
-                            return $exact
-                                ? 'Bestellnummer steht wörtlich im Verwendungszweck.'
-                                : 'Erst nach Entfernen von Trenn- und Leerzeichen gefunden.';
+                            // Three origins, three sentences. A hand assignment used to
+                            // be described as "found after cleaning up the spacing" -
+                            // a claim about the purpose text that is simply untrue.
+                            return match ($record->match_method) {
+                                \App\Services\EnableBanking\PurposeMatcher::EXACT =>
+                                    'Bestellnummer steht wörtlich im Verwendungszweck.',
+                                \App\Services\EnableBanking\PurposeMatcher::MANUAL =>
+                                    'Von Hand zugeordnet – nicht aus dem Verwendungszweck erkannt. '
+                                    . 'Wer und wann steht im Protokoll.',
+                                default => 'Erst nach Entfernen von Trenn- und Leerzeichen gefunden.',
+                            };
                         }
 
                         $suggestion = $record->bestSuggestion();
@@ -211,12 +220,14 @@ class EnableBankingJournalResource extends Resource
                         \App\Services\EnableBanking\PurposeMatcher::EXACT => 'wörtlich',
                         \App\Services\EnableBanking\PurposeMatcher::NORMALISED => 'nach Bereinigung',
                         \App\Services\EnableBanking\PurposeMatcher::FUZZY => 'Vorschlag',
+                        \App\Services\EnableBanking\PurposeMatcher::MANUAL => 'von Hand',
                         default => 'nichts',
                     })
                     ->color(fn (?string $state) => match ($state) {
                         \App\Services\EnableBanking\PurposeMatcher::EXACT => 'success',
                         \App\Services\EnableBanking\PurposeMatcher::NORMALISED => 'info',
                         \App\Services\EnableBanking\PurposeMatcher::FUZZY => 'warning',
+                        \App\Services\EnableBanking\PurposeMatcher::MANUAL => 'info',
                         default => 'gray',
                     })
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -303,6 +314,83 @@ class EnableBankingJournalResource extends Resource
              * detour through a log list would mean searching for it again.
              */
             ->actions([
+                /*
+                 * THE HAND ON THE SAME LEVER THE AUTOMATION PULLS. The automatic
+                 * report needs the event's switch, an event at all, and a code the
+                 * recognition found on its own - and where any of the three is
+                 * missing, the entry sits in "Zu tun" with nothing anyone can do
+                 * about it from here. This button is that missing step, and it goes
+                 * through the SAME check, the same record and the same protocol; the
+                 * only difference is that a person answered instead of a rule.
+                 */
+                Tables\Actions\Action::make('als_bezahlt_melden')
+                    ->label('Als bezahlt melden')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    /*
+                     * Only where it can mean anything: money IN, on an order that is
+                     * not already paid. On a refund it would offer to confirm a
+                     * payment at the moment it was reversed.
+                     */
+                    ->visible(fn ($record) => (float) $record->amount > 0 && $record->pretix_order_status !== 'p')
+                    ->modalHeading('Bestellung in pretix als bezahlt melden')
+                    /*
+                     * SAYS WHAT IT DOES TO SOMEONE ELSE. The click leaves TxWatch: the
+                     * order is settled in pretix and the guest receives their tickets.
+                     * Whoever reads this modal has to know that before, not after.
+                     */
+                    ->modalDescription(
+                        'Die Bestellung wird in pretix auf BEZAHLT gesetzt – der Gast bekommt daraufhin '
+                        . 'seine Tickets. Gemeldet wird nur, wenn die Bestellung offen ist und pretix eine '
+                        . 'offene Überweisungs-Zahlung dazu führt; anschliessend wird bei pretix nachgefragt, '
+                        . 'ob es wirklich gewirkt hat. Der Vorgang wird mit deinem Namen protokolliert.',
+                    )
+                    ->modalSubmitActionLabel('Jetzt melden')
+                    /*
+                     * Prefilled with what the recognition made of the purpose - the
+                     * assigned code, or the proposal it did not dare to assign. That
+                     * prefill IS the one-click case; typing is for the entry where the
+                     * guest quoted nothing usable.
+                     */
+                    ->fillForm(fn ($record) => [
+                        'order_code' => $record->pretix_order_code ?? ($record->bestSuggestion()['code'] ?? null),
+                    ])
+                    ->form([
+                        Forms\Components\TextInput::make('order_code')
+                            ->label('Bestellnummer in pretix')
+                            ->required()
+                            ->maxLength(64)
+                            ->helperText('Vorbelegt mit dem, was im Verwendungszweck gefunden wurde – bei einem '
+                                . 'Vorschlag mit diesem. Steht dort nichts oder das Falsche, hier die richtige '
+                                . 'Bestellnummer eintragen.'),
+
+                        Forms\Components\Checkbox::make('allow_amount_mismatch')
+                            ->label('Abweichenden Betrag annehmen')
+                            ->helperText('Sonst wird nur gemeldet, wenn der Geldeingang auf den Cent zur offenen '
+                                . 'Zahlung in pretix passt. Nur ankreuzen, wenn die Abweichung geklärt ist – etwa '
+                                . 'eine mitüberwiesene Gebühr. Beide Beträge und diese Entscheidung stehen '
+                                . 'danach im Protokoll.'),
+                    ])
+                    ->action(function (EnableBankingJournalEntry $record, array $data) {
+                        $confirmation = app(JournalPaymentReporter::class)->reportEntry(
+                            $record,
+                            automatic: false,
+                            orderCode: $data['order_code'] ?? null,
+                            allowAmountMismatch: (bool) ($data['allow_amount_mismatch'] ?? false),
+                        );
+
+                        $geklappt = $confirmation->succeeded();
+
+                        Notification::make()
+                            ->title($geklappt ? 'In pretix als bezahlt gemeldet' : 'Nicht gemeldet')
+                            ->body($confirmation->explain())
+                            // A refusal has to survive the glance away: it names what
+                            // to change before the next attempt.
+                            ->when(! $geklappt, fn (Notification $n) => $n->persistent())
+                            ->{$geklappt ? 'success' : 'danger'}()
+                            ->send();
+                    }),
+
                 Tables\Actions\Action::make('protokoll')
                     ->label('Protokoll')
                     ->icon('heroicon-o-list-bullet')
