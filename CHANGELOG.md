@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.64.1] - 2026-08-31
+
+### Behoben
+- **Der neue Bestellverlauf schrieb bei jedem Import über tausend gleichlautende Zeilen.** Der
+  pretix-Abgleich läuft über **alle** Bestellungen, nicht nur über geänderte – am echten Bestand waren
+  das 1056 identische „abgeglichen"-Zeilen pro Lauf, alle 30 Minuten, rund 50.000 Zeilen am Tag, unter
+  denen die wenigen mit Aussage verschwunden wären. Aufgezeichnet wird jetzt nur noch eine **geänderte**
+  Antwort. Gleichzeitig lautet die Buchungszeile unabhängig davon, ob die Buchung neu angelegt oder
+  aktualisiert wurde: dieser Unterschied beschreibt unsere Zeile, nicht die Bestellung, und liess einen
+  unveränderten Lauf wie eine Neuigkeit aussehen.
+
 ## [0.64.0] - 2026-08-31
 
 ### Hinzugefügt

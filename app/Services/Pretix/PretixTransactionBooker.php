@@ -140,15 +140,18 @@ class PretixTransactionBooker
                 \App\Models\PretixOrderLogEntry::ACTION_BOOKED,
                 $connection->id, $order->event_slug, $order->order_code,
                 sprintf(
-                    '%s als Transaktion: %s brutto, %s Gebühr, %s netto (%s).',
-                    $transaction->wasRecentlyCreated ? 'Verbucht' : 'Buchung aktualisiert',
+                    // DELIBERATELY THE SAME SENTENCE whether the row was created or
+                    // updated: that distinction describes OUR row, not the order, and
+                    // wording it differently made an unchanged re-run look like news.
+                    // Whether it was new is in the context, where it belongs.
+                    'Als Transaktion verbucht: %s brutto, %s Gebühr, %s netto (%s).',
                     number_format($gross, 2, ',', '.'),
                     number_format($fee, 2, ',', '.'),
                     number_format(round($gross + $fee, 2), 2, ',', '.'),
                     $providerLabel,
                 ),
                 $order, null, $order->status,
-                ['transaction_id' => $transaction->id],
+                ['transaction_id' => $transaction->id, 'neu' => $transaction->wasRecentlyCreated],
             );
 
             $refunds += $this->bookRefunds($connection, $order);

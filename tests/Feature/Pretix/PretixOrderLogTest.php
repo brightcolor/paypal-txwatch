@@ -61,6 +61,7 @@ class PretixOrderLogTest extends TestCase
         $this->assertStringContainsString('25,00', $entry->message);
         // The fee is part of what was booked and belongs in the record.
         $this->assertStringContainsString('Gebühr', $entry->message);
+        $this->assertStringContainsString('verbucht', $entry->message);
         $this->assertSame(1, Transaction::count());
     }
 
@@ -177,4 +178,51 @@ class PretixOrderLogTest extends TestCase
         $this->assertFalse($resource::canEdit($order));
         $this->assertFalse($resource::canDelete($order));
     }
+    /**
+     * A REPEATED IMPORT DOES NOT REPEAT THE RECORD.
+     *
+     * Measured on the real data, and it was wrong at first: the reconciler walks
+     * EVERY order on EVERY import, not just the changed ones - 1056 identical lines
+     * per run, every 30 minutes, about 50.000 rows a day burying the handful that
+     * say something.
+     */
+    public function test_an_unchanged_answer_is_not_recorded_again(): void
+    {
+        $c = $this->connection();
+        $this->order($c, 'TWICE', 'p', 25.00);
+
+        app(PretixTransactionBooker::class)->book($c);
+        $nachErstem = PretixOrderLogEntry::where('order_code', 'TWICE')->count();
+
+        app(PretixTransactionBooker::class)->book($c);
+        app(PretixTransactionBooker::class)->book($c);
+
+        $this->assertSame(
+            $nachErstem,
+            PretixOrderLogEntry::where('order_code', 'TWICE')->count(),
+            'Ein unveraenderter Lauf darf keine zweite gleichlautende Zeile schreiben.',
+        );
+        $this->assertGreaterThan(0, $nachErstem);
+    }
+
+    /** A CHANGED answer is recorded - the dedupe must not silence real news. */
+    public function test_a_changed_answer_is_recorded(): void
+    {
+        $c = $this->connection();
+        $order = $this->order($c, 'MOVED', 'p', 25.00);
+
+        app(PretixTransactionBooker::class)->book($c);
+        $vorher = PretixOrderLogEntry::where('order_code', 'MOVED')->count();
+
+        // The order is cancelled - now it is skipped instead of booked.
+        $order->forceFill(['status' => 'c'])->save();
+        app(PretixTransactionBooker::class)->book($c);
+
+        $this->assertGreaterThan($vorher, PretixOrderLogEntry::where('order_code', 'MOVED')->count());
+        $this->assertSame(
+            PretixOrderLogEntry::ACTION_SKIPPED,
+            PretixOrderLogEntry::where('order_code', 'MOVED')->orderByDesc('id')->value('action'),
+        );
+    }
+
 }

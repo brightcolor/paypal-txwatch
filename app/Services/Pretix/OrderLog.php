@@ -42,6 +42,17 @@ class OrderLog
         ?string $statusAfter = null,
         array $context = [],
     ): void {
+        /*
+         * THE SAME SENTENCE TWICE IS NOT A SECOND RECORD - and here that is not a
+         * nicety. The reconciler walks EVERY order on EVERY import, not just the
+         * changed ones: measured on the real data that was 1056 identical lines per
+         * run, every 30 minutes, about 50.000 rows a day burying the handful that
+         * say something. Only a CHANGED answer is written.
+         */
+        if ($this->alreadySaid($action, $eventSlug, $orderCode, $message)) {
+            return;
+        }
+
         PretixOrderLogEntry::create([
             'pretix_import_run_id' => $this->runId,
             'pretix_connection_id' => $connectionId,
@@ -56,6 +67,28 @@ class OrderLog
             'context' => $context ?: null,
             'at' => now(),
         ]);
+    }
+
+    /**
+     * Did the last entry of this kind for this order say exactly the same thing?
+     *
+     * Compared per KIND: a booking line and a reconciliation line are two different
+     * facts about the same order and must not suppress each other.
+     */
+    private function alreadySaid(string $action, ?string $eventSlug, ?string $orderCode, string $message): bool
+    {
+        if ($orderCode === null) {
+            return false;
+        }
+
+        $letzte = PretixOrderLogEntry::query()
+            ->where('order_code', $orderCode)
+            ->where('event_slug', $eventSlug)
+            ->where('action', $action)
+            ->orderByDesc('id')
+            ->value('message');
+
+        return $letzte === $message;
     }
 
     /**
