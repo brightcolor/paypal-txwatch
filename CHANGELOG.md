@@ -4,6 +4,28 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.64.0] - 2026-08-31
+
+### Hinzugefügt
+- **Neue Ansicht „pretix → Bestellungen": alle Bestellungen, in jedem Status.** Die Bestellungen wurden
+  längst importiert – über tausend – aber es gab keinen Bildschirm, der sie zeigte. Zu finden war eine
+  Bestellung nur indirekt: über eine Transaktion, die ihre Nummer trug, oder über einen Bankumsatz, der
+  sie erkannt hatte. Eine Bestellung, gegen die noch kein Geld steht – also genau der Fall, den man
+  sucht – tauchte nirgends auf und sah aus wie ein fehlgeschlagener Import. Offene, bezahlte,
+  abgelaufene und stornierte stehen jetzt gleichberechtigt in einer Liste, suchbar nach Bestellnummer
+  und E-Mail, filterbar nach Status, Event und Zahlungsart.
+- **Der Import zeichnet je Bestellung auf, was mit ihr geschehen ist.** Über „Verlauf" an jeder
+  Bestellung: wann der Import sie geliefert hat, ob sie neu war, unverändert oder geändert – bei
+  Änderungen mit **Vorher/Nachher** je Feld – und was daraufhin geschah: als Transaktion verbucht (mit
+  Brutto, Gebühr, Netto), gegen PayPal abgeglichen, oder **mit Begründung übergangen** („steht auf
+  offen", „vollständig über PayPal bezahlt – hier wäre es eine Dublette").
+  - Bewusst **nicht** im Fortschritts-Log des Importlaufs: der ist auf 300 Zeilen gedeckelt und wird bei
+    jedem Schritt komplett neu geschrieben. Die Antwort auf „was wurde aus Bestellung X" fiele dort
+    innerhalb eines Laufs aus der Begrenzung.
+- **Im Bank-Journal steht jetzt oben, wann die Bank zuletzt abgefragt wurde** – mit Datum und Abstand
+  („vor 2 Stunden"), und falls der Abruf klemmt, seit wie vielen Stunden. Ein Journal, dessen neuester
+  Eintrag Tage alt ist, sieht sonst gleich aus, egal ob die Bank nichts zu melden hatte oder niemand
+  gefragt hat – und das sind gegensätzliche Lagen.
 ## [0.63.0] - 2026-08-29
 
 ### Hinzugefügt

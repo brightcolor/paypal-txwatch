@@ -34,6 +34,14 @@ class AppServiceProvider extends ServiceProvider
             \App\Services\EnableBanking\KeyVault::class,
             fn () => new \App\Services\EnableBanking\KeyVault(config('bank.enablebanking.key_dir')),
         );
+
+        /*
+         * ONE INSTANCE for importer, booker and reconciler. The run id is set once,
+         * on the importer; with a fresh instance per injection the other two would
+         * write their lines with no run attached - and the history would come apart
+         * at exactly the point where it is supposed to join up.
+         */
+        $this->app->singleton(\App\Services\Pretix\OrderLog::class);
     }
 
     /**

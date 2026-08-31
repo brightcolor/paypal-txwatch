@@ -70,6 +70,9 @@ class ImportPretixOrdersJob implements ShouldQueue
             $r = $importer->import(
                 $connection,
                 fn (string $message, array $patch = []) => $run->pushLog($message, $patch),
+                // Ties the per-order history to this run, so "what happened to order X"
+                // and "what did that import do" are the same record from two sides.
+                $run->id,
             );
 
             // Mismatch count of the previous finished run (for "new discrepancies").

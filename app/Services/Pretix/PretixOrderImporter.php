@@ -20,6 +20,7 @@ class PretixOrderImporter
     public function __construct(
         private readonly PretixReconciler $reconciler,
         private readonly PretixTransactionBooker $booker,
+        private readonly OrderLog $orderLog,
     ) {
     }
 
@@ -28,8 +29,11 @@ class PretixOrderImporter
      *         invoked with a human message + optional counter patch, for live logging
      * @return array{events: int, orders: int, booked: int, matched: int, mismatch: int, unmatched: int}
      */
-    public function import(PretixConnection $connection, ?callable $onProgress = null): array
+    public function import(PretixConnection $connection, ?callable $onProgress = null, ?int $runId = null): array
     {
+        // Everything the three services write from here on is tied to this run.
+        $this->orderLog->forRun($runId);
+
         $client = new PretixClient($connection);
         $orderCount = 0;
         $progress = $onProgress ?? fn (string $m, array $p = []) => null;
@@ -111,7 +115,20 @@ class PretixOrderImporter
             return;
         }
 
-        PretixOrder::updateOrCreate(
+        /*
+         * READ BEFORE WRITING. "Changed" is only a record if the previous values are
+         * in it; after updateOrCreate they are gone, and a history line saying
+         * "something changed" answers nothing.
+         */
+        $existing = PretixOrder::query()
+            ->where('pretix_connection_id', $connection->id)
+            ->where('event_slug', $slug)
+            ->where('order_code', $code)
+            ->first();
+
+        $before = OrderLog::snapshot($existing);
+
+        $order = PretixOrder::updateOrCreate(
             [
                 'pretix_connection_id' => $connection->id,
                 'event_slug' => $slug,
@@ -128,6 +145,51 @@ class PretixOrderImporter
                 'url' => $client->orderControlUrl($slug, $code),
                 'raw_payload' => $raw,
             ],
+        );
+
+        $after = OrderLog::snapshot($order->refresh());
+        $changes = OrderLog::differences($before, $after);
+
+        if (! $existing) {
+            $this->orderLog->write(
+                \App\Models\PretixOrderLogEntry::ACTION_NEW,
+                $connection->id, $slug, $code,
+                sprintf(
+                    'Neu aus pretix übernommen: %s über %s, Zahlungsart %s.',
+                    \App\Models\PretixOrderLogEntry::statusLabel($order->status),
+                    $order->total !== null ? number_format((float) $order->total, 2, ',', '.') . ' ' . ($order->currency ?? '') : '?',
+                    $order->payment_provider ?: 'unbekannt',
+                ),
+                $order, null, $order->status,
+            );
+
+            return;
+        }
+
+        if ($changes === []) {
+            /*
+             * RECORDED ANYWAY, and that is deliberate: the question "was my order
+             * even seen" is asked far more often than "what changed", and an import
+             * that returns an order without touching it is the answer to it. The
+             * import is incremental, so pretix hands over only what it changed - this
+             * stays a handful of rows per run rather than a thousand.
+             */
+            $this->orderLog->write(
+                \App\Models\PretixOrderLogEntry::ACTION_UNCHANGED,
+                $connection->id, $slug, $code,
+                'Von pretix geliefert, keine Änderung gegenüber dem Bestand.',
+                $order, $before['status'] ?? null, $order->status,
+            );
+
+            return;
+        }
+
+        $this->orderLog->write(
+            \App\Models\PretixOrderLogEntry::ACTION_CHANGED,
+            $connection->id, $slug, $code,
+            'Aus pretix aktualisiert – ' . implode(', ', $changes) . '.',
+            $order, $before['status'] ?? null, $order->status,
+            ['changes' => $changes],
         );
     }
 

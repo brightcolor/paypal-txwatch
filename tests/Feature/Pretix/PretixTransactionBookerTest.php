@@ -46,7 +46,7 @@ class PretixTransactionBookerTest extends TestCase
         $c = $this->connection();
         $order = $this->order($c, ['total' => 50.00]);
 
-        $result = (new PretixTransactionBooker())->book($c);
+        $result = (app(PretixTransactionBooker::class))->book($c);
 
         $this->assertSame(1, $result['booked']);
 
@@ -68,13 +68,13 @@ class PretixTransactionBookerTest extends TestCase
         $c = $this->connection();
         $this->order($c, ['payment_provider' => 'paypal']);
 
-        $result = (new PretixTransactionBooker())->book($c);
+        $result = (app(PretixTransactionBooker::class))->book($c);
         $this->assertSame(0, $result['booked']);
         $this->assertSame(1, $result['skipped_paypal']);
         $this->assertSame(0, Transaction::count());
 
         $c->update(['import_paypal_orders' => true]);
-        $result = (new PretixTransactionBooker())->book($c);
+        $result = (app(PretixTransactionBooker::class))->book($c);
         $this->assertSame(1, $result['booked']);
     }
 
@@ -84,7 +84,7 @@ class PretixTransactionBookerTest extends TestCase
         $this->order($c, ['status' => 'n']);
         $this->order($c, ['payment_provider' => 'boxoffice', 'total' => 30.00]);
 
-        (new PretixTransactionBooker())->book($c);
+        (app(PretixTransactionBooker::class))->book($c);
 
         $this->assertSame(1, Transaction::count());
         $tx = Transaction::firstOrFail();
@@ -100,7 +100,7 @@ class PretixTransactionBookerTest extends TestCase
         $this->order($c, ['payment_provider' => 'manual', 'total' => 0.00]);
         $this->order($c, ['payment_provider' => 'free', 'total' => 0.00]);
 
-        (new PretixTransactionBooker())->book($c);
+        (app(PretixTransactionBooker::class))->book($c);
 
         $paid = Transaction::where('gross_amount', '>', 0)->firstOrFail();
         $this->assertSame('-0.20', $paid->fee_amount);
@@ -122,7 +122,7 @@ class PretixTransactionBookerTest extends TestCase
             ]],
         ]);
 
-        $result = (new PretixTransactionBooker())->book($c);
+        $result = (app(PretixTransactionBooker::class))->book($c);
 
         $this->assertSame(1, $result['refunds']);
         $this->assertSame(2, Transaction::count()); // payment + refund
@@ -134,7 +134,7 @@ class PretixTransactionBookerTest extends TestCase
         $this->assertSame('Rückzahlung/Storno', $refund->typeLabel());
 
         // Idempotent: booking again doesn't duplicate the refund.
-        (new PretixTransactionBooker())->book($c);
+        (app(PretixTransactionBooker::class))->book($c);
         $this->assertSame(2, Transaction::count());
 
         // Central refund scope finds it.
@@ -146,14 +146,14 @@ class PretixTransactionBookerTest extends TestCase
         $c = $this->connection();
         $order = $this->order($c, ['total' => 30.00]);
 
-        (new PretixTransactionBooker())->book($c); // books +30
+        (app(PretixTransactionBooker::class))->book($c); // books +30
 
         // Later: order fully refunded and cancelled in pretix.
         $order->update([
             'status' => 'c',
             'raw_payload' => ['refunds' => [['local_id' => 1, 'state' => 'done', 'amount' => '30.00']]],
         ]);
-        (new PretixTransactionBooker())->book($c);
+        (app(PretixTransactionBooker::class))->book($c);
 
         $this->assertSame(2, Transaction::count());
         $this->assertSame(0.0, (float) Transaction::sum('gross_amount')); // +30 -30
@@ -165,12 +165,12 @@ class PretixTransactionBookerTest extends TestCase
         $c = $this->connection();
         $order = $this->order($c);
 
-        (new PretixTransactionBooker())->book($c);
-        (new PretixTransactionBooker())->book($c);
+        (app(PretixTransactionBooker::class))->book($c);
+        (app(PretixTransactionBooker::class))->book($c);
         $this->assertSame(1, Transaction::count());
 
         $order->update(['status' => 'c']);
-        (new PretixTransactionBooker())->book($c);
+        (app(PretixTransactionBooker::class))->book($c);
 
         $this->assertSame(1, Transaction::count());
         $this->assertSame('V', Transaction::firstOrFail()->transaction_status);

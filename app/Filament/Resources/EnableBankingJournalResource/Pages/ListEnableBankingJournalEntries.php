@@ -73,6 +73,32 @@ class ListEnableBankingJournalEntries extends ListRecords
     }
 
     /**
+     * WHEN THE BANK WAS LAST ASKED - above the list, not buried on another page.
+     *
+     * The six-day outage was invisible partly because this stood only under
+     * "Bank verbinden". A journal whose newest entry is days old looks the same
+     * whether the bank had nothing to report or nobody asked it, and those are
+     * opposite situations.
+     */
+    public function getHeading(): string
+    {
+        $c = \App\Models\EnableBankingConnection::current();
+
+        if (! $c->last_synced_at) {
+            return 'Bank-Journal – noch kein Abruf gelaufen';
+        }
+
+        $alter = $c->last_synced_at->diffForHumans();
+
+        return sprintf(
+            'Bank-Journal – zuletzt abgerufen %s (%s)%s',
+            $c->last_synced_at->format('d.m.Y H:i'),
+            $alter,
+            $c->isFailing() ? sprintf(', seit %d Stunden ohne Erfolg', (int) $c->failingForHours()) : '',
+        );
+    }
+
+    /**
      * Says up front what this list is - and, more importantly, what it is NOT.
      *
      * Without this line a table full of bank transactions inside an accounting

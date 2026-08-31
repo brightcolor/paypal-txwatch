@@ -349,6 +349,12 @@ DB-Fehler nicht zurück in die DB, damit das Logging nie den Request killt oder 
   **PayPal-Auszahlungen** (kam die Auszahlung aufs Konto an?) und gegen **pretix-Überweisungen** (Bestellcode
   im Verwendungszweck). Offene Eingänge sind als Badge sichtbar; manuelles Ignorieren/Zurücksetzen und ein
   „Erneut abgleichen" sind möglich.
+- **pretix-Bestellungen** (pretix → Bestellungen, Admin): alle importierten Bestellungen in **jedem**
+  Status – offen, bezahlt, abgelaufen, storniert. Suchbar nach Bestellnummer und E-Mail, filterbar nach
+  Status, Event und Zahlungsart; die Bestellnummer öffnet die Bestellung in pretix. Über **„Verlauf"**
+  steht je Bestellung, wann der Import sie gefunden hat, was sich geändert hat (mit Vorher/Nachher) und
+  was daraufhin geschah – verbucht, abgeglichen oder mit Begründung übergangen. Daten von pretix sind
+  hier nicht änderbar.
 - **Bestellungen bei Geldeingang automatisch auf bezahlt setzen** – **pro Event** schaltbar (Events →
   Event öffnen → „Zahlungen automatisch melden", Voreinstellung **aus**). Geht eine Überweisung ein,
   deren Verwendungszweck die Bestellnummer enthält und deren Betrag auf den Cent stimmt, meldet TxWatch

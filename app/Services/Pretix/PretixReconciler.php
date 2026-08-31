@@ -19,6 +19,10 @@ use Illuminate\Support\Collection;
  */
 class PretixReconciler
 {
+    public function __construct(private readonly OrderLog $orderLog)
+    {
+    }
+
     private const TOLERANCE = 0.01;
 
     /**
@@ -98,6 +102,21 @@ class PretixReconciler
 
             $status = $plausible ? Transaction::RECONCILIATION_MATCHED : Transaction::RECONCILIATION_MISMATCH;
             $this->link($group, $order->id, $status);
+
+            $this->orderLog->write(
+                \App\Models\PretixOrderLogEntry::ACTION_RECONCILED,
+                $order->pretix_connection_id, $order->event_slug, $order->order_code,
+                sprintf(
+                    $plausible
+                        ? 'Mit %d Zahlung(en) abgeglichen: %s eingegangen, Bestellung lautet über %s.'
+                        : 'ABWEICHUNG: %d Zahlung(en) ergeben %s, die Bestellung lautet aber über %s.',
+                    $paymentCount,
+                    number_format($paid, 2, ',', '.'),
+                    number_format((float) $order->total, 2, ',', '.'),
+                ),
+                $order, null, $order->status,
+                ['paid' => $paid, 'plausible' => $plausible],
+            );
 
             $plausible ? $matched += $paymentCount : $mismatch += $paymentCount;
         }

@@ -54,6 +54,7 @@ class AdminPagesSmokeTest extends TestCase
         \App\Filament\Resources\EnableBankingJournalResource::class,
         \App\Filament\Resources\BankTransactionResource::class,
         \App\Filament\Resources\PretixPaymentConfirmationResource::class,
+        \App\Filament\Resources\PretixOrderResource::class,
     ];
 
     private const PAGES = [

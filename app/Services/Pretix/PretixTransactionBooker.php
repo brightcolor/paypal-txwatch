@@ -20,6 +20,10 @@ use App\Models\Transaction;
  */
 class PretixTransactionBooker
 {
+    public function __construct(private readonly OrderLog $orderLog)
+    {
+    }
+
     /**
      * @param  callable(string, array<string, int|string>): void|null  $onProgress
      * @param  \DateTimeInterface|null  $since  only (re-)book orders whose local
@@ -47,6 +51,16 @@ class PretixTransactionBooker
             $dedupeKey = hash('sha256', "pretix|{$connection->id}|{$order->event_slug}|{$order->order_code}");
 
             if ($order->status !== 'p') {
+                $this->orderLog->write(
+                    \App\Models\PretixOrderLogEntry::ACTION_SKIPPED,
+                    $connection->id, $order->event_slug, $order->order_code,
+                    sprintf(
+                        'Nicht verbucht: Bestellung steht auf „%s". Verbucht wird nur, was bezahlt ist.',
+                        \App\Models\PretixOrderLogEntry::statusLabel($order->status),
+                    ),
+                    $order, null, $order->status,
+                );
+
                 // Never booked -> nothing to do. Previously booked but no longer
                 // paid -> mirror the status so it stands out, and book its refunds
                 // so the balance nets out (rows are never deleted).
@@ -72,6 +86,14 @@ class PretixTransactionBooker
 
             if ($money === null) {
                 // Fully PayPal-paid -> nothing to book here.
+                $this->orderLog->write(
+                    \App\Models\PretixOrderLogEntry::ACTION_SKIPPED,
+                    $connection->id, $order->event_slug, $order->order_code,
+                    'Nicht verbucht: vollständig über PayPal bezahlt – dieses Geld kommt über den '
+                    . 'PayPal-Abgleich herein, eine Buchung hier wäre eine Dublette.',
+                    $order, null, $order->status,
+                );
+
                 $skippedPaypal++;
 
                 continue;
@@ -113,6 +135,21 @@ class PretixTransactionBooker
             );
 
             $transaction->wasRecentlyCreated ? $booked++ : $updated++;
+
+            $this->orderLog->write(
+                \App\Models\PretixOrderLogEntry::ACTION_BOOKED,
+                $connection->id, $order->event_slug, $order->order_code,
+                sprintf(
+                    '%s als Transaktion: %s brutto, %s Gebühr, %s netto (%s).',
+                    $transaction->wasRecentlyCreated ? 'Verbucht' : 'Buchung aktualisiert',
+                    number_format($gross, 2, ',', '.'),
+                    number_format($fee, 2, ',', '.'),
+                    number_format(round($gross + $fee, 2), 2, ',', '.'),
+                    $providerLabel,
+                ),
+                $order, null, $order->status,
+                ['transaction_id' => $transaction->id],
+            );
 
             $refunds += $this->bookRefunds($connection, $order);
         }
