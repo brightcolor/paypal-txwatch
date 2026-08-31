@@ -181,6 +181,33 @@ class TransactionResource extends Resource
                         : null)
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('invoice_id')->label('Invoice ID')->searchable()->toggleable(),
+
+                /*
+                 * WHY THIS ROW IS IN THE RESULT.
+                 *
+                 * Half the searched fields are columns hidden by default - e-mail,
+                 * invoice id, transaction id - and the full-text filter also searches
+                 * the subject, which is no column at all. So a result could appear with
+                 * nothing on screen containing the term, and the only way to find out
+                 * was to switch columns on one at a time.
+                 *
+                 * THE VALUE IN FULL, not a highlighted fragment: "Voß" tells nobody
+                 * WHICH Voß, and recognising the person is the reason for asking.
+                 *
+                 * Shown only while something is being searched - with no term it would
+                 * be an empty column in everyone's way.
+                 */
+                Tables\Columns\TextColumn::make('treffer')
+                    ->label('Gefunden über')
+                    ->state(fn (Transaction $record, $livewire) => collect(
+                        \App\Support\TransactionSearch::explain($record, \App\Support\TransactionSearch::term($livewire)),
+                    )->map(fn (array $t) => $t['label'] . ': ' . $t['value'])->implode(' · '))
+                    ->visible(fn ($livewire) => filled(\App\Support\TransactionSearch::term($livewire)))
+                    ->color('primary')
+                    ->wrap()
+                    // A row in the result with no reason means search and explanation
+                    // have come apart - better said out loud than left blank.
+                    ->placeholder('kein Treffer in den durchsuchten Feldern'),
                 Tables\Columns\TextColumn::make('type')
                     ->label('Art')
                     ->badge()

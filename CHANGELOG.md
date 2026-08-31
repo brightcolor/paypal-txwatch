@@ -4,6 +4,25 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.65.0] - 2026-08-31
+
+### Hinzugefügt
+- **Suchergebnisse sagen jetzt, WARUM sie Treffer sind.** Bei aktiver Suche erscheint in der
+  Transaktionsliste die Spalte **„Gefunden über"**: sie nennt jedes Feld, in dem der Suchbegriff
+  vorkommt, und zeigt dessen Wert **vollständig** – „Name: Diana Voß", „Betreff: Überweisung Voß",
+  „E-Mail: …". Nötig war das, weil die Hälfte der durchsuchten Felder Spalten sind, die
+  standardmässig ausgeblendet sind (E-Mail, Invoice ID, Transaktions-ID), und die Volltextsuche
+  zusätzlich den Betreff durchsucht, zu dem es gar keine Spalte gibt: ein Ergebnis konnte auftauchen,
+  ohne dass auf dem Bildschirm irgendwo der gesuchte Begriff stand.
+  - **Vollständig, nicht als hervorgehobenes Bruchstück:** „Voß" sagt niemandem, WELCHER Voß – und die
+    Person wiederzuerkennen ist der Grund, warum man fragt.
+  - Der Begriff wird aus dem Suchfeld **und** aus dem Filter „Bestellnummer / Volltextsuche" gelesen;
+    ein Ergebnis, das über den Filter kam, braucht seine Begründung genauso.
+  - **Adressen gibt es nicht** und sie werden auch nicht vorgetäuscht: PayPal liefert für diese
+    Umsätze keine – in 400 geprüften kein einziger mit Anschrift –, nur einen Liefernamen, der in aller
+    Regel den Zahlenden wiederholt. Erklärt werden ausschliesslich Felder, die auch durchsucht werden;
+    alles andere würde vorgeben, die Suche reiche weiter als sie tut.
+
 ## [0.64.2] - 2026-08-31
 
 ### Hinzugefügt
