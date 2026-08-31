@@ -225,4 +225,73 @@ class PretixOrderLogTest extends TestCase
         );
     }
 
+    /**
+     * THE BACKFILL GIVES EVERY EXISTING ORDER A STARTING POINT.
+     *
+     * Without it the history only ever fills for orders a later import happens to
+     * touch - and the import is incremental. The one order someone looks up would
+     * show "no history", which reads like the recording is broken rather than young.
+     */
+    public function test_the_backfill_writes_one_opening_line_per_order(): void
+    {
+        $c = $this->connection();
+        $this->order($c, 'ALTER', 'n', 87.89);
+        $this->order($c, 'ALTEB', 'p', 25.00);
+
+        $this->artisan('pretix:backfill-order-log')->assertSuccessful();
+
+        $this->assertSame(2, PretixOrderLogEntry::count());
+
+        $entry = PretixOrderLogEntry::where('order_code', 'ALTER')->firstOrFail();
+        $this->assertSame(PretixOrderLogEntry::ACTION_BASELINE, $entry->action);
+        $this->assertStringContainsString('87,89', $entry->message);
+        $this->assertStringContainsString('offen', $entry->message);
+        // Says plainly where the record begins - a history that starts in the middle
+        // without saying so is a worse witness than an empty one.
+        $this->assertStringContainsString('nicht aufgezeichnet', $entry->message);
+    }
+
+    /** Orders that already have a history are left alone, and a second run adds nothing. */
+    public function test_the_backfill_is_idempotent_and_skips_known_orders(): void
+    {
+        $c = $this->connection();
+        $this->order($c, 'BOOKB', 'p', 25.00);
+
+        // BOOKB gets a real history line first. PLAIN is created AFTERWARDS, so it
+        // has none - the booker writes a line for every order it sees, including the
+        // ones it deliberately skips.
+        app(PretixTransactionBooker::class)->book($c);
+
+        $this->order($c, 'PLAIN', 'n', 25.00);
+        $this->assertSame(0, PretixOrderLogEntry::where('order_code', 'PLAIN')->count());
+
+        $this->artisan('pretix:backfill-order-log')->assertSuccessful();
+        $nachErstem = PretixOrderLogEntry::count();
+
+        $this->artisan('pretix:backfill-order-log')->assertSuccessful();
+
+        $this->assertSame($nachErstem, PretixOrderLogEntry::count(), 'Ein zweiter Lauf darf nichts hinzufuegen.');
+        $this->assertSame(
+            1,
+            PretixOrderLogEntry::where('order_code', 'PLAIN')
+                ->where('action', PretixOrderLogEntry::ACTION_BASELINE)->count(),
+        );
+        $this->assertSame(
+            0,
+            PretixOrderLogEntry::where('order_code', 'BOOKB')
+                ->where('action', PretixOrderLogEntry::ACTION_BASELINE)->count(),
+            'Eine Bestellung mit echtem Verlauf braucht keine Bestandsaufnahme.',
+        );
+    }
+
+    /** The dry run counts and writes nothing. */
+    public function test_the_dry_run_writes_nothing(): void
+    {
+        $this->order($this->connection(), 'DRYRN', 'n', 25.00);
+
+        $this->artisan('pretix:backfill-order-log', ['--dry-run' => true])->assertSuccessful();
+
+        $this->assertSame(0, PretixOrderLogEntry::count());
+    }
+
 }

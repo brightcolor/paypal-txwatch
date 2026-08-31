@@ -4,6 +4,20 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.64.2] - 2026-08-31
+
+### Hinzugefügt
+- **Bestellungen aus der Zeit vor der Aufzeichnung bekommen eine Bestandsaufnahme.** Der Verlauf füllt
+  sich nur, wenn ein Import eine Bestellung anfasst – und der Import ist inkrementell, holt also nur,
+  was pretix geändert hat. Die über tausend vorhandenen Bestellungen hätten damit nie eine Zeile
+  bekommen, und ausgerechnet die eine, die man nachschlägt, zeigte „Noch kein Verlauf" – was nach einer
+  kaputten Aufzeichnung aussieht statt nach einer jungen. `php artisan pretix:backfill-order-log`
+  schreibt je Bestellung ohne Verlauf **eine** Zeile mit dem, was bekannt ist: Status, Betrag,
+  Zahlungsart und ob ihr eine Transaktion zugeordnet ist – und sagt ausdrücklich dazu, dass die Zeit
+  davor nicht aufgezeichnet wurde. Eine erfundene Vorgeschichte wäre ein schlechterer Zeuge als eine
+  leere. Wiederholbar: Bestellungen, die schon einen Verlauf haben, bleiben unberührt (`--dry-run` zählt
+  nur).
+
 ## [0.64.1] - 2026-08-31
 
 ### Behoben

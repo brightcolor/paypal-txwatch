@@ -34,6 +34,15 @@ class PretixOrderLogEntry extends Model
     /** Matched against a PayPal transaction - or explicitly not. */
     public const ACTION_RECONCILED = 'reconciled';
 
+    /**
+     * The opening line for an order that predates this recording.
+     *
+     * Says what is KNOWN now, and says plainly that what came before was not
+     * recorded. A history that quietly starts in the middle is worse than one that
+     * names its own beginning.
+     */
+    public const ACTION_BASELINE = 'baseline';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -71,6 +80,7 @@ class PretixOrderLogEntry extends Model
             self::ACTION_BOOKED => 'verbucht',
             self::ACTION_SKIPPED => 'nicht verbucht',
             self::ACTION_RECONCILED => 'abgeglichen',
+            self::ACTION_BASELINE => 'Bestand aufgenommen',
             default => (string) $this->action,
         };
     }
