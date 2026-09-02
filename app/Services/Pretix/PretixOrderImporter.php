@@ -51,8 +51,9 @@ class PretixOrderImporter
 
             foreach ($events as $event) {
                 $this->upsertEvent($client, $event);
+                $this->upsertItems($connection, $client, $event['slug']);
             }
-            $progress('Lokale Events angelegt/aktualisiert (Name aus pretix).');
+            $progress('Lokale Events und Ticketarten angelegt/aktualisiert (aus pretix).');
 
             foreach ($events as $i => $event) {
                 $slug = $event['slug'];
@@ -104,6 +105,30 @@ class PretixOrderImporter
             ])->save();
 
             throw $e;
+        }
+    }
+
+    /**
+     * The event's ticket types, by name.
+     *
+     * Order positions refer to a ticket type by NUMBER - 3, 4, 23 on the real data -
+     * and nobody selects a ticket type by typing 23. Stored rather than fetched when
+     * needed, so choosing one does not depend on pretix answering at that moment.
+     *
+     * A failing call is not fatal: the export then offers no names for that event,
+     * which is a smaller problem than an import that stops over reference data.
+     */
+    private function upsertItems(PretixConnection $connection, PretixClient $client, string $slug): void
+    {
+        foreach ($client->items($slug) as $id => $name) {
+            \App\Models\PretixItem::updateOrCreate(
+                [
+                    'pretix_connection_id' => $connection->id,
+                    'event_slug' => $slug,
+                    'item_id' => (int) $id,
+                ],
+                ['name' => (string) $name],
+            );
         }
     }
 

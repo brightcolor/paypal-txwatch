@@ -58,6 +58,7 @@ class AdminPagesSmokeTest extends TestCase
     ];
 
     private const PAGES = [
+        \App\Filament\Pages\ParticipantExportPage::class,
         Reports::class,
         PaypalCsvImport::class,
         TwoFactorAuthSettings::class,

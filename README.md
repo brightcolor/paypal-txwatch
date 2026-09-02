@@ -349,6 +349,18 @@ DB-Fehler nicht zurück in die DB, damit das Logging nie den Request killt oder 
   **PayPal-Auszahlungen** (kam die Auszahlung aufs Konto an?) und gegen **pretix-Überweisungen** (Bestellcode
   im Verwendungszweck). Offene Eingänge sind als Badge sichtbar; manuelles Ignorieren/Zurücksetzen und ein
   „Erneut abgleichen" sind möglich.
+- **Teilnehmer exportieren** (pretix → Teilnehmer exportieren, Admin): E-Mail-Adressen oder Käufe
+  **einzelner Ticketarten** einer Veranstaltung als XLSX oder CSV – etwa alle Adressen eines Events mit
+  VIP- oder Meet-&-Greet-Ticket. Zwei Formen, weil zwei verschiedene Fragen gestellt werden:
+  **Adressen** (eine Zeile je Person, Dubletten nach E-Mail zusammengefasst – wer drei Tickets hat, ist
+  ein Empfänger) und **Käufe** (eine Zeile je Ticket, mit dem Namen auf dem Ticket). Voreingestellt sind
+  nur **bezahlte** Bestellungen; stornierte Positionen zählen nie mit. **Welche Spalten** in welcher Reihenfolge herauskommen,
+  wird wie beim Transaktionsexport per Drag & Drop gewählt; Formate sind **CSV**, **Text** (Tabulator)
+  und XLSX. Bei genau einer Spalte ergibt Text eine Datei mit einem Wert je Zeile – zum Einfügen in ein
+  Mailprogramm. **Die Zeilenzahl steht vor dem
+  Download** – eine Adressliste wird benutzt, und hinterher zu merken, dass der Filter drei statt
+  dreihundert Personen traf, ist die teure Reihenfolge. Ticketarten kommen aus pretix und werden bei
+  jedem Bestellimport aufgefrischt.
 - **pretix-Bestellungen** (pretix → Bestellungen, Admin): alle importierten Bestellungen in **jedem**
   Status – offen, bezahlt, abgelaufen, storniert. Suchbar nach Bestellnummer und E-Mail, filterbar nach
   Status, Event und Zahlungsart; die Bestellnummer öffnet die Bestellung in pretix. Über **„Verlauf"**

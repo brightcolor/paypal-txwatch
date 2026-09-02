@@ -4,6 +4,38 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.66.0] - 2026-08-31
+
+### Hinzugefügt
+- **Teilnehmer exportieren: E-Mail-Adressen oder Käufe einzelner Ticketarten** (pretix → Teilnehmer
+  exportieren). Damit ist beantwortbar, was bisher nirgends ging – „alle Adressen des Alex-Christensen-
+  Events mit VIP- oder Meet-&-Greet-Ticket". Die Ticketart steckt in den Bestellpositionen als blosse
+  Nummer (bei diesem Event 3, 4 und 23), und niemand wählt eine Ticketart aus, indem er 23 tippt: die
+  Namen kommen jetzt aus pretix und werden bei jedem Bestellimport aufgefrischt.
+  - **Zwei Formen**, weil zwei verschiedene Fragen gestellt werden. **Adressen**: eine Zeile je Person,
+    Dubletten über die E-Mail zusammengefasst – wer drei Tickets in zwei Bestellungen hat, ist ein
+    Empfänger und keine drei. **Käufe**: eine Zeile je Ticket, mit dem Namen auf dem Ticket, der vom
+    Käufer abweichen kann – für eine Gästeliste ist genau das der Unterschied.
+  - **Die Zeilenzahl steht vor dem Download.** Eine Adressliste wird benutzt; hinterher zu merken, dass
+    der Filter drei statt dreihundert Personen traf, ist die teure Reihenfolge. Eine leere Auswahl wird
+    abgelehnt statt als leere Datei geliefert – die sieht aus wie ein fertiger Export.
+  - Voreingestellt sind **nur bezahlte** Bestellungen (eine offene ist noch kein Gast), keine Auswahl
+    bei den Ticketarten bedeutet **alle**, und **stornierte Positionen** zählen nie mit: pretix behält
+    sie in den Daten, und ein storniertes Ticket auf einer Einlassliste ist jemand, der nicht kommt.
+  - **Die Spalten werden gewählt**, wie beim Transaktionsexport: ein Feld je Zeile, Reihenfolge per
+    Drag & Drop. Eine Mehrfachauswahl könnte „E-Mail zuerst, Name danach" nicht ausdrücken, und für
+    eine Liste, die irgendwo eingefügt wird, ist die Reihenfolge die halbe Miete. Die angebotenen
+    Spalten folgen der Form – eine Adresszeile hat keinen Ticketpreis.
+  - **Formate: CSV, Text und XLSX.** Bei genau einer Spalte ergibt Text eine Datei mit einem Wert je
+    Zeile – die Adressliste zum Einfügen in ein Mailprogramm, die Anführungszeichen zerstören würden.
+    Tabulatoren und Umbrüche innerhalb eines Werts werden zu Leerzeichen, sonst erfände ein Name mit
+    Zeilenumbruch eine zusätzliche Zeile.
+  - Die Spaltenauswahl ändert **nie**, welche Zeilen herauskommen: die Zeilen entstehen vollständig und
+    werden erst danach auf die gewählten Spalten reduziert. Andernfalls könnte eine engere Auswahl
+    stillschweigend Empfänger verlieren.
+  - Über dem Formular steht der Hinweis auf personenbezogene Daten – vor der Auswahl, nicht hinter dem
+    Knopf.
+
 ## [0.65.0] - 2026-08-31
 
 ### Hinzugefügt
