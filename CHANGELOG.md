@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.67.0] - 2026-08-31
+
+### Geändert
+- **Der Teilnehmer-Export hat jetzt zwei Reiter, und der erste macht nur eine Sache: Adressen.** Der
+  Zweck ist, einzelne Ticketinhaber vorab zu informieren – alles andere ist Beiwerk darum herum.
+  Veranstaltung und Ticketarten wählen, und die Adressen stehen **direkt auf dem Schirm**, mit
+  Semikolon getrennt fürs BCC-Feld (wahlweise Zeilenumbruch oder Komma). Der nächste Schritt ist fast
+  nie „Datei öffnen", sondern „einfügen", und dafür war der Umweg über einen Download eine Sackgasse
+  mit nichts am Ende.
+  - Der Textdownload dieses Reiters hat **keine Kopfzeile**: eine Zeile „E-Mail" in einer Adressliste
+    wird zu einer Mail an ein Postfach dieses Namens.
+  - Die Empfängerzahl steht über der Liste, und jede Adresse kommt genau einmal vor.
+- Der zweite Reiter **„Ausführlicher Export"** ist unverändert das, was vorher die ganze Seite war:
+  Adressen oder Käufe, wählbare Spalten mit Reihenfolge, CSV/Text/XLSX.
+- Beide Reiter haben **eigene** Auswahlfelder. Eine gemeinsame würde beim Wechsel des Reiters
+  stillschweigend ändern, wer angeschrieben wird.
+
 ## [0.66.0] - 2026-08-31
 
 ### Hinzugefügt

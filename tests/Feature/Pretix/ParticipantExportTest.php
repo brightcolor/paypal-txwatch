@@ -33,6 +33,15 @@ class ParticipantExportTest extends TestCase
 
     private PretixConnection $connection;
 
+    /** An admin, logged in - the only role that may see this page. */
+    private function admin(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $user = User::factory()->create();
+        $user->assignRole(Role::findByName('admin'));
+        $this->actingAs($user);
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -206,13 +215,89 @@ class ParticipantExportTest extends TestCase
         $this->assertStringContainsString('Ticketart #999', $gebaut['rows'][0][2]);
     }
 
-    /** The page renders, offers the event's ticket types and previews the count. */
-    public function test_the_page_offers_the_ticket_types_and_previews(): void
+    /**
+     * THE MAIL TAB DOES THE JOB IN ONE SCREEN.
+     *
+     * Some ticket holders have to be told something in advance - that is what this
+     * page is for. The addresses have to be readable on the spot, because the next
+     * step is pasting them into BCC, not opening a file.
+     */
+    public function test_the_mail_tab_shows_the_addresses_ready_to_copy(): void
     {
-        $this->seed(RolesAndPermissionsSeeder::class);
-        $admin = User::factory()->create();
-        $admin->assignRole(Role::findByName('admin'));
-        $this->actingAs($admin);
+        $this->admin();
+
+        \App\Models\Event::create([
+            'name' => 'Sommerfest', 'pretix_event_slug' => 'sommerfest', 'is_active' => true,
+        ]);
+        $this->order('VIPA1', 'anna@example.de', [['item' => self::VIP]]);
+        $this->order('MEET1', 'bernd@example.de', [['item' => self::MEET]]);
+        $this->order('NORM1', 'clara@example.de', [['item' => self::NORMAL]]);
+
+        Livewire::test(ParticipantExportPage::class)
+            ->assertOk()
+            // The warning about personal data belongs above the form, not behind the
+            // button.
+            ->assertSee('Personenbezogene Daten')
+            ->fillForm([
+                'mail_event_slug' => 'sommerfest',
+                'mail_item_ids' => [self::VIP, self::MEET],
+            ])
+            ->assertSee('2 Adressen')
+            // On screen and separated for a BCC field.
+            ->assertFormFieldExists('mail_liste')
+            ->assertSet('data.mail_liste', 'anna@example.de; bernd@example.de');
+    }
+
+    /** The separator follows the choice - one address per line for a plain list. */
+    public function test_the_separator_can_be_switched_to_one_per_line(): void
+    {
+        $this->admin();
+
+        \App\Models\Event::create([
+            'name' => 'Sommerfest', 'pretix_event_slug' => 'sommerfest', 'is_active' => true,
+        ]);
+        $this->order('VIPA1', 'anna@example.de', [['item' => self::VIP]]);
+        $this->order('VIPA2', 'bernd@example.de', [['item' => self::VIP]]);
+
+        Livewire::test(ParticipantExportPage::class)
+            ->fillForm([
+                'mail_event_slug' => 'sommerfest',
+                'mail_item_ids' => [self::VIP],
+                'mail_separator' => 'newline',
+            ])
+            ->assertSet('data.mail_liste', "anna@example.de\nbernd@example.de");
+    }
+
+    /**
+     * THE MAIL TAB IGNORES THE OTHER TAB'S SELECTION.
+     *
+     * Both tabs live in one form. If the address list read the full export's event,
+     * switching tabs would silently change who gets written to.
+     */
+    public function test_the_two_tabs_do_not_share_their_selection(): void
+    {
+        $this->admin();
+
+        foreach (['sommerfest' => 'Sommerfest', 'winterfest' => 'Winterfest'] as $slug => $name) {
+            \App\Models\Event::create(['name' => $name, 'pretix_event_slug' => $slug, 'is_active' => true]);
+        }
+
+        $this->order('VIPA1', 'anna@example.de', [['item' => self::VIP]]);
+
+        Livewire::test(ParticipantExportPage::class)
+            ->fillForm([
+                'mail_event_slug' => 'sommerfest',
+                'event_slug' => 'winterfest',
+            ])
+            // The mail tab keeps its own event, and its own answer.
+            ->assertSet('data.mail_liste', 'anna@example.de')
+            ->assertSee('Zu dieser Veranstaltung sind keine Bestellungen importiert');
+    }
+
+    /** The full export tab still previews its own selection. */
+    public function test_the_full_tab_previews_its_own_selection(): void
+    {
+        $this->admin();
 
         \App\Models\Event::create([
             'name' => 'Sommerfest', 'pretix_event_slug' => 'sommerfest', 'is_active' => true,
@@ -220,23 +305,15 @@ class ParticipantExportTest extends TestCase
         $this->order('VIPA1', 'anna@example.de', [['item' => self::VIP]]);
 
         Livewire::test(ParticipantExportPage::class)
-            ->assertOk()
-            // The warning about personal data belongs above the form, not behind the
-            // button.
-            ->assertSee('Personenbezogene Daten')
             ->fillForm(['event_slug' => 'sommerfest', 'item_ids' => [self::VIP]])
             ->assertSee('VIP-Ticket')
-            // The count BEFORE the download - a mailing list gets acted on.
-            ->assertSee('1 E-Mail-Adressen');
+            ->assertSee('1 Personen');
     }
 
     /** An empty result is refused rather than delivered as an empty file. */
     public function test_an_empty_selection_is_refused(): void
     {
-        $this->seed(RolesAndPermissionsSeeder::class);
-        $admin = User::factory()->create();
-        $admin->assignRole(Role::findByName('admin'));
-        $this->actingAs($admin);
+        $this->admin();
 
         \App\Models\Event::create([
             'name' => 'Sommerfest', 'pretix_event_slug' => 'sommerfest', 'is_active' => true,
@@ -244,87 +321,11 @@ class ParticipantExportTest extends TestCase
         $this->order('NORM1', 'clara@example.de', [['item' => self::NORMAL]]);
 
         Livewire::test(ParticipantExportPage::class)
-            ->fillForm(['event_slug' => 'sommerfest', 'item_ids' => [self::VIP]])
-            ->call('export')
+            ->fillForm(['mail_event_slug' => 'sommerfest', 'mail_item_ids' => [self::VIP]])
+            ->call('exportMails', 'txt')
             ->assertNotified();
 
         $this->assertSame(0, app(ParticipantExporter::class)->build('sommerfest', [self::VIP])['count']);
-    }
-    /**
-     * ONLY THE CHOSEN COLUMNS, IN THE CHOSEN ORDER.
-     *
-     * The order is half the point: a list that gets pasted somewhere needs the
-     * address first, and a multi-select cannot express that.
-     */
-    public function test_only_the_chosen_columns_in_the_chosen_order(): void
-    {
-        $this->order('ORD01', 'anna@example.de', [['item' => self::VIP]]);
-
-        $gebaut = app(ParticipantExporter::class)->build(
-            'sommerfest', [self::VIP], ['p'], ParticipantExporter::MODE_ADDRESSES,
-            ['name', 'email'],
-        );
-
-        $this->assertSame(['Name', 'E-Mail'], $gebaut['headings']);
-        $this->assertSame(['Max Mustermann', 'anna@example.de'], $gebaut['rows'][0]);
-    }
-
-    /** A single column is allowed - the address list for a mail client. */
-    public function test_a_single_column_is_allowed(): void
-    {
-        $this->order('ORD01', 'anna@example.de', [['item' => self::VIP]]);
-
-        $gebaut = app(ParticipantExporter::class)->build(
-            'sommerfest', [], ['p'], ParticipantExporter::MODE_ADDRESSES, ['email'],
-        );
-
-        $this->assertSame(['E-Mail'], $gebaut['headings']);
-        $this->assertSame([['anna@example.de']], $gebaut['rows']);
-    }
-
-    /**
-     * CHOOSING COLUMNS NEVER CHANGES WHICH ROWS COME OUT.
-     *
-     * Rows are built complete and projected afterwards. If narrowing the columns
-     * could drop people, an address list would silently lose recipients.
-     */
-    public function test_the_column_choice_does_not_change_the_row_count(): void
-    {
-        $this->order('ORD01', 'anna@example.de', [['item' => self::VIP]]);
-        $this->order('ORD02', 'bernd@example.de', [['item' => self::VIP]]);
-
-        $alle = app(ParticipantExporter::class)->build('sommerfest', [self::VIP]);
-        $eine = app(ParticipantExporter::class)->build(
-            'sommerfest', [self::VIP], ['p'], ParticipantExporter::MODE_ADDRESSES, ['email'],
-        );
-
-        $this->assertSame($alle['count'], $eine['count']);
-    }
-
-    /** An unknown column key is dropped rather than exported as a nameless column. */
-    public function test_an_unknown_column_is_dropped(): void
-    {
-        $this->order('ORD01', 'anna@example.de', [['item' => self::VIP]]);
-
-        $gebaut = app(ParticipantExporter::class)->build(
-            'sommerfest', [], ['p'], ParticipantExporter::MODE_ADDRESSES,
-            ['email', 'gibtesnicht', 'preis'],
-        );
-
-        $this->assertSame(['E-Mail'], $gebaut['headings']);
-    }
-
-    /** No column chosen means all of them, in catalogue order. */
-    public function test_no_column_chosen_means_all_of_them(): void
-    {
-        $this->order('ORD01', 'anna@example.de', [['item' => self::VIP]]);
-
-        $gebaut = app(ParticipantExporter::class)->build('sommerfest');
-
-        $this->assertSame(
-            array_values(ParticipantExporter::COLUMNS[ParticipantExporter::MODE_ADDRESSES]),
-            $gebaut['headings'],
-        );
     }
 
     /**

@@ -349,9 +349,15 @@ DB-Fehler nicht zurück in die DB, damit das Logging nie den Request killt oder 
   **PayPal-Auszahlungen** (kam die Auszahlung aufs Konto an?) und gegen **pretix-Überweisungen** (Bestellcode
   im Verwendungszweck). Offene Eingänge sind als Badge sichtbar; manuelles Ignorieren/Zurücksetzen und ein
   „Erneut abgleichen" sind möglich.
-- **Teilnehmer exportieren** (pretix → Teilnehmer exportieren, Admin): E-Mail-Adressen oder Käufe
-  **einzelner Ticketarten** einer Veranstaltung als XLSX oder CSV – etwa alle Adressen eines Events mit
-  VIP- oder Meet-&-Greet-Ticket. Zwei Formen, weil zwei verschiedene Fragen gestellt werden:
+- **Teilnehmer & Adressen** (pretix → Teilnehmer & Adressen, Admin), zwei Reiter:
+  - **E-Mail-Adressen** – der Reiter für den eigentlichen Zweck: Ticketinhaber vorab informieren.
+    Veranstaltung und Ticketarten wählen, und die Adressen stehen **direkt auf dem Schirm**, mit
+    Semikolon getrennt fürs BCC-Feld (wahlweise Zeilenumbruch oder Komma) – zum Markieren und
+    Einfügen, ohne Umweg über eine Datei. Daneben Download als Text oder CSV; der Text enthält **keine
+    Kopfzeile**, sonst ginge eine Mail an ein Postfach namens „E-Mail".
+  - **Ausführlicher Export** – Käufe oder Adressen
+  **einzelner Ticketarten** einer Veranstaltung als CSV, Text oder XLSX – etwa alle Adressen eines
+  Events mit VIP- oder Meet-&-Greet-Ticket. Zwei Formen, weil zwei verschiedene Fragen gestellt werden:
   **Adressen** (eine Zeile je Person, Dubletten nach E-Mail zusammengefasst – wer drei Tickets hat, ist
   ein Empfänger) und **Käufe** (eine Zeile je Ticket, mit dem Namen auf dem Ticket). Voreingestellt sind
   nur **bezahlte** Bestellungen; stornierte Positionen zählen nie mit. **Welche Spalten** in welcher Reihenfolge herauskommen,
