@@ -245,7 +245,13 @@ class ParticipantExportTest extends TestCase
             ->assertSee('2 Adressen')
             // On screen and separated for a BCC field.
             ->assertFormFieldExists('mail_liste')
-            ->assertSet('data.mail_liste', 'anna@example.de; bernd@example.de');
+            ->assertSet('data.mail_liste', 'anna@example.de; bernd@example.de')
+            // Actually RENDERED - the field is a Blade view, and a mistake in it
+            // would show up when someone opens the page and nowhere earlier.
+            ->assertSee('anna@example.de; bernd@example.de')
+            // Clicking copies, and the page says so before and after.
+            ->assertSee('In das Feld klicken')
+            ->assertSee('2 Adressen kopiert');
     }
 
     /** The separator follows the choice - one address per line for a plain list. */

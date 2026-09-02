@@ -352,8 +352,8 @@ DB-Fehler nicht zurück in die DB, damit das Logging nie den Request killt oder 
 - **Teilnehmer & Adressen** (pretix → Teilnehmer & Adressen, Admin), zwei Reiter:
   - **E-Mail-Adressen** – der Reiter für den eigentlichen Zweck: Ticketinhaber vorab informieren.
     Veranstaltung und Ticketarten wählen, und die Adressen stehen **direkt auf dem Schirm**, mit
-    Semikolon getrennt fürs BCC-Feld (wahlweise Zeilenumbruch oder Komma) – zum Markieren und
-    Einfügen, ohne Umweg über eine Datei. Daneben Download als Text oder CSV; der Text enthält **keine
+    Semikolon getrennt fürs BCC-Feld (wahlweise Zeilenumbruch oder Komma). **Ein Klick in das Feld
+    kopiert sie** in die Zwischenablage und bestätigt das sichtbar – kein Umweg über eine Datei. Daneben Download als Text oder CSV; der Text enthält **keine
     Kopfzeile**, sonst ginge eine Mail an ein Postfach namens „E-Mail".
   - **Ausführlicher Export** – Käufe oder Adressen
   **einzelner Ticketarten** einer Veranstaltung als CSV, Text oder XLSX – etwa alle Adressen eines

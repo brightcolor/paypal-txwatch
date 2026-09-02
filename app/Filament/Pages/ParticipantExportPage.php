@@ -12,7 +12,6 @@ use Filament\Forms\Components\Actions\Action as FormAction;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Tabs;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
@@ -151,19 +150,20 @@ class ParticipantExportPage extends Page implements HasForms
                 ->content(fn (callable $get) => $this->mailSummary($get)),
 
             /*
-             * ON SCREEN, not only as a file. The next step after choosing the ticket
-             * types is almost never "open a download" but "paste into BCC", and a
-             * round trip through the file system for that is a detour with nothing at
-             * the end of it.
+             * ON SCREEN AND COPIED BY A CLICK, not only as a file. The next step after
+             * choosing the ticket types is almost never "open a download" but "paste
+             * into BCC" - a round trip through the file system for that is a detour
+             * with nothing at the end of it, and marking the text by hand first is one
+             * handle too many for the single thing this field is for.
+             *
+             * A VIEW FIELD rather than a Textarea, because the click handler and the
+             * confirmation belong to the same element: a clipboard is invisible, and
+             * without an answer nobody knows whether the click did anything.
              */
-            Textarea::make('mail_liste')
-                ->label('Adressen zum Kopieren')
-                ->rows(8)
-                ->readOnly()
+            \Filament\Forms\Components\ViewField::make('mail_liste')
+                ->label('Adressen')
+                ->view('filament.forms.copy-addresses')
                 ->columnSpanFull()
-                ->extraInputAttributes(['class' => 'font-mono text-xs'])
-                ->helperText('Markieren und kopieren. Die Liste enthält jede Adresse genau einmal.')
-                ->afterStateHydrated(fn (Textarea $component, callable $get) => $component->state($this->mailList($get)))
                 ->dehydrated(false)
                 ->live(),
 

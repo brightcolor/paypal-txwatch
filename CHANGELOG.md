@@ -4,6 +4,15 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.67.1] - 2026-08-31
+
+### Geändert
+- **Ein Klick in das Adressfeld kopiert alle Adressen** – und sagt es. Erst markieren und dann kopieren
+  ist ein Handgriff zu viel für das Einzige, wofür dieses Feld da ist. Die Bestätigung („✓ 26 Adressen
+  kopiert") erscheint **auf dem Feld**, dort wo der Klick war: eine Zwischenablage ist unsichtbar, und
+  ohne Rückmeldung klickt man noch dreimal. Markiert wird der Text in jedem Fall, sodass sich das
+  Kopieren notfalls von Hand zu Ende bringen lässt.
+
 ## [0.67.0] - 2026-08-31
 
 ### Geändert
