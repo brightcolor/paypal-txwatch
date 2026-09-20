@@ -66,4 +66,20 @@ class Event extends Model
     {
         return $this->display_name ?: $this->name;
     }
+
+    /**
+     * pretix slug => event name, for every event that has a slug.
+     *
+     * The slug is unique on the table, so this is a plain lookup. It lives here so
+     * that every audience view - list, matrix, export - labels an event the same way.
+     *
+     * @return array<string, string>
+     */
+    public static function namesBySlug(): array
+    {
+        return static::query()
+            ->whereNotNull('pretix_event_slug')
+            ->pluck('name', 'pretix_event_slug')
+            ->all();
+    }
 }
