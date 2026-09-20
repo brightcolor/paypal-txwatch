@@ -306,6 +306,41 @@ Ebenfalls auf dem Dashboard erscheint der Block **"Zu prüfen"**, sobald es abzu
 (Betrag weicht von pretix ab oder keine pretix-Bestellung gefunden) – eine kurze Inbox mit Direktsprung in
 die jeweilige Transaktion. Ist nichts offen, wird der Block ausgeblendet.
 
+## Publikum: wer kommt zu welchen Veranstaltungen
+
+Die Seite **Berichte → Publikum** zeigt, welche Ticketkäufer sich für welche Veranstaltungen interessieren.
+Oben mehrere Veranstaltungen, den Bestellstatus, Ticketarten und einen Zeitraum wählen; alles darunter bezieht
+sich auf genau diese Auswahl:
+
+- **Kopfzahlen:** Käufer, Tickets, Bestellungen, Umsatz und der Anteil der Käufer, die bei mehreren der
+  gewählten Veranstaltungen waren
+- **Überschneidung:** eine Matrix Veranstaltung × Veranstaltung – „von den Käufern der Zeile waren so viele
+  auch bei der Spalte"
+- **Neu und wiederkehrend:** je Veranstaltung, wer dort zum ersten Mal gekauft hat
+- **Käuferliste:** eine Zeile je E-Mail-Adresse mit Veranstaltungen, Bestellungen, Tickets, Umsatz, erster und
+  letzter Bestellung; sortier- und durchsuchbar, als CSV oder Excel herunterladbar
+- **Weitere Auswertungen:** Ticketarten (samt Treue zur selben Kategorie), Vorlaufzeit bis zum
+  Veranstaltungstag, Gruppengröße, Verkaufsverlauf nach Tag, Wochentag, Tageszeit und Tagen vor der
+  Veranstaltung, Bestellwert mit Median, Gutscheine, Zahlungsart, Herkunft nach PLZ-Region, Ort und Land,
+  Storno- und Ablaufquote sowie die Antworten auf Fragen, die pretix beim Kauf stellt
+
+Ein Käufer ist eine E-Mail-Adresse (Groß- und Kleinschreibung zählen nicht). Bestellungen ohne Adresse
+zählen bei Tickets und Umsatz mit und bleiben aus allen käuferbezogenen Zahlen heraus. Die Umsatzzahlen sind
+Ticketpreise aus pretix; die Buchhaltung rechnet weiter über Transaktionen und Abrechnungen.
+
+**Datengrundlage** ist die Tabelle `pretix_positions` – eine Zeile je aktiver Ticketposition, die der
+pretix-Import bei jeder Bestellung mitschreibt. Scheitert das Schreiben einmal, läuft der Import trotzdem
+durch und meldet die betroffenen Bestellungen an die Admins. Aufbauen oder reparieren:
+
+```bash
+php artisan pretix:rebuild-positions            # alle gespeicherten Bestellungen
+php artisan pretix:rebuild-positions --event=gag-wismar-2026
+```
+
+Der Befehl ist wiederholbar. **Sichtbarkeit:** Admins sehen alle Veranstaltungen; Nutzer mit der Rolle
+`customer` (Recht `view-audience`) ausschließlich die Veranstaltungen ihres Veranstalters. Für das
+Verarbeitungsverzeichnis siehe [docs/datenschutz-publikumsauswertung.md](docs/datenschutz-publikumsauswertung.md).
+
 ## Fehler-Log (500er nachvollziehen)
 
 Jeder Server-Fehler (HTTP 5xx / unbehandelte Exception) wird strukturiert in der Tabelle

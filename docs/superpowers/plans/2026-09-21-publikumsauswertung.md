@@ -46,6 +46,7 @@ Create `tests/Feature/Pretix/PretixPositionsSchemaTest.php`:
 
 namespace Tests\Feature\Pretix;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
@@ -59,6 +60,9 @@ use Tests\TestCase;
  */
 class PretixPositionsSchemaTest extends TestCase
 {
+    // Needed by the second test: Schema::hasColumn asks the migrated database.
+    use RefreshDatabase;
+
     /** The shortest width each column may have, from pretix' own field lengths. */
     private const MINIMUM_WIDTHS = [
         'event_slug' => 255,
@@ -4281,3 +4285,25 @@ Der Bestand hat heute 48 Personen mit mehr als einer Veranstaltung. Die Auswertu
 richtig, aber schmal. Sobald `gag-wismar-2027` verkauft ist, lohnt ein zweiter Blick auf die
 Überschneidung — und erst dann die Frage, ob Segmente oder ein Verteiler je Segment dazukommen
 sollen.
+
+---
+
+## Abweichungen bei der Umsetzung (21.09.2026)
+
+Der Plan oben ist der Stand vor dem Bauen. Beim Bauen haben sich diese Punkte geändert; der Code
+ist maßgeblich.
+
+| Aufgabe | Abweichung | Grund |
+|---|---|---|
+| 1 | Schematest bindet `RefreshDatabase` ein | `Schema::hasColumn` fragt die migrierte Datenbank |
+| 3 | Befehl heißt `PretixRebuildPositionsCommand`, Test `PretixRebuildPositionsCommandTest` | Namensmuster der vorhandenen Befehle |
+| 3 | Zusätzlicher Test `PretixImportWritesPositionsTest` mit einem einzigen `Http::fake`-Rückruf | Ohne ihn hatte der Aufruf im Importer keinen Prüfer; ein zweites `Http::fake` wäre nie gefragt worden |
+| 7 | `Event::namesBySlug()` ist eine schlichte Zuordnung, der Test für doppelte Slugs entfällt | `events.pretix_event_slug` ist eindeutig |
+| 8/9 | `daysBefore()` und `eventDates()` als gemeinsame Helfer für Vorlaufzeit und Verkaufsverlauf | Eine Rechenregel statt zwei |
+| 10 | Kein Seeder-Schritt beim Ausrollen | `docker/entrypoint.sh` führt den Seeder bei jedem Containerstart aus |
+| 11 | `->defaultKeySort(false)` plus SQL-Wächter im Tabellentest | PostgreSQL lehnt `ORDER BY` auf eine Spalte außerhalb des `GROUP BY` ab |
+| 12 | Tabellen nutzen die vorhandene Theme-Klasse `.rpt`; neues CSS nur für Kacheln, Hinweise, Balken | Einheitlicher Berichtsstil, weniger CSS |
+| 13 | `Excel::raw` + `streamDownload` + Ablehnung leerer Auswahl statt `Excel::download` | Muster des Teilnehmer-Exports; keine Datei mit Käuferdaten auf der Platte |
+| 14 | Spaltenbreiten an Quellspalte und pretix-Feld ausgerichtet | Eine zu schmale Spalte hätte auf PostgreSQL den Import einer Bestellung abgebrochen |
+| 14 | Fehler beim Schreiben der Positionen wird abgefangen und an die Admins gemeldet | Der Import trägt auch Verbuchung und PayPal-Abgleich |
+| 14 | PostgreSQL-Gegenprobe nach dem Ausrollen, gegen alle Lesepfade | Vorher existieren Tabelle und Klassen auf Produktion nicht |

@@ -133,6 +133,15 @@ geschrieben, Bestellungen ohne Positionen).
 
 Der Erstaufbau auf Produktion erfasst die 1458 Bestellungen mit 3359 aktiven Positionen.
 
+**Ein Fehler beim Schreiben der Positionen hält den Import nicht an.** Derselbe Lauf verbucht
+Überweisungen und gleicht PayPal ab; eine abgeleitete Auswertungstabelle darf diesen Geldweg
+nicht aufhalten. Der Importer fängt den Fehler ab, sammelt die Bestellnummern und meldet sie
+einmal je Lauf über `AdminNotifier` an die Admins, mit dem Befehl zum Nachziehen. Der technische
+Grund steht im Server-Log.
+
+**Spaltenbreiten:** jede Spalte mindestens so breit wie die Quellspalte in `pretix_orders` und
+wie das Feld in pretix selbst. Der Schemawächter hält die Migration gegen diese Regel.
+
 ## 6. Auswertungsdienst
 
 `app/Services/Audience/`, eine Klasse je Frage, jede für sich prüfbar:
@@ -308,8 +317,15 @@ dem Vorbild von `.rpt`. Light-only Flächen werden auf `html:not(.dark)` beschr�
 **Diagramme:** Verkaufsverlauf und Verteilungen als Filament-Chart-Widgets (Chart.js), nach dem
 Vorbild von `RevenueByDayChart`. Die Matrix bleibt eine Tabelle.
 
-**Export:** Die Käuferliste und die Überschneidungsmatrix lassen sich als CSV und XLSX
-herunterladen, über den vorhandenen Exportweg.
+**Export:** Die Käuferliste lässt sich als CSV und XLSX herunterladen, die
+Überschneidungsmatrix als XLSX. Wie beim Teilnehmer-Export wird eine leere Auswahl mit
+Begründung abgelehnt und ein Erfolg gemeldet. Die Datei entsteht per `Excel::raw` im Speicher
+und wird direkt ausgeliefert; auf dem Server bleibt keine Kopie mit Käuferdaten zurück.
+
+**Sortierung:** Die Tabelle schaltet Filaments Schlüsselsortierung ausdrücklich ab. Sie hinge
+`ORDER BY pretix_positions.id` an die gruppierte Abfrage, und diese Spalte steht außerhalb des
+`GROUP BY` — SQLite nimmt das hin, PostgreSQL lehnt die Abfrage ab. Ein Test liest die erzeugte
+SQL und schlägt an, falls ein Update den Standard umdreht.
 
 ## 9. Zugriff und Datenschutz
 
@@ -386,8 +402,9 @@ Der Wächter gegen Rückfall: Wer `CustomerScope::byEventSlug` aus `AudienceQuer
   Event 1 („VIP Dauerkarte 2026") trägt einen Wert, der kein pretix-Slug ist, und hat keine
   Bestellungen; solche Events erscheinen in der Auswahl mit dem Hinweis, dass keine Bestellungen
   vorliegen.
-- Zwei TxWatch-Events können denselben pretix-Slug tragen. Die Auswertung gruppiert über den
-  Slug und zeigt den Namen des zuerst angelegten Events.
+- Der pretix-Slug ist in `events` eindeutig (Unique-Index seit der Migration vom 11.07.2026).
+  Jede Veranstaltung hat damit genau einen Namen; `Event::namesBySlug()` ist die eine Stelle,
+  an der alle Ansichten ihn nachschlagen.
 - Der Umfang des Bestands (1458 Bestellungen) erlaubt Aggregation in SQL ohne Zwischenspeicher.
   Ein Cache kommt dazu, sobald eine Auswertung messbar langsam wird; der Schlüssel muss dann die
   Mandantensperre enthalten.

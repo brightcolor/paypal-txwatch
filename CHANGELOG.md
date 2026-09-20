@@ -4,6 +4,37 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.68.0] - 2026-09-21
+
+### Hinzugefügt
+- **Neue Seite „Publikum": wer kommt zu welchen Veranstaltungen.** Mehrere Veranstaltungen auswählen, und
+  die Seite zeigt, wie viele Käufer sie sich teilen – als Matrix „von den Käufern der Zeile waren so viele
+  auch bei der Spalte" –, wer bei einer Veranstaltung zum ersten Mal kauft und wer wiederkommt. Darunter die
+  Käuferliste: eine Zeile je E-Mail-Adresse mit Veranstaltungen, Bestellungen, Tickets, Umsatz sowie erster
+  und letzter Bestellung, sortier- und durchsuchbar, als CSV oder Excel herunterladbar. Die Matrix gibt es
+  ebenfalls als Excel-Datei.
+- **Elf weitere Auswertungen aus demselben Bestand:** Ticketarten samt der Frage, ob jemand überall dieselbe
+  Kategorie wählt; Vorlaufzeit bis zum Veranstaltungstag; Tickets je Bestellung und wie oft ein anderer Name
+  auf dem Ticket steht; Verkaufsverlauf nach Tag, Wochentag, Tageszeit und Tagen vor der Veranstaltung –
+  auf dieser Achse lassen sich mehrere Veranstaltungen übereinanderlegen; Bestellwert mit Median;
+  Gutscheinanteil; Zahlungsart; Herkunft nach PLZ-Region, Ort und Land mit ausgewiesener Abdeckung;
+  Storno- und Ablaufquote; Antworten auf die Fragen, die pretix beim Kauf stellt.
+- **Befehl `pretix:rebuild-positions`** baut die zugrunde liegende Tabelle aus den gespeicherten Bestellungen
+  auf, wahlweise für eine einzelne Veranstaltung. Er ist wiederholbar.
+
+### Geändert
+- Der pretix-Import schreibt zu jeder Bestellung die aktiven Ticketpositionen mit. Eine in pretix stornierte
+  Position verschwindet beim nächsten Import aus der Auswertung.
+- Scheitert das Schreiben der Ticketpositionen, läuft der Import trotzdem vollständig durch – Verbuchung und
+  PayPal-Abgleich hängen nicht daran. Die betroffenen Bestellungen gehen einmal je Lauf als Meldung an die
+  Admins, mit dem Befehl zum Nachziehen.
+
+### Sicherheit
+- Ein Veranstalter mit Portalzugang sieht in der Publikumsauswertung ausschließlich die eigenen
+  Veranstaltungen. Die Sperre sitzt an der einen Stelle, durch die jede Zahl der Seite läuft.
+- Die Exporte der Publikumsseite entstehen im Speicher; auf dem Server bleibt keine Datei mit
+  Käuferdaten zurück.
+
 ## [0.67.1] - 2026-08-31
 
 ### Geändert
