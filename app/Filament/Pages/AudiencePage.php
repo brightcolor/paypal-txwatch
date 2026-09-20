@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Models\Event;
 use App\Models\PretixItem;
 use App\Models\PretixPosition;
+use App\Services\Audience\AudienceBuyers;
 use App\Services\Audience\AudienceDimensions;
 use App\Services\Audience\AudienceOverlap;
 use App\Services\Audience\AudienceQuery;
@@ -15,6 +16,10 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Filament\Pages\Page;
+use Filament\Tables;
+use Filament\Tables\Concerns\InteractsWithTable;
+use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Table;
 use Illuminate\Support\Carbon;
 
 /**
@@ -25,9 +30,10 @@ use Illuminate\Support\Carbon;
  * no arithmetic of its own - and no way past the customer scope that sits in
  * AudienceQuery.
  */
-class AudiencePage extends Page implements HasForms
+class AudiencePage extends Page implements HasForms, HasTable
 {
     use InteractsWithForms;
+    use InteractsWithTable;
 
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
 
@@ -141,6 +147,84 @@ class AudiencePage extends Page implements HasForms
     public function getDimensionsProperty(): AudienceDimensions
     {
         return app(AudienceDimensions::class);
+    }
+
+    /**
+     * The buyer list.
+     *
+     * A REAL TABLE rather than a rendered array: this is the list people work in -
+     * sort by tickets, search for a name, page through it, take it away as a file.
+     * All of that is free here and hand-built anywhere else.
+     */
+    public function table(Table $table): Table
+    {
+        return $table
+            ->query(fn () => app(AudienceBuyers::class)->query($this->currentQuery()))
+            ->defaultSort('tickets', 'desc')
+            /*
+             * 200 IS THE CEILING HERE, below the global policy's 500: this query
+             * groups over every position of the selection, so a large page repeats
+             * that work on every reload. Because the option does not exist, nothing
+             * has to be clamped back afterwards.
+             */
+            ->paginated([25, 50, 100, 200])
+            ->defaultPaginationPageOption(50)
+            /*
+             * NO KEY SORT, and on purpose: it would append ORDER BY pretix_positions.id,
+             * a column outside the GROUP BY. SQLite accepts that, PostgreSQL refuses
+             * the query. Off by default in Filament 3; stated here so an upgrade that
+             * flips the default meets AudienceBuyerTableTest first.
+             */
+            ->defaultKeySort(false)
+            ->heading('Käufer')
+            ->description('Eine Zeile je E-Mail-Adresse, über die gewählten Veranstaltungen hinweg.')
+            ->columns([
+                Tables\Columns\TextColumn::make('buyer_email')
+                    ->label('E-Mail')
+                    ->searchable(query: fn ($query, string $search) => AudienceBuyers::search($query, $search))
+                    ->copyable(),
+
+                Tables\Columns\TextColumn::make('buyer_display_name')
+                    ->label('Name')
+                    ->placeholder('ohne Angabe'),
+
+                Tables\Columns\TextColumn::make('events')
+                    ->label('Veranstaltungen')
+                    ->sortable()
+                    ->alignEnd()
+                    // $state and $record by name: Filament injects closure arguments
+                    // by their parameter name, and a different name gives a 500.
+                    ->tooltip(fn ($record) => implode(', ', app(AudienceBuyers::class)
+                        ->eventNames($this->currentQuery(), (string) $record->buyer_email))),
+
+                Tables\Columns\TextColumn::make('orders')
+                    ->label('Bestellungen')
+                    ->sortable()
+                    ->alignEnd(),
+
+                Tables\Columns\TextColumn::make('tickets')
+                    ->label('Tickets')
+                    ->sortable()
+                    ->alignEnd(),
+
+                Tables\Columns\TextColumn::make('revenue')
+                    ->label('Umsatz')
+                    ->sortable()
+                    ->alignEnd()
+                    ->formatStateUsing(fn ($state) => number_format((float) $state, 2, ',', '.') . ' €'),
+
+                Tables\Columns\TextColumn::make('first_at')
+                    ->label('Erste Bestellung')
+                    ->sortable()
+                    ->formatStateUsing(fn ($state) => $state ? Carbon::parse($state)->format('d.m.Y') : ''),
+
+                Tables\Columns\TextColumn::make('last_at')
+                    ->label('Letzte Bestellung')
+                    ->sortable()
+                    ->formatStateUsing(fn ($state) => $state ? Carbon::parse($state)->format('d.m.Y') : ''),
+            ])
+            ->emptyStateHeading('Keine Käufer in dieser Auswahl')
+            ->emptyStateDescription('Prüfe die gewählten Veranstaltungen, den Bestellstatus und den Zeitraum. Ohne pretix-Import liegen noch keine Bestellungen vor.');
     }
 
     /**

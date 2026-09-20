@@ -32,4 +32,8 @@
             <div class="aud-fein">{{ number_format($stats['tickets_without_buyer'], 0, ',', '.') }} Tickets ohne Käuferadresse</div>
         </x-filament::section>
     </div>
+
+    <div class="aud">
+        {{ $this->table }}
+    </div>
 </x-filament-panels::page>
