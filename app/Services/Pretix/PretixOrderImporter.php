@@ -172,6 +172,15 @@ class PretixOrderImporter
             ],
         );
 
+        /*
+         * The derived positions travel with the order. Written here rather than in a
+         * listener, because the order and its positions have to be right at the same
+         * moment: every audience figure reads the positions, and an order that is
+         * already updated while its positions still describe the previous state is a
+         * wrong number that nothing complains about.
+         */
+        app(\App\Services\Pretix\PositionWriter::class)->write($order);
+
         $after = OrderLog::snapshot($order->refresh());
         $changes = OrderLog::differences($before, $after);
 
