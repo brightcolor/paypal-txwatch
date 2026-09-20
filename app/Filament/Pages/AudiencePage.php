@@ -2,6 +2,8 @@
 
 namespace App\Filament\Pages;
 
+use App\Exports\AudienceBuyersExport;
+use App\Exports\AudienceOverlapExport;
 use App\Models\Event;
 use App\Models\PretixItem;
 use App\Models\PretixPosition;
@@ -15,12 +17,16 @@ use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Tables;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Support\Carbon;
+use Maatwebsite\Excel\Excel as ExcelFormat;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Who comes to which events - and what that says about the programme.
@@ -223,8 +229,85 @@ class AudiencePage extends Page implements HasForms, HasTable
                     ->sortable()
                     ->formatStateUsing(fn ($state) => $state ? Carbon::parse($state)->format('d.m.Y') : ''),
             ])
+            ->headerActions([
+                Tables\Actions\Action::make('kaeuferliste_csv')
+                    ->label('Käuferliste als CSV')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->action(fn () => $this->downloadBuyers('csv')),
+
+                Tables\Actions\Action::make('kaeuferliste_xlsx')
+                    ->label('Käuferliste als Excel')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('gray')
+                    ->action(fn () => $this->downloadBuyers('xlsx')),
+
+                Tables\Actions\Action::make('ueberschneidung_xlsx')
+                    ->label('Überschneidung als Excel')
+                    ->icon('heroicon-o-table-cells')
+                    ->color('gray')
+                    ->action(fn () => $this->downloadOverlap()),
+            ])
             ->emptyStateHeading('Keine Käufer in dieser Auswahl')
             ->emptyStateDescription('Prüfe die gewählten Veranstaltungen, den Bestellstatus und den Zeitraum. Ohne pretix-Import liegen noch keine Bestellungen vor.');
+    }
+
+    public function downloadBuyers(string $format): ?StreamedResponse
+    {
+        $export = new AudienceBuyersExport($this->currentQuery());
+        $anzahl = count($export->array());
+
+        if ($anzahl === 0) {
+            return $this->refuse();
+        }
+
+        $format = $format === 'xlsx' ? 'xlsx' : 'csv';
+
+        return $this->deliver($export, $format, 'publikum-kaeufer', $anzahl . ' Käufer exportiert');
+    }
+
+    public function downloadOverlap(): ?StreamedResponse
+    {
+        $export = new AudienceOverlapExport($this->currentQuery());
+        $anzahl = count($export->array());
+
+        if ($anzahl === 0) {
+            return $this->refuse();
+        }
+
+        return $this->deliver($export, 'xlsx', 'publikum-ueberschneidung', $anzahl . ' Veranstaltungen exportiert');
+    }
+
+    /**
+     * Refused rather than delivered empty: an empty file looks like a finished
+     * export, and nobody notices until someone opens it.
+     */
+    private function refuse(): null
+    {
+        Notification::make()
+            ->title('Nichts zu exportieren')
+            ->body('Für diese Auswahl gibt es keine Käufer. Prüfe die gewählten Veranstaltungen, den Bestellstatus und den Zeitraum.')
+            ->warning()
+            ->send();
+
+        return null;
+    }
+
+    /**
+     * Rendered in memory and streamed.
+     *
+     * NOTHING IS WRITTEN TO DISK: the file holds names and e-mail addresses, and a
+     * copy under storage/ would outlive the download with nobody to delete it.
+     */
+    private function deliver(object $export, string $format, string $name, string $meldung): StreamedResponse
+    {
+        $inhalt = (string) Excel::raw($export, $format === 'xlsx' ? ExcelFormat::XLSX : ExcelFormat::CSV);
+
+        Notification::make()->title($meldung)->success()->send();
+
+        return response()->streamDownload(
+            fn () => print ($inhalt),
+            $name . '-' . now()->format('Y-m-d') . '.' . $format,
+        );
     }
 
     /**
