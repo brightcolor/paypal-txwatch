@@ -69,6 +69,10 @@ Das Wort „Kunde" bleibt in der neuen Oberfläche dem Veranstalter vorbehalten.
 **Identität eines Käufers** ist die kleingeschriebene, getrimmte E-Mail-Adresse der Bestellung.
 Namen und Adressen dienen der Anzeige.
 
+Eine Bestellung ohne E-Mail-Adresse bekommt `buyer_email = null`. Solche Zeilen zählen bei
+Tickets und Umsatz mit und bleiben aus jeder käuferbezogenen Zahl heraus, damit sie sich nicht
+zu einer Phantomperson bündeln. Ihre Anzahl steht bei den Kopfzahlen als eigener Wert.
+
 ## 4. Datenmodell
 
 Neue Tabelle `pretix_positions`, eine Zeile je **aktiver** Ticketposition. Positionen mit
@@ -83,7 +87,7 @@ Neue Tabelle `pretix_positions`, eine Zeile je **aktiver** Ticketposition. Posit
 | `order_code` | string(64) | Bestellung |
 | `order_status` | string(8) | `pretix_orders.status` |
 | `payment_provider` | string(64), nullable | Bestellung |
-| `buyer_email` | string(255), kleingeschrieben, indiziert | `pretix_orders.email` |
+| `buyer_email` | string(255), nullable, kleingeschrieben, indiziert | `pretix_orders.email`; leer wird zu `null` |
 | `buyer_name` | string(255), nullable | `invoice_address.name` |
 | `position_id` | bigint | `position.id` |
 | `item_id` | bigint, indiziert | `position.item` |
@@ -189,7 +193,7 @@ Eine Zeile je `buyer_email`, mit:
 | Spalte | Definition |
 |---|---|
 | E-Mail | `buyer_email` |
-| Name | Häufigster gefüllter `buyer_name` dieser Adresse; bei Gleichstand der zuletzt bestellte |
+| Name | Ein gefüllter `buyer_name` dieser Adresse, über `MAX()` bestimmt; weichen mehrere voneinander ab, ist es der alphabetisch letzte. Abweichende Namen an einer Adresse bleiben über den Teilnehmer-Export je Bestellung sichtbar |
 | Veranstaltungen | Anzahl verschiedener `event_slug`, dazu die Namen als Text |
 | Bestellungen | Anzahl verschiedener `order_code` |
 | Tickets | Anzahl Zeilen |
@@ -243,7 +247,11 @@ Die Verteilung steht vor dem Mittelwert, damit einzelne Großbestellungen sichtb
 ### 7.10 Gutscheine
 
 Anteil der Positionen mit gefülltem `voucher`, je Event und über die Auswahl. Dazu die
-häufigsten Gutscheincodes mit Anzahl.
+häufigsten Gutscheine mit Anzahl.
+
+pretix liefert an der Position die **Kennung** des Gutscheins, nicht den eingelösten Code. Die
+Auswertung gruppiert deshalb über diese Kennung und beschriftet die Spalte „Gutschein-Kennung".
+Der Code selbst liegt hinter einem eigenen pretix-Endpunkt und bleibt vorerst draußen.
 
 ### 7.11 Zahlungsart
 
@@ -287,11 +295,11 @@ Neue Filament-Seite `App\Filament\Pages\AudiencePage`:
 - Abschnitt 4 — die Dimensionen aus 7.5 bis 7.14, je ein kompakter Block
 
 Die Käuferliste ist eine Filament-Tabelle über `PretixPosition`, gruppiert nach `buyer_email`.
-Als Datensatzschlüssel dient `MIN(id)`. Die Seite bindet
-`App\Filament\Concerns\ClampsRecordsPerPageOnReload` ein. Der Trait überschreibt
-`getDefaultTableRecordsPerPageSelectOption()`, die `Filament\Tables\Concerns\InteractsWithTable`
-auch auf einer Page bereitstellt; die Planung prüft das an einem laufenden Beispiel und
-erweitert den Trait, falls die Signatur dort abweicht.
+Als Datensatzschlüssel dient `MIN(id)`. Die Tabelle bietet die Seitengrößen 25, 50, 100 und 200
+an und beginnt bei 50. Die globale Richtlinie kennt zusätzlich 500 und klemmt eine gemerkte
+große Auswahl beim Neuladen über `ClampsRecordsPerPageOnReload` zurück; hier entfällt das, weil
+die Auswahl über 200 gar nicht erst existiert. Grund ist die Gruppierung: eine große Seite
+wiederholt die Aggregation über alle Positionen der Auswahl bei jedem Aufruf.
 
 **Styling:** Das Projekt hat keinen Tailwind-Build. Eigene Darstellung kommt als echtes CSS in
 `resources/views/filament/adminlte-theme.blade.php` unter einer eigenen Klasse (`.aud`), nach
