@@ -50,4 +50,27 @@ class CustomerScope
 
         return $query;
     }
+
+    /**
+     * Scope a query that carries a pretix event slug to the customer's own events.
+     *
+     * A customer with no events gets an empty list and therefore no rows - that is
+     * the same "sees nothing rather than everything" rule as activeCustomerId().
+     */
+    public static function byEventSlug(Builder $query, string $column = 'event_slug'): Builder
+    {
+        $customerId = static::activeCustomerId();
+
+        if ($customerId !== null) {
+            $slugs = \App\Models\Event::query()
+                ->where('customer_id', $customerId)
+                ->whereNotNull('pretix_event_slug')
+                ->pluck('pretix_event_slug')
+                ->all();
+
+            $query->whereIn($column, $slugs);
+        }
+
+        return $query;
+    }
 }
