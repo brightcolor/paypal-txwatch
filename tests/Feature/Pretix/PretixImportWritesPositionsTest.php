@@ -84,6 +84,41 @@ class PretixImportWritesPositionsTest extends TestCase
         $this->assertSame('erika@example.test', PretixPosition::first()->buyer_email);
     }
 
+    /**
+     * A failure in the derived table must not stop the import - and must not go
+     * unnoticed either.
+     *
+     * The import also books bank transfers and reconciles PayPal; one refused row
+     * in an analysis table stopping all of that would be the wrong way round. The
+     * failure is therefore caught, and the admins are told once per run.
+     */
+    public function test_a_failing_position_write_leaves_the_import_running_and_tells_the_admins(): void
+    {
+        $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
+        $admin = \App\Models\User::factory()->create(['is_active' => true]);
+        $admin->assignRole('admin');
+
+        $this->app->instance(\App\Services\Pretix\PositionWriter::class, new class extends \App\Services\Pretix\PositionWriter {
+            public function write(\App\Models\PretixOrder $order): int
+            {
+                throw new \RuntimeException('value too long for type character varying');
+            }
+        });
+
+        $this->positions = [['id' => 11, 'item' => 3, 'price' => '40.00', 'canceled' => false]];
+
+        $ergebnis = app(PretixOrderImporter::class)->import($this->connection());
+
+        $this->assertSame(1, $ergebnis['orders']);
+        $this->assertSame(1, \App\Models\PretixOrder::count());
+
+        $meldungen = $admin->notifications()->get();
+        $this->assertCount(1, $meldungen);
+        $this->assertStringContainsString('Ticketpositionen', (string) $meldungen->first()->data['title']);
+        $this->assertStringContainsString('ABCDE', (string) $meldungen->first()->data['body']);
+        $this->assertStringContainsString('pretix:rebuild-positions', (string) $meldungen->first()->data['body']);
+    }
+
     public function test_a_position_cancelled_in_pretix_leaves_on_the_next_import(): void
     {
         $connection = $this->connection();

@@ -17,6 +17,9 @@ use Throwable;
  */
 class PretixOrderImporter
 {
+    /** Order codes whose ticket positions could not be written in this run. */
+    private array $positionFailures = [];
+
     public function __construct(
         private readonly PretixReconciler $reconciler,
         private readonly PretixTransactionBooker $booker,
@@ -33,6 +36,7 @@ class PretixOrderImporter
     {
         // Everything the three services write from here on is tied to this run.
         $this->orderLog->forRun($runId);
+        $this->positionFailures = [];
 
         $client = new PretixClient($connection);
         $orderCount = 0;
@@ -72,6 +76,8 @@ class PretixOrderImporter
 
                 $progress("Event {$index}/{$total}: {$slug} – {$eventOrders} Bestellungen.", ['events_done' => $index, 'orders_imported' => $orderCount]);
             }
+
+            $this->reportPositionFailures($progress);
 
             $progress('Verbuche Nicht-PayPal-Zahlungen (Überweisung etc.) …');
             $booking = $this->booker->book($connection, $progress, $since);
@@ -118,6 +124,37 @@ class PretixOrderImporter
      * A failing call is not fatal: the export then offers no names for that event,
      * which is a smaller problem than an import that stops over reference data.
      */
+    /**
+     * One message per run for every order whose positions failed.
+     *
+     * The technical reason stays in the log: a database error can name tables and
+     * values, and the admin needs to know what happened and what to do next.
+     */
+    private function reportPositionFailures(callable $progress): void
+    {
+        if ($this->positionFailures === []) {
+            return;
+        }
+
+        $anzahl = count($this->positionFailures);
+        $beispiele = implode(', ', array_slice($this->positionFailures, 0, 5));
+
+        $progress("Ticketpositionen für {$anzahl} Bestellung(en) nicht gespeichert – der Import läuft weiter.");
+
+        \App\Support\AdminNotifier::warn(
+            'Publikum: Ticketpositionen unvollständig',
+            sprintf(
+                'Bei %d Bestellung(en) konnten die Ticketpositionen nicht gespeichert werden (z. B. %s). '
+                . 'Der pretix-Import selbst ist durchgelaufen; Verbuchung und Abgleich sind davon unberührt, '
+                . 'nur die Publikumsauswertung fehlt für diese Bestellungen. Den Grund nennt das Server-Log '
+                . 'unter „Ticketpositionen nicht geschrieben". Nach der Behebung mit '
+                . '`php artisan pretix:rebuild-positions` nachziehen.',
+                $anzahl,
+                $beispiele,
+            ),
+        );
+    }
+
     private function upsertItems(PretixConnection $connection, PretixClient $client, string $slug): void
     {
         foreach ($client->items($slug) as $id => $name) {
@@ -178,8 +215,22 @@ class PretixOrderImporter
          * moment: every audience figure reads the positions, and an order that is
          * already updated while its positions still describe the previous state is a
          * wrong number that nothing complains about.
+         *
+         * A FAILURE HERE DOES NOT STOP THE IMPORT. This run also books bank transfers
+         * and reconciles PayPal; an analysis table refusing a row must not hold that
+         * up. It is not swallowed either: the codes are collected and the admins are
+         * told once per run, with the command that repairs the table.
          */
-        app(\App\Services\Pretix\PositionWriter::class)->write($order);
+        try {
+            app(PositionWriter::class)->write($order);
+        } catch (Throwable $e) {
+            $this->positionFailures[] = $code;
+
+            \Illuminate\Support\Facades\Log::warning('Ticketpositionen nicht geschrieben', [
+                'order' => $slug . '/' . $code,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         $after = OrderLog::snapshot($order->refresh());
         $changes = OrderLog::differences($before, $after);
