@@ -32,9 +32,9 @@ return new class extends Migration
             $table->unsignedBigInteger('pretix_order_id');
 
             $table->string('event_slug', 255);
-            $table->string('order_code', 64);
-            $table->string('order_status', 8)->nullable();
-            $table->string('payment_provider', 64)->nullable();
+            $table->string('order_code', 255);
+            $table->string('order_status', 255)->nullable();
+            $table->string('payment_provider', 255)->nullable();
 
             // The buyer's identity. NULL when the order carries no address: those
             // tickets still count, but they must not bundle into one phantom person.
@@ -49,9 +49,9 @@ return new class extends Migration
             $table->string('voucher', 255)->nullable();
             $table->string('attendee_name', 255)->nullable();
 
-            $table->string('zipcode', 32)->nullable();
-            $table->string('city', 128)->nullable();
-            $table->string('country', 8)->nullable();
+            $table->string('zipcode', 64)->nullable();
+            $table->string('city', 255)->nullable();
+            $table->string('country', 64)->nullable();
 
             $table->timestamp('ordered_at')->nullable();
             $table->timestamps();

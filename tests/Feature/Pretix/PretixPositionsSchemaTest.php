@@ -18,17 +18,30 @@ class PretixPositionsSchemaTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** The shortest width each column may have, from pretix' own field lengths. */
+    /**
+     * The shortest width each column may have.
+     *
+     * THE RULE: at least as wide as the column the value is copied from, and at
+     * least as wide as pretix' own field. Every import writes these rows, so one
+     * value PostgreSQL refuses stops the import of that order - the table must be
+     * structurally unable to be the narrowest link.
+     *
+     * Copied from pretix_orders (all varchar 255): event_slug, order_code,
+     * order_status, payment_provider, buyer_email. From the payload, with pretix'
+     * limits: invoice name/city 255, attendee name 255, zipcode 30, country 2.
+     */
     private const MINIMUM_WIDTHS = [
         'event_slug' => 255,
-        'order_code' => 64,
-        'payment_provider' => 64,
+        'order_code' => 255,
+        'order_status' => 255,
+        'payment_provider' => 255,
         'buyer_email' => 255,
         'buyer_name' => 255,
         'voucher' => 255,
         'attendee_name' => 255,
-        'zipcode' => 32,
-        'city' => 128,
+        'zipcode' => 30,
+        'city' => 255,
+        'country' => 2,
     ];
 
     public function test_every_string_column_is_wide_enough(): void
