@@ -19,6 +19,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'view-sync-logs',
         'view-audit-log',
         'view-reports',
+        'view-audience',
     ];
 
     /**
@@ -47,6 +48,8 @@ class RolesAndPermissionsSeeder extends Seeder
         $customer = Role::findOrCreate('customer');
         $customer->syncPermissions([
             'view-reports',
+            // Their own events only: AudienceQuery scopes every figure through CustomerScope.
+            'view-audience',
         ]);
 
         $auditor = Role::findOrCreate('auditor');

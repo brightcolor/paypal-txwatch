@@ -69,6 +69,7 @@ class AdminPagesSmokeTest extends TestCase
         \App\Filament\Pages\BrandingSettingsPage::class,
         \App\Filament\Pages\FintsConnectionPage::class,
         \App\Filament\Pages\EnableBankingPage::class,
+        \App\Filament\Pages\AudiencePage::class,
     ];
 
     private function admin(): User
