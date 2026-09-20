@@ -273,6 +273,24 @@
     .dark .rpt td.neg { color: #f28b95; }
     .rpt-empty { padding: .75rem .55rem; color: #9aa0a6; }
 
+    /* ===== Publikum (audience page) =====
+       Tables reuse .rpt; this adds the tiles, hints and the bar next to a share.
+       The bar is plain CSS width - the number beside it is the answer, the bar
+       only shows its weight at a glance. */
+    .aud-kacheln { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1rem; }
+    .aud-klein { font-size: .78rem; color: #6c757d; margin-bottom: .2rem; font-weight: 500; }
+    .aud-gross { font-size: 1.6rem; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
+    .aud-fein { font-size: .72rem; color: #9aa0a6; }
+    .aud-hinweis { font-size: .82rem; color: #6c757d; margin: 0 0 .7rem; }
+    .aud-spalten { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1.25rem; }
+    .aud-abstand { margin-top: 1.1rem; }
+    .aud-balkenspalte { width: 32%; min-width: 5rem; }
+    .aud-balken { display: block; height: .55rem; border-radius: .25rem; background: #007bff; min-width: 2px; }
+    .aud-diagonale { font-weight: 600; }
+    .dark .aud-klein, .dark .aud-hinweis { color: #9aa4b2; }
+    .dark .aud-fein { color: #7d8793; }
+    .dark .aud-balken { background: #64b1ff; }
+
     /* ===== Login card ===== */
     html:not(.dark) .fi-simple-layout { background: var(--lte-body) !important; }
     .fi-simple-main {
