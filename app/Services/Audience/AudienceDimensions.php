@@ -5,6 +5,7 @@ namespace App\Services\Audience;
 use App\Models\Event;
 use App\Models\PretixItem;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * The patterns beyond the headline figures.
@@ -114,17 +115,30 @@ class AudienceDimensions
         $erfasst = 0;
         $offen = 0;
 
-        foreach ($query->positions()->select('event_slug', 'ordered_at')->get() as $zeile) {
-            $termin = $termine[$zeile->event_slug] ?? null;
+        /*
+         * GROUPED BY DAY IN SQL. Row by row this walked every ticket of the
+         * selection through a date parser - measured on production, 3253 tickets
+         * cost 504 ms of the page. Per day it is 241 rows and 21 ms, and the
+         * classification needs nothing finer than the day anyway.
+         */
+        $zeilen = $query->positions()
+            ->selectRaw('event_slug, date(ordered_at) as tag, COUNT(*) as tickets')
+            ->groupBy('event_slug', DB::raw('date(ordered_at)'))
+            ->get();
 
-            if ($termin === null || $zeile->ordered_at === null) {
-                $offen++;
+        foreach ($zeilen as $zeile) {
+            $anzahl = (int) $zeile->tickets;
+            $termin = $termine[$zeile->event_slug] ?? null;
+            $tag = mb_substr((string) $zeile->tag, 0, 10);
+
+            if ($termin === null || $tag === '') {
+                $offen += $anzahl;
 
                 continue;
             }
 
-            $erfasst++;
-            $klassen[$this->leadTimeClass($this->daysBefore($zeile->ordered_at, $termin))]++;
+            $erfasst += $anzahl;
+            $klassen[$this->leadTimeClass($this->daysBetween($tag, $termin))] += $anzahl;
         }
 
         return ['classes' => $klassen, 'covered' => $erfasst, 'uncovered' => $offen];
@@ -200,16 +214,21 @@ class AudienceDimensions
             ->get();
 
         foreach ($bestellungen as $bestellung) {
-            if ($bestellung->bestellt_am === null) {
+            // Read off the stored string rather than parsed into a date object:
+            // both engines hand back "Y-m-d H:i:s", and a parser per order was a
+            // measurable share of the page.
+            $stempel = (string) $bestellung->bestellt_am;
+
+            if (mb_strlen($stempel) < 13) {
                 continue;
             }
 
-            $zeitpunkt = Carbon::parse($bestellung->bestellt_am);
-            $tag = $zeitpunkt->format('Y-m-d');
+            $tag = mb_substr($stempel, 0, 10);
+            $stunde = (int) mb_substr($stempel, 11, 2);
 
             $proTag[$tag] = ($proTag[$tag] ?? 0) + 1;
-            $proWochentag[$wochentage[$zeitpunkt->dayOfWeekIso - 1]]++;
-            $proBlock[$bloecke[intdiv($zeitpunkt->hour, 4)]]++;
+            $proWochentag[$wochentage[(int) date('N', (int) strtotime($tag . ' 00:00:00 UTC')) - 1]]++;
+            $proBlock[$bloecke[intdiv($stunde, 4)]]++;
 
             $termin = $termine[$bestellung->event_slug] ?? null;
 
@@ -219,7 +238,7 @@ class AudienceDimensions
                 continue;
             }
 
-            $tageVorher = $this->daysBefore($bestellung->bestellt_am, $termin);
+            $tageVorher = $this->daysBetween($tag, $termin);
             $proVorlauf[$tageVorher] = ($proVorlauf[$tageVorher] ?? 0) + 1;
         }
 
@@ -464,7 +483,21 @@ class AudienceDimensions
     {
         $fragen = [];
 
-        $query->orders()->select('id', 'raw_payload')->orderBy('id')->chunk(200, function ($seite) use (&$fragen) {
+        /*
+         * ONLY ORDERS THAT CARRY AN ANSWER. Decoding every payload of the selection
+         * cost 396 ms on production for the 166 orders in 1409 that have one. Both
+         * spellings are matched, because a column of type json keeps the compact
+         * text we wrote while jsonb would normalise it with a space.
+         *
+         * If the shape ever changes, AudienceDimensionsMoreTest goes red: it writes
+         * an answer through the model and expects it back here.
+         */
+        $query->orders()
+            ->where(function ($q) {
+                $q->whereRaw('CAST(raw_payload AS TEXT) LIKE ?', ['%"answers":[{%'])
+                    ->orWhereRaw('CAST(raw_payload AS TEXT) LIKE ?', ['%"answers": [{%']);
+            })
+            ->select('id', 'raw_payload')->orderBy('id')->chunk(200, function ($seite) use (&$fragen) {
             foreach ($seite as $order) {
                 foreach ($order->raw_payload['positions'] ?? [] as $position) {
                     if (($position['canceled'] ?? false) === true) {
@@ -518,26 +551,34 @@ class AudienceDimensions
     }
 
     /**
-     * Whole days between an order and its event, never negative.
+     * Whole days between two calendar days, never negative.
      *
-     * Counted from midnight to midnight, so an order on the evening before the
-     * event is one day ahead and an order on the day itself is zero.
+     * Both are read at midnight UTC, so the difference is exact whole days and no
+     * daylight saving change can shift it. The stored times are the local wall
+     * clock pretix sent, which is what the classification is about.
      */
-    private function daysBefore(mixed $orderedAt, mixed $eventDate): int
+    private function daysBetween(string $tag, string $termin): int
     {
-        $tage = (int) Carbon::parse($orderedAt)->startOfDay()
-            ->diffInDays(Carbon::parse($eventDate)->startOfDay(), false);
+        $von = strtotime($tag . ' 00:00:00 UTC');
+        $bis = strtotime($termin . ' 00:00:00 UTC');
 
-        return max(0, $tage);
+        if ($von === false || $bis === false) {
+            return 0;
+        }
+
+        return max(0, intdiv($bis - $von, 86400));
     }
 
-    /** @return array<string, mixed> pretix slug => event date */
+    /** @return array<string, string> pretix slug => event date as Y-m-d */
     private function eventDates(): array
     {
         return Event::query()
             ->whereNotNull('pretix_event_slug')
             ->whereNotNull('event_date')
-            ->pluck('event_date', 'pretix_event_slug')
+            ->get(['pretix_event_slug', 'event_date'])
+            ->mapWithKeys(fn ($event) => [
+                (string) $event->pretix_event_slug => Carbon::parse($event->event_date)->format('Y-m-d'),
+            ])
             ->all();
     }
 
