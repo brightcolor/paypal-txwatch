@@ -34,11 +34,15 @@ class AudienceBuyersExport implements FromArray, WithHeadings
         $dienst = app(AudienceBuyers::class);
         $zeilen = [];
 
+        // The event names for everyone in one query: per buyer this file would be
+        // one query per row, and it has a row per person in the selection.
+        $namen = $dienst->eventNamesForBuyers($this->query);
+
         foreach ($dienst->query($this->query)->orderByDesc('tickets')->orderBy('buyer_email')->get() as $kaeufer) {
             $zeilen[] = [
                 (string) $kaeufer->buyer_email,
                 (string) ($kaeufer->buyer_display_name ?? ''),
-                implode(', ', $dienst->eventNames($this->query, (string) $kaeufer->buyer_email)),
+                implode(', ', $namen[$kaeufer->buyer_email] ?? []),
                 (int) $kaeufer->orders,
                 (int) $kaeufer->tickets,
                 round((float) $kaeufer->revenue, 2),

@@ -53,23 +53,44 @@ class AudienceBuyers
     /**
      * The events one buyer appears at, by name where an event is configured.
      *
-     * A slug without an Event record stays visible as the slug: an order for an
-     * event nobody set up yet is still a purchase, and dropping it would make the
-     * count in the list disagree with the names beside it.
-     *
      * @return array<int, string>
      */
     public function eventNames(AudienceQuery $query, string $email): array
     {
-        $slugs = $query->buyers()
-            ->where('buyer_email', $email)
+        return $this->eventNamesForBuyers($query, [$email])[$email] ?? [];
+    }
+
+    /**
+     * The same, for many buyers in ONE query.
+     *
+     * ASKING PER BUYER IS THE TRAP: a table of 50 rows then costs 50 queries per
+     * render, and the export one per person. Measured on production that was 100 of
+     * the 184 queries a single page view made.
+     *
+     * A slug without an Event record stays visible as the slug: an order for an
+     * event nobody set up yet is still a purchase, and dropping it would make the
+     * count in the list disagree with the names beside it.
+     *
+     * @param  array<int, string>  $emails  empty means every buyer of the selection
+     * @return array<string, array<int, string>>
+     */
+    public function eventNamesForBuyers(AudienceQuery $query, array $emails = []): array
+    {
+        $paare = $query->buyers()
+            ->when($emails !== [], fn (Builder $q) => $q->whereIn('buyer_email', $emails))
+            ->select('buyer_email', 'event_slug')
             ->distinct()
+            ->orderBy('buyer_email')
             ->orderBy('event_slug')
-            ->pluck('event_slug')
-            ->all();
+            ->get();
 
         $namen = Event::namesBySlug();
+        $proKaeufer = [];
 
-        return array_map(fn (string $slug) => $namen[$slug] ?? $slug, $slugs);
+        foreach ($paare as $paar) {
+            $proKaeufer[$paar->buyer_email][] = $namen[$paar->event_slug] ?? $paar->event_slug;
+        }
+
+        return $proKaeufer;
     }
 }

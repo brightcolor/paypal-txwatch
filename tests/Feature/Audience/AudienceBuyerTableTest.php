@@ -112,6 +112,39 @@ class AudienceBuyerTableTest extends TestCase
         }
     }
 
+    /**
+     * The number of queries must not grow with the number of buyers.
+     *
+     * Measured on production: the event-name tooltip asked once per row and the
+     * event labels once per cell - 184 queries and several seconds per render, on
+     * every filter change. The guard compares two renders instead of pinning a
+     * number, so it holds whatever the page shows next.
+     */
+    public function test_the_query_count_does_not_grow_with_the_buyers(): void
+    {
+        $zaehle = function (): int {
+            \Illuminate\Support\Facades\DB::flushQueryLog();
+            \Illuminate\Support\Facades\DB::enableQueryLog();
+            Livewire::test(AudiencePage::class);
+
+            return count(\Illuminate\Support\Facades\DB::getQueryLog());
+        };
+
+        $mitDrei = $zaehle();
+
+        for ($i = 1; $i <= 30; $i++) {
+            $this->pretixOrder($i % 2 ? 'sommerfest' : 'winterball', 'N' . $i, "kaeufer{$i}@example.test", [['item' => 3]]);
+        }
+
+        $mitDreiunddreissig = $zaehle();
+
+        $this->assertLessThanOrEqual(
+            $mitDrei,
+            $mitDreiunddreissig,
+            "Mit 3 Kaeufern {$mitDrei} Abfragen, mit 33 Kaeufern {$mitDreiunddreissig} - eine Abfrage je Zeile oder Zelle.",
+        );
+    }
+
     public function test_the_table_offers_no_page_size_above_two_hundred(): void
     {
         $optionen = Livewire::test(AudiencePage::class)->instance()->getTable()->getPaginationPageOptions();

@@ -65,6 +65,21 @@ class AudiencePage extends Page implements HasForms, HasTable
     /** @var array<string, mixed> */
     public ?array $data = [];
 
+    /*
+     * Lookups that several parts of one render need. Private, so Livewire keeps
+     * them out of the snapshot and they start empty on the next request - a page
+     * that answers from a stale name map would be worse than one query more.
+     */
+
+    /** @var array<string, string>|null */
+    private ?array $eventNameMap = null;
+
+    /** @var array<string, string>|null */
+    private ?array $eventOptionMap = null;
+
+    /** @var array<string, array<int, string>>|null */
+    private ?array $eventNamesOnPage = null;
+
     public static function canAccess(): bool
     {
         return auth()->user()?->can('view-audience') ?? false;
@@ -198,10 +213,9 @@ class AudiencePage extends Page implements HasForms, HasTable
                     ->label('Veranstaltungen')
                     ->sortable()
                     ->alignEnd()
-                    // $state and $record by name: Filament injects closure arguments
-                    // by their parameter name, and a different name gives a 500.
-                    ->tooltip(fn ($record) => implode(', ', app(AudienceBuyers::class)
-                        ->eventNames($this->currentQuery(), (string) $record->buyer_email))),
+                    // $record by name: Filament injects closure arguments by their
+                    // parameter name, and a different name gives a 500.
+                    ->tooltip(fn ($record) => $this->eventNamesOf((string) $record->buyer_email)),
 
                 Tables\Columns\TextColumn::make('orders')
                     ->label('Bestellungen')
@@ -318,7 +332,26 @@ class AudiencePage extends Page implements HasForms, HasTable
      */
     public function eventLabel(string $slug): string
     {
-        return Event::namesBySlug()[$slug] ?? $slug;
+        return ($this->eventNameMap ??= Event::namesBySlug())[$slug] ?? $slug;
+    }
+
+    /**
+     * The events of one buyer, for the tooltip in the list.
+     *
+     * Loaded ONCE for the rows of the current page: the closure runs per row, and
+     * a query in there is a query per row.
+     */
+    public function eventNamesOf(string $email): string
+    {
+        if ($this->eventNamesOnPage === null) {
+            $mails = collect($this->getTableRecords()->items())->pluck('buyer_email')->filter()->all();
+
+            $this->eventNamesOnPage = $mails === []
+                ? []
+                : app(AudienceBuyers::class)->eventNamesForBuyers($this->currentQuery(), $mails);
+        }
+
+        return implode(', ', $this->eventNamesOnPage[$email] ?? []);
     }
 
     /**
@@ -332,6 +365,10 @@ class AudiencePage extends Page implements HasForms, HasTable
      */
     private function eventOptions(): array
     {
+        if ($this->eventOptionMap !== null) {
+            return $this->eventOptionMap;
+        }
+
         $events = CustomerScope::byEventSlug(
             Event::query()->whereNotNull('pretix_event_slug'),
             'pretix_event_slug',
@@ -353,7 +390,7 @@ class AudiencePage extends Page implements HasForms, HasTable
 
         asort($optionen);
 
-        return $optionen;
+        return $this->eventOptionMap = $optionen;
     }
 
     /**
