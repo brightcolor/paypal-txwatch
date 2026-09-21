@@ -192,10 +192,43 @@
             {{ number_format($verlauf['without_event_date'], 0, ',', '.') }} Bestellungen gehören zu
             Veranstaltungen ohne gepflegtes Datum und fehlen hier.
         </p>
-        @include('filament.pages.partials.audience-verteilung', ['rows' => $verlauf['by_days_before'], 'labelHeading' => 'Tage vorher'])
+        @include('filament.pages.partials.audience-verlauf', [
+            'rows' => $verlauf['by_days_before'],
+            'id' => 'aud-vorlauf',
+            'label' => 'Bestellungen nach Tagen vor der Veranstaltung',
+            'axis' => 'Tage vor der Veranstaltung',
+        ])
 
         <h4 class="aud-klein aud-abstand">Bestellungen je Tag</h4>
-        @include('filament.pages.partials.audience-verteilung', ['rows' => $verlauf['by_day'], 'labelHeading' => 'Tag'])
+        @include('filament.pages.partials.audience-verlauf', [
+            'rows' => $verlauf['by_day'],
+            'id' => 'aud-tage',
+            'label' => 'Bestellungen je Tag',
+            'axis' => 'Bestelltag',
+        ])
+
+        @php
+            $besteTage = $verlauf['by_day'];
+            arsort($besteTage);
+            $besteTage = array_slice($besteTage, 0, 10, true);
+        @endphp
+
+        <h4 class="aud-klein aud-abstand">Stärkste Verkaufstage</h4>
+        <div class="rpt-wrap">
+            <table class="rpt">
+                <thead><tr><th>Tag</th><th class="num">Bestellungen</th></tr></thead>
+                <tbody>
+                    @forelse ($besteTage as $tag => $anzahl)
+                        <tr>
+                            <td class="lbl">{{ \Illuminate\Support\Carbon::parse($tag)->format('d.m.Y') }}</td>
+                            <td class="num">{{ number_format($anzahl, 0, ',', '.') }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="2" class="rpt-empty">Für diese Auswahl liegen keine Bestellungen vor.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
     </x-filament::section>
 
     <x-filament::section heading="Bestellwert">

@@ -4,6 +4,24 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.68.1] - 2026-09-21
+
+### Behoben
+- **Die Publikumsseite baut sich deutlich schneller auf.** Sie stellte dieselbe Eventliste einmal je
+  Tabellenzelle neu zusammen und fragte die Veranstaltungen jeder Person einzeln ab – auf dem Produktivstand
+  waren das 184 Datenbankabfragen und mehrere Sekunden, und zwar bei jedem Filterwechsel. Beides läuft jetzt
+  in je einer Abfrage. Auch der Export der Käuferliste holte die Veranstaltungen Person für Person.
+- **Vorlaufzeit und Positionsfragen rechnen sparsamer.** Die Vorlaufzeit wird nach Tagen gruppiert berechnet,
+  statt jedes einzelne Ticket durch einen Datumsparser zu schicken. Die Antworten werden nur noch aus
+  Bestellungen gelesen, die überhaupt eine enthalten.
+
+### Geändert
+- **Verkaufsverlauf und Vorlauf sind Liniendiagramme.** Als Tabellen waren das über hundert Zeilen je
+  Reihe, in denen der Verlauf gerade nicht zu sehen war. Die Zahlen bleiben als Klassen der Vorlaufzeit und
+  als Liste der stärksten Verkaufstage lesbar daneben stehen. Das Diagramm nutzt die in Filament enthaltene
+  Chart.js-Einbindung, also ohne weitere Bibliothek, und hat für den Dunkelmodus einen eigenen, auf
+  dunklem Grund geprüften Blauton.
+
 ## [0.68.0] - 2026-09-21
 
 ### Hinzugefügt

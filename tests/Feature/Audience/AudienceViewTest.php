@@ -74,6 +74,24 @@ class AudienceViewTest extends TestCase
         $antwort->assertSeeInOrder(['Sommerfest', 'Winterball', '100,0&nbsp;%', '50,0&nbsp;%'], false);
     }
 
+    /**
+     * The two day series are charts, and their numbers stay reachable.
+     *
+     * As tables they were 150 rows each - the shape of the curve disappeared in
+     * them, and they made up a good part of the page weight.
+     */
+    public function test_the_day_series_are_drawn_as_charts_with_a_readable_fallback(): void
+    {
+        $antwort = $this->get(AudiencePage::getUrl());
+
+        $antwort->assertSee('aud-vorlauf', false);
+        $antwort->assertSee('aud-tage', false);
+        $antwort->assertSee('x-ref="canvas"', false);
+        $antwort->assertSee('Stärkste Verkaufstage', false);
+        // Der bezahlte Bestelltag aus dem Aufbau, als lesbare Zahl daneben.
+        $antwort->assertSee('01.07.2026', false);
+    }
+
     public function test_the_origin_block_names_its_coverage(): void
     {
         $this->get(AudiencePage::getUrl())->assertSee('Abdeckung:', false);

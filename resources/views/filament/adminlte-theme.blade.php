@@ -287,6 +287,13 @@
     .aud-balkenspalte { width: 32%; min-width: 5rem; }
     .aud-balken { display: block; height: .55rem; border-radius: .25rem; background: #007bff; min-width: 2px; }
     .aud-diagonale { font-weight: 600; }
+    /* The chart component reads its colours as the computed text colour of these
+       two spans. The dark step is a different blue: the light accent sits outside
+       the validated lightness band for dark surfaces. */
+    .aud-linie { color: #007bff; }
+    .dark .aud-linie { color: #2f8ff5; }
+    .aud-flaeche { color: rgba(0, 123, 255, .10); }
+    .dark .aud-flaeche { color: rgba(47, 143, 245, .16); }
     .dark .aud-klein, .dark .aud-hinweis { color: #9aa4b2; }
     .dark .aud-fein { color: #7d8793; }
     .dark .aud-balken { background: #64b1ff; }
