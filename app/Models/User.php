@@ -15,7 +15,7 @@ use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Fillable(['name', 'email', 'password', 'customer_id', 'is_active'])]
-#[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes'])]
+#[Hidden(['password', 'remember_token', 'two_factor_secret', 'two_factor_recovery_codes', 'two_factor_pin'])]
 class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
@@ -46,6 +46,10 @@ class User extends Authenticatable implements FilamentUser
             'two_factor_secret' => 'encrypted',
             'two_factor_recovery_codes' => 'encrypted:array',
             'two_factor_confirmed_at' => 'datetime',
+            'two_factor_pin' => 'hashed',
+            'two_factor_pin_set_at' => 'datetime',
+            'two_factor_pin_failures' => 'integer',
+            'two_factor_device_epoch' => 'integer',
         ];
     }
 
@@ -62,5 +66,10 @@ class User extends Authenticatable implements FilamentUser
     public function hasTwoFactorEnabled(): bool
     {
         return $this->two_factor_confirmed_at !== null;
+    }
+
+    public function hasTwoFactorPin(): bool
+    {
+        return $this->two_factor_pin !== null;
     }
 }

@@ -73,6 +73,12 @@ class TwoFactorAuthenticationService
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
+            // PIN and confirmed devices only mean something while 2FA is on;
+            // the counter invalidates every confirmed-device cookie.
+            'two_factor_pin' => null,
+            'two_factor_pin_set_at' => null,
+            'two_factor_pin_failures' => 0,
+            'two_factor_device_epoch' => (int) $user->two_factor_device_epoch + 1,
         ])->save();
     }
 

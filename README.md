@@ -530,7 +530,22 @@ idempotenten Upsert/Änderungsverlauf, Event-Zuordnungsregeln, Sync-Fehlerbehand
   **Einstellungen → Zwei-Faktor-Authentifizierung** – jeder Nutzer aktiviert sie für sich selbst. Nach
   Login wird bei aktiviertem 2FA jede Panel-Anfrage bis zur bestätigten Challenge umgeleitet
   (`EnsureTwoFactorChallengeIsPassed`); zusätzlich 10 einmalige Wiederherstellungscodes als Fallback.
-  Der Verify-Endpunkt ist auf 6 Versuche/Minute rate-limitiert.
-- **2FA-Pflicht für Admins**: Standardmäßig (`TWO_FACTOR_REQUIRED_FOR_ADMINS=true`) wird jeder Admin ohne
-  aktiviertes 2FA nach dem Login auf die 2FA-Einrichtungsseite umgeleitet, bis er es aktiviert – ein
-  Admin-Konto kann nicht ungeschützt bleiben. Über die Env-Variable abschaltbar.
+  Der Verify-Endpunkt ist auf 6 Versuche/Minute rate-limitiert. „Abmelden" funktioniert auch von der
+  Challenge aus.
+- **Entsperr-PIN und bestätigte Geräte**: Mit aktivem 2FA kann jeder Nutzer auf derselben Seite eine PIN
+  festlegen. Ein Gerät gilt als bestätigt, sobald dort der Code aus der App eingegeben wurde (Cookie,
+  verschlüsselt und signiert). Auf bestätigten Geräten reicht danach die PIN statt des Codes. Kommt jemand
+  nach Ablauf der Sitzung über „Angemeldet bleiben" zurück, fragt TxWatch nach der PIN; ohne nutzbare PIN
+  folgt eine vollständige Abmeldung auf diesem Gerät. Nach zu vielen falschen PINs in Folge gilt die PIN
+  erst nach einer Anmeldung mit dem App-Code wieder, und kein Gerät gilt mehr als bestätigt. „Andere
+  Geräte vergessen" hebt die Bestätigung aller übrigen Geräte auf. Einstellbar (Werte außerhalb der
+  Grenzen stoppen mit einer Meldung, die die Variable nennt):
+
+  | Variable | Vorgabe | Grenzen | Wirkung |
+  |---|---|---|---|
+  | `TWO_FACTOR_PIN_MIN_LENGTH` | 6 | 4–12 | kürzeste erlaubte PIN in Ziffern (längste: 12) |
+  | `TWO_FACTOR_PIN_MAX_ATTEMPTS` | 5 | 1–20 | falsche PINs in Folge bis zur Sperre |
+  | `TWO_FACTOR_TRUSTED_DEVICE_DAYS` | 30 | 1–400 | Tage, die ein Gerät nach dem letzten App-Code bestätigt bleibt |
+  | `TWO_FACTOR_TRUSTED_DEVICE_COOKIE` | `txwatch_2fa_device` | 1–64 Zeichen `A-Za-z0-9_-` | Name des Cookies für bestätigte Geräte |
+- **2FA-Erinnerung für Admins**: Admins ohne 2FA sehen einmal pro Sitzung einen Hinweis mit Link zur
+  Einrichtung, arbeiten aber ganz normal weiter (`TWO_FACTOR_NAG_ADMINS=true`, mit `false` abschaltbar).

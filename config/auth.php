@@ -122,4 +122,28 @@ return [
     */
     'two_factor_nag_admins' => (bool) env('TWO_FACTOR_NAG_ADMINS', env('TWO_FACTOR_REQUIRED_FOR_ADMINS', true)),
 
+    /*
+    | Unlock PIN and confirmed devices for accounts with two-factor auth.
+    | App\Support\TwoFactorSettings reads these, checks the limits and names the
+    | variable in its error message.
+    |
+    | A user may set a PIN on the 2FA settings page. On a device where they
+    | confirmed an authenticator code within trusted_device_days, the PIN then
+    | replaces that code. Without a PIN, a return through "Angemeldet bleiben"
+    | after the session ended signs the user out completely.
+    |
+    |   pin_min_length         shortest PIN in digits, 4 to 12
+    |   pin_max_attempts       wrong PINs in a row, 1 to 20; then the PIN only
+    |                          works again after a sign-in with the app code
+    |   trusted_device_days    days a device stays confirmed after the last app
+    |                          code entered on it, 1 to 400
+    |   trusted_device_cookie  name of the cookie that marks a confirmed device
+    */
+    'two_factor' => [
+        'pin_min_length' => env('TWO_FACTOR_PIN_MIN_LENGTH', 6),
+        'pin_max_attempts' => env('TWO_FACTOR_PIN_MAX_ATTEMPTS', 5),
+        'trusted_device_days' => env('TWO_FACTOR_TRUSTED_DEVICE_DAYS', 30),
+        'trusted_device_cookie' => env('TWO_FACTOR_TRUSTED_DEVICE_COOKIE', 'txwatch_2fa_device'),
+    ],
+
 ];

@@ -4,6 +4,31 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.70.0] - 2026-09-27
+
+### Hinzugefügt
+- **Entsperr-PIN für Konten mit Zwei-Faktor-Authentifizierung.** Unter „Einstellungen →
+  Zwei-Faktor-Authentifizierung“ lässt sich eine PIN festlegen. Auf einem Gerät, auf dem der Code aus der
+  Authenticator-App eingegeben wurde, reicht danach die PIN, etwa wenn die Sitzung abgelaufen ist. Die
+  Abfrage bietet weiter den Code aus der App an. Nach fünf falschen PINs in Folge (Vorgabe) gilt die PIN erst wieder
+  nach einer Anmeldung mit dem App-Code, und alle Geräte brauchen dann wieder den Code. „Andere Geräte
+  vergessen“ hebt die Bestätigung aller übrigen Geräte auf. PIN-Länge, Anzahl der Versuche, die Dauer der
+  Gerätebestätigung und der Cookie-Name sind einstellbar (siehe README).
+- **Fehlerseiten „Seite abgelaufen“ (419) und „Zu viele Versuche“ (429)** auf Deutsch, mit dem nächsten
+  Schritt und bei 429 mit der Wartezeit.
+
+### Geändert
+- **Rückkehr über „Angemeldet bleiben“ ohne Zwischenstand.** War die Sitzung abgelaufen, meldete TxWatch
+  Konten mit Zwei-Faktor-Authentifizierung über das Cookie wieder an und hielt sie dann an der Code-Abfrage
+  fest. Jetzt fragt die Seite auf einem bestätigten Gerät nach der PIN. Ohne nutzbare PIN wird das Gerät
+  vollständig abgemeldet, und die Anmeldeseite nennt den Grund. Andere Geräte bleiben angemeldet.
+
+### Behoben
+- **„Abmelden“ auf der Zwei-Faktor-Abfrage** führte zurück auf dieselbe Abfrage, weil die Abmeldung hinter
+  der Zwei-Faktor-Prüfung lag. Die Abmeldung ist jetzt von dort aus erreichbar.
+- Nach der Zwei-Faktor-Abfrage geht es zurück zur zuletzt aufgerufenen Seite. Ein Livewire-Aufruf gilt
+  dabei nicht mehr als Ziel.
+
 ## [0.69.0] - 2026-09-27
 
 ### Geändert

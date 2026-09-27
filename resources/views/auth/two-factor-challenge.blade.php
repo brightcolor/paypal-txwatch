@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="utf-8">
-    <title>Zwei-Faktor-Authentifizierung - {{ config('app.name') }}</title>
+    <title>{{ $mode === 'pin' ? 'PIN eingeben' : 'Zwei-Faktor-Authentifizierung' }} - {{ config('app.name') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="{{ asset('css/werkbank-fonts.css') }}?v={{ config('version.number') }}">
     {{-- Workbench look outside the panel: paper, four-colour band, white card,
@@ -22,29 +22,49 @@
         button:hover { background: #e9bc0c; }
         button:focus-visible, a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
         .error { margin-top: 10px; color: var(--bad); font-size: 13px; font-weight: 700; }
-        .logout { margin-top: 16px; text-align: center; }
-        .logout a { color: var(--quiet); font-size: 13px; text-underline-offset: 3px; }
-        .logout a:hover { color: var(--loud); }
+        .links { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 18px; }
+        .links form { margin: 0; }
+        .links a, button.link { width: auto; min-height: 0; margin: 0; padding: 0; border: 0; background: none; color: var(--quiet); font: inherit; font-size: 13px; font-weight: 400; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+        .links a:hover, button.link:hover { background: none; color: var(--loud); }
     </style>
 </head>
 <body>
 <div class="card">
-    <h1>Zwei-Faktor-Authentifizierung</h1>
-    <p>Bitte gib den 6-stelligen Code aus deiner Authenticator-App ein, oder einen deiner Wiederherstellungscodes.</p>
+    @if ($mode === 'pin')
+        <h1>PIN eingeben</h1>
+        <p>Dieses Gerät ist bestätigt. Gib deine PIN ein, um weiterzuarbeiten.</p>
 
-    <form method="POST" action="{{ route('two-factor.verify') }}">
-        @csrf
-        <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" autofocus placeholder="123456" aria-label="Code" @error('code') aria-invalid="true" aria-describedby="code-fehler" @enderror>
-        @error('code')
-            <div class="error" id="code-fehler">{{ $message }}</div>
-        @enderror
-        <button type="submit">Bestätigen</button>
-    </form>
-
-    <div class="logout">
-        <form method="POST" action="/admin/logout">
+        <form method="POST" action="{{ route('two-factor.verify') }}">
             @csrf
-            <a href="#" onclick="this.closest('form').submit(); return false;">Abmelden</a>
+            <input type="password" name="pin" inputmode="numeric" pattern="[0-9]*" maxlength="{{ \App\Support\TwoFactorSettings::PIN_MAX_LENGTH }}" autocomplete="off" autofocus aria-label="PIN" @error('pin') aria-invalid="true" aria-describedby="pin-fehler" @enderror>
+            @error('pin')
+                <div class="error" id="pin-fehler">{{ $message }}</div>
+            @enderror
+            <button type="submit">Entsperren</button>
+        </form>
+    @else
+        <h1>Zwei-Faktor-Authentifizierung</h1>
+        <p>Bitte gib den 6-stelligen Code aus deiner Authenticator-App ein, oder einen deiner Wiederherstellungscodes.</p>
+
+        <form method="POST" action="{{ route('two-factor.verify') }}">
+            @csrf
+            <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" autofocus placeholder="123456" aria-label="Code" @error('code') aria-invalid="true" aria-describedby="code-fehler" @enderror>
+            @error('code')
+                <div class="error" id="code-fehler">{{ $message }}</div>
+            @enderror
+            <button type="submit">Bestätigen</button>
+        </form>
+    @endif
+
+    <div class="links">
+        @if ($mode === 'pin')
+            <a href="{{ route('two-factor.challenge', ['via' => 'code']) }}">Code aus der Authenticator-App verwenden</a>
+        @elseif ($pinUsable)
+            <a href="{{ route('two-factor.challenge') }}">Mit PIN entsperren</a>
+        @endif
+        <form method="POST" action="{{ route('filament.admin.auth.logout') }}">
+            @csrf
+            <button type="submit" class="link">Abmelden</button>
         </form>
     </div>
 </div>

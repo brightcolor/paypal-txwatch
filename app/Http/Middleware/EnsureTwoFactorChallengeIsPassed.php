@@ -6,12 +6,16 @@ use App\Filament\Pages\TwoFactorAuthSettings;
 use Closure;
 use Filament\Notifications\Notification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Two things, in order:
  *  1. Once a user HAS 2FA enabled, gate every panel request behind the
- *     TOTP/recovery-code challenge until it's passed for the session.
+ *     challenge (app code, recovery code or unlock PIN) until it's passed for
+ *     the session. Signing out stays reachable. A return through "Angemeldet
+ *     bleiben" is marked for the challenge, which then asks for the PIN or
+ *     signs the user out completely (TwoFactorChallengeController).
  *  2. If an admin has NOT enabled 2FA yet, REMIND them (once per session) - but
  *     never block: they can keep working and enrol whenever they get to it.
  *     Nagging on (config auth.two_factor_nag_admins), enforcement off.
@@ -28,7 +32,20 @@ class EnsureTwoFactorChallengeIsPassed
         }
 
         if ($user->hasTwoFactorEnabled() && ! session('two_factor_passed')) {
-            session(['two_factor_redirect' => $request->fullUrl()]);
+            // Filament keeps its logout route behind this middleware; without
+            // this line "Abmelden" on the challenge page led back to it.
+            if ($request->routeIs('filament.*.auth.logout')) {
+                return $next($request);
+            }
+
+            if (Auth::viaRemember()) {
+                session(['two_factor_reentry' => true]);
+            }
+
+            // Only a page is worth returning to; a Livewire update is not.
+            if ($request->isMethod('GET') && ! $request->headers->has('X-Livewire')) {
+                session(['two_factor_redirect' => $request->fullUrl()]);
+            }
 
             return redirect()->route('two-factor.challenge');
         }
