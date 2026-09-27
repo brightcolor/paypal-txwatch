@@ -12,7 +12,7 @@
                         Mehr Infos <span aria-hidden="true">&rarr;</span>
                     </a>
                 @else
-                    <span class="more" style="opacity:.55;">&nbsp;</span>
+                    <span class="more" aria-hidden="true">&nbsp;</span>
                 @endif
             </div>
         @endforeach

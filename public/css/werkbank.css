@@ -1,0 +1,948 @@
+/* ==========================================================================
+   TxWatch im Werkbank-Stil von bright color.
+
+   Loaded after Filament's stylesheets (render hook HEAD_END, see
+   resources/views/filament/werkbank-theme.blade.php). Filament's colour
+   scales come from App\Support\WerkbankPalette; this file sets the roles:
+   onyx rail, white top bar with the four-colour band, paper ground, cards
+   with a soft shadow, yellow main buttons, pills for states, Anton for page
+   and card titles. The density rules of the former theme stay: compact rows,
+   the page title on the top bar row, breadcrumbs only on record pages.
+
+   Values: bc-tokens.css (design system), workbench light on :root, dark on
+   Filament's .dark class. Utilities of Filament win through variants
+   (dark:, hover:), hence !important on colours and surfaces.
+   ========================================================================== */
+
+:root {
+	--bc-ink: #111111;
+	--bc-paper: #f2f0eb;
+	--bc-white: #ffffff;
+	--bc-cyan: #1dc3f3;
+	--bc-yellow: #fed329;
+	--bc-magenta: #ee318a;
+	--bc-pink: #d61f7a;
+	--bc-pink-deep: #b81765;
+	--bc-lime: #bfd535;
+	--bc-violet: #aa4b88;
+	--bc-deep: #05202a;
+	--bc-paper-deep: #e3e0d8;
+
+	--bc-ground: #f2f0eb;
+	--bc-surface: #ffffff;
+	--bc-control: #ffffff;
+	--bc-overlay: #ffffff;
+	--bc-head: #f7f6f2;
+	--bc-hover: #f1efe9;
+	--bc-raised: #ffffff;
+	--bc-rule: #e3e0d8;
+	--bc-rule-soft: #ece9e2;
+	--bc-rule-loud: #9e9a90;
+	--bc-field-edge: #8e8a80;
+
+	--bc-text: #1a1a1a;
+	--bc-text-loud: #111111;
+	--bc-text-quiet: #5e5b55;
+	--bc-link: #b3146a;
+	--bc-link-hover: #111111;
+	--bc-focus: #0a86ad;
+
+	--bc-primary: #fed329;
+	--bc-primary-deep: #e9bc0c;
+	--bc-on-primary: #111111;
+	--bc-ok-text: #4e6a00;
+	--bc-ok-mid: #aac420;
+	--bc-warn-text: #7a5b00;
+	--bc-bad-text: #b3146a;
+	--bc-bad-tint: #fbe3ee;
+	--bc-bad-deep: #b0145f;
+
+	--bc-rail: #111111;
+	--bc-rail-2: #1c1c1e;
+	--bc-rail-text: #d9d6ce;
+	--bc-rail-muted: #8c8981;
+	--bc-rail-line: #29292d;
+
+	--bc-track: #d9d6ce;
+	--bc-track-on: #111111;
+	--bc-knob-on: #bfd535;
+
+	--bc-radius: 12px;
+	--bc-radius-sm: 8px;
+	--bc-shadow: 0 1px 2px rgba(17, 17, 17, .05), 0 6px 20px rgba(17, 17, 17, .05);
+	--bc-shadow-pop: 0 8px 28px rgba(17, 17, 17, .16);
+	--bc-move: 150ms;
+
+	--bc-font-display: "Anton", Impact, "Arial Narrow", system-ui, sans-serif;
+	--bc-font-text: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+	--bc-font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+	--tx-band: linear-gradient(90deg, var(--bc-magenta) 0 25%, var(--bc-cyan) 25% 50%, var(--bc-lime) 50% 75%, var(--bc-yellow) 75% 100%);
+	--tx-card: 0 0 0 1px var(--bc-rule), var(--bc-shadow);
+	--tx-pop: 0 0 0 1px var(--bc-rule), var(--bc-shadow-pop);
+	--tx-chart-fill: rgba(238, 49, 138, .12);
+}
+
+.dark {
+	--bc-ground: #0b0b0c;
+	--bc-surface: #141415;
+	--bc-control: #19191b;
+	--bc-overlay: #1c1c1e;
+	--bc-head: #18181a;
+	--bc-hover: #232326;
+	--bc-raised: #1f1f22;
+	--bc-rule: #2a2a2d;
+	--bc-rule-soft: #333337;
+	--bc-rule-loud: #5c5c62;
+	--bc-field-edge: #6e6e74;
+
+	--bc-text: #e6e4de;
+	--bc-text-loud: #ffffff;
+	--bc-text-quiet: #a3a097;
+	--bc-link: #1dc3f3;
+	--bc-link-hover: #ffffff;
+	--bc-focus: #1dc3f3;
+
+	--bc-ok-text: #bfd535;
+	--bc-warn-text: #fed329;
+	--bc-bad-text: #ff5ca8;
+	--bc-bad-tint: #2a1520;
+
+	--bc-rail: #070708;
+	--bc-rail-2: #161618;
+	--bc-rail-line: #1f1f22;
+
+	--bc-track: #3a3a3f;
+	--bc-track-on: #bfd535;
+	--bc-knob-on: #111111;
+
+	--bc-shadow: 0 1px 2px rgba(0, 0, 0, .5);
+	--bc-shadow-pop: 0 10px 30px rgba(0, 0, 0, .6);
+	--tx-chart-fill: rgba(238, 49, 138, .18);
+	color-scheme: dark;
+}
+
+/* ===== Page, type, band ================================================= */
+
+body.fi-body {
+	background-color: var(--bc-ground) !important;
+	color: var(--bc-text);
+	font-family: var(--bc-font-text);
+	-webkit-font-smoothing: antialiased;
+}
+
+/* The four-colour band along the top, over bar and rail alike. */
+body.fi-body::before {
+	content: "";
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 60;
+	height: 4px;
+	background: var(--tx-band);
+	pointer-events: none;
+}
+
+::selection {
+	background: var(--bc-yellow);
+	color: var(--bc-ink);
+}
+
+:focus-visible {
+	outline: 2px solid var(--bc-focus);
+	outline-offset: 2px;
+}
+
+code, kbd, pre, samp {
+	font-family: var(--bc-font-mono);
+}
+
+/* Filament's own views set notes, placeholders and icons in text-gray-400
+   (light) and dark:text-gray-500 (dark). On the warm scale both sit below
+   the contrast floor, so they take the quiet tone of the mode. :where keeps
+   the weight at zero: every component rule below wins. */
+:where(html:not(.dark)) :where(.text-gray-400),
+:where(.dark) :where(.dark\:text-gray-500) { color: var(--bc-text-quiet) !important; }
+
+/* ===== Page heading: Anton on the top bar row ========================== */
+
+.fi-main { padding: .1rem 1rem .7rem !important; gap: .6rem !important; }
+.fi-main > * + * { margin-top: .7rem !important; }
+.fi-page { gap: .6rem !important; }
+.fi-header { margin-bottom: 0 !important; padding-top: 0 !important; }
+
+.fi-header-heading {
+	font-family: var(--bc-font-display) !important;
+	font-size: 1.55rem !important;
+	font-weight: 400 !important;
+	letter-spacing: .03em !important;
+	line-height: 1.1 !important;
+	text-transform: uppercase;
+	color: var(--bc-text-loud) !important;
+	overflow-wrap: break-word;
+}
+
+/* The magenta square of the workbench label, before the page title. */
+.fi-header-heading::before {
+	content: "";
+	display: inline-block;
+	width: 9px;
+	height: 9px;
+	margin-right: 10px;
+	background: var(--bc-magenta);
+	vertical-align: .32em;
+}
+
+.fi-header-subheading { color: var(--bc-text-quiet) !important; }
+
+/* Breadcrumbs only for real drill-down (edit, view, create record pages). */
+.fi-breadcrumbs { display: none !important; }
+.fi-resource-edit-record-page .fi-breadcrumbs,
+.fi-resource-view-record-page .fi-breadcrumbs,
+.fi-resource-create-record-page .fi-breadcrumbs { display: flex !important; }
+.fi-breadcrumbs-item-label { color: var(--bc-text-quiet) !important; }
+a.fi-breadcrumbs-item-label:hover { color: var(--bc-text-loud) !important; }
+
+/* Heading on the same row as the top bar search (desktop). The lifted header
+   spans the full width on top of the bar: pointer-events keep search and
+   avatar clickable, and only an action bar with buttons moves back down. */
+@media (min-width: 1024px) {
+	.fi-main { padding-top: 0 !important; }
+	.fi-header {
+		margin-top: -84px !important;
+		position: relative;
+		z-index: 30;
+		align-items: flex-start !important;
+		pointer-events: none !important;
+	}
+	.fi-header > * { pointer-events: auto !important; }
+	.fi-header > *:nth-child(2):has(button, a) { margin-top: 84px !important; }
+}
+
+/* ===== Rail: Filament's sidebar on onyx ================================ */
+
+.fi-sidebar {
+	background-color: var(--bc-rail) !important;
+	color: var(--bc-rail-text);
+	box-shadow: inset -1px 0 0 var(--bc-rail-line) !important;
+	scrollbar-color: var(--bc-rail-line) var(--bc-rail);
+	--bc-focus: var(--bc-yellow);
+}
+
+.fi-sidebar-header {
+	background-color: var(--bc-rail) !important;
+	box-shadow: inset 0 -1px 0 var(--bc-rail-line) !important;
+	--tw-ring-shadow: 0 0 transparent !important;
+	color: #ffffff;
+	--tx-mark: var(--bc-yellow);
+}
+
+.fi-sidebar-nav { padding-top: .6rem !important; }
+
+.fi-sidebar-group-label {
+	color: var(--bc-rail-muted) !important;
+	font-size: 10.5px !important;
+	font-weight: 700 !important;
+	letter-spacing: .14em;
+	text-transform: uppercase;
+	padding-top: .55rem;
+}
+
+.fi-sidebar-group-collapse-button,
+.fi-sidebar-group-button .fi-icon-btn { color: var(--bc-rail-muted) !important; }
+.fi-sidebar-group-collapse-button:hover { color: #ffffff !important; }
+
+.fi-sidebar-item-button {
+	position: relative;
+	border-radius: var(--bc-radius-sm) !important;
+	padding-top: .3rem !important;
+	padding-bottom: .3rem !important;
+	transition: background-color var(--bc-move) ease, color var(--bc-move) ease;
+}
+
+.fi-sidebar-item-label { color: var(--bc-rail-text) !important; font-size: .84rem !important; font-weight: 500 !important; }
+.fi-sidebar-item-icon { color: var(--bc-rail-text) !important; opacity: .85; }
+
+.fi-sidebar-item-button:hover,
+.fi-sidebar-item-button:focus-visible { background-color: var(--bc-rail-2) !important; }
+.fi-sidebar-item-button:hover .fi-sidebar-item-label,
+.fi-sidebar-item-button:hover .fi-sidebar-item-icon { color: #ffffff !important; opacity: 1; }
+
+/* The open page: yellow edge on the rail, yellow icon, white label. */
+.fi-sidebar-item-active .fi-sidebar-item-button { background-color: var(--bc-rail-2) !important; }
+.fi-sidebar-item-active .fi-sidebar-item-button::before {
+	content: "";
+	position: absolute;
+	top: 6px;
+	bottom: 6px;
+	left: -.5rem;
+	width: 4px;
+	border-radius: 0 3px 3px 0;
+	background: var(--bc-yellow);
+}
+.fi-sidebar-item-active .fi-sidebar-item-label { color: #ffffff !important; font-weight: 700 !important; }
+.fi-sidebar-item-active .fi-sidebar-item-icon { color: var(--bc-yellow) !important; opacity: 1; }
+
+.fi-sidebar-item-badge .fi-badge { box-shadow: none !important; }
+.fi-sidebar-nav-groups { gap: .15rem !important; }
+.fi-sidebar-group-items { gap: .05rem !important; }
+.fi-sidebar-group-items > * + * { margin-top: .05rem !important; }
+
+/* Phones: the off-canvas rail is 100vh, which counts the area behind the
+   browser bars; pin it to the dynamic height so the last entry is reachable. */
+@media (max-width: 1023px) {
+	.fi-sidebar { height: 100dvh !important; max-height: 100dvh !important; }
+	.fi-sidebar-nav { overflow-y: auto !important; -webkit-overflow-scrolling: touch; padding-bottom: 2rem !important; }
+}
+
+.fi-sidebar-close-overlay { background-color: rgba(17, 17, 17, .5) !important; }
+
+/* ===== Top bar ======================================================= */
+
+.fi-topbar nav {
+	background-color: var(--bc-surface) !important;
+	box-shadow: inset 0 -1px 0 var(--bc-rule) !important;
+	--tw-ring-shadow: 0 0 transparent !important;
+	color: var(--bc-text);
+	--tx-mark: var(--bc-text-loud);
+}
+
+.fi-topbar .fi-icon-btn { color: var(--bc-text-quiet) !important; }
+.fi-topbar .fi-icon-btn:hover { color: var(--bc-text-loud) !important; background-color: var(--bc-hover) !important; }
+
+.fi-global-search-field .fi-input-wrp { background-color: var(--bc-head) !important; }
+
+.fi-avatar { box-shadow: none !important; }
+/* The ink disc of the initials avatar gets an edge on the dark bar. */
+.dark .fi-user-menu .fi-avatar { box-shadow: 0 0 0 1px var(--bc-rule-loud) !important; }
+
+/* ===== Brand ======================================================== */
+
+.tx-brand { display: inline-flex; align-items: center; gap: .55rem; color: inherit; }
+.tx-brand__mark { flex: none; width: 1.6rem; height: 1.6rem; color: var(--tx-mark, var(--bc-text-loud)); }
+.tx-brand__name { font-family: var(--bc-font-display); font-size: 1.3rem; font-weight: 400; letter-spacing: .04em; line-height: 1.1; text-transform: uppercase; }
+
+/* ===== Cards: sections, tables, tabs, widgets ============================ */
+
+.fi-section,
+.fi-ta-ctn,
+.fi-fo-tabs,
+.fi-in-tabs,
+.fi-wi-stats-overview-stat,
+.fi-fo-repeater-item,
+.fi-fo-builder-item,
+.fi-in-repeatable-item {
+	background-color: var(--bc-surface) !important;
+	border-radius: var(--bc-radius) !important;
+	box-shadow: var(--tx-card) !important;
+	--tw-ring-shadow: 0 0 transparent !important;
+}
+
+.fi-section-header { padding: .55rem .9rem !important; }
+.fi-section-content { padding: .65rem .9rem !important; }
+
+.fi-section-header-heading {
+	font-family: var(--bc-font-display) !important;
+	font-size: 1.05rem !important;
+	font-weight: 400 !important;
+	letter-spacing: .04em !important;
+	line-height: 1.15 !important;
+	text-transform: uppercase;
+	color: var(--bc-text-loud) !important;
+}
+
+.fi-section-header-description { color: var(--bc-text-quiet) !important; }
+.fi-section-content-ctn,
+.fi-section-footer { border-color: var(--bc-rule) !important; }
+
+/* Dashboard period picker: a slim bar. */
+.fi-page > form.fi-form,
+.fi-page > .fi-form { margin-bottom: .1rem !important; }
+.fi-page > form .fi-section,
+.fi-page > .fi-form .fi-section { box-shadow: 0 0 0 1px var(--bc-rule) !important; }
+.fi-page > form .fi-section-content,
+.fi-page > .fi-form .fi-section-content { padding: .5rem .75rem !important; }
+
+/* ===== Tables ======================================================== */
+
+.fi-ta-ctn { overflow: hidden; }
+.fi-ta-header-toolbar { padding: .5rem .75rem !important; }
+.fi-ta-header-ctn { gap: .4rem !important; }
+
+.fi-ta-header-cell {
+	background-color: var(--bc-head) !important;
+	padding-top: .45rem !important;
+	padding-bottom: .45rem !important;
+	box-shadow: inset 0 -1px 0 var(--bc-rule);
+}
+
+.fi-ta-header-cell-label,
+.fi-ta-header-cell-sort-btn {
+	color: var(--bc-text-quiet) !important;
+	font-size: 11px !important;
+	font-weight: 700 !important;
+	letter-spacing: .1em;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.fi-ta-table > :not([hidden]) ~ :not([hidden]),
+.fi-ta-table tbody > :not([hidden]) ~ :not([hidden]) { border-color: var(--bc-rule-soft) !important; }
+
+/* Rows half as tall: the height sits on the py-4 content wrapper three
+   levels below the cell. */
+.fi-ta-cell [class~="py-4"] { padding-top: .3rem !important; padding-bottom: .3rem !important; }
+.fi-ta-row, .fi-ta-record { --min-height: 0 !important; min-height: 0 !important; }
+
+.fi-ta-row:hover { background-color: var(--bc-hover) !important; }
+.fi-ta-row.fi-selected,
+.fi-ta-record.fi-selected { background-color: color-mix(in srgb, var(--bc-yellow) 16%, var(--bc-surface)) !important; }
+
+.fi-ta-text-item { line-height: 1.2 !important; }
+.fi-ta-table thead { position: sticky; top: 0; z-index: 5; }
+.fi-ta-text-item-label { font-variant-numeric: tabular-nums; }
+.fi-ta-text-item-label:not(.whitespace-normal),
+.fi-ta-text:not(.whitespace-normal) { white-space: nowrap; }
+.fi-ta-content { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Linked cells read as links: link colour and underline, so a pink negative
+   amount never looks like one. */
+a.fi-ta-col-wrp .fi-ta-text-item-label,
+.fi-ta-text-item a,
+.fi-in-text-item a {
+	color: var(--bc-link) !important;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+a.fi-ta-col-wrp:hover .fi-ta-text-item-label,
+.fi-ta-text-item a:hover { color: var(--bc-link-hover) !important; }
+
+.fi-ta-empty-state-heading { color: var(--bc-text-loud) !important; }
+.fi-ta-empty-state-description { color: var(--bc-text-quiet) !important; }
+.fi-ta-empty-state-icon-ctn { background-color: var(--bc-head) !important; }
+
+/* Pagination: page numbers as squares, the current one in ink. */
+.fi-pagination-item-button { border-radius: 7px !important; }
+.fi-pagination-item.fi-active .fi-pagination-item-button,
+.fi-pagination-item-active .fi-pagination-item-button {
+	background-color: var(--bc-text-loud) !important;
+	color: var(--bc-surface) !important;
+}
+.fi-pagination-item.fi-active .fi-pagination-item-label,
+.fi-pagination-item-active .fi-pagination-item-label { color: var(--bc-surface) !important; }
+
+/* ===== Buttons ======================================================= */
+
+.fi-btn {
+	border-radius: var(--bc-radius-sm) !important;
+	font-weight: 700 !important;
+	box-shadow: none;
+	transition: background-color var(--bc-move) ease, color var(--bc-move) ease, box-shadow var(--bc-move) ease;
+}
+
+.fi-btn:active { transform: translateY(1px); }
+
+.fi-btn.fi-color-primary:not(.fi-btn-outlined),
+.fi-btn.fi-color-warning:not(.fi-btn-outlined) {
+	background-color: var(--bc-primary) !important;
+	color: var(--bc-on-primary) !important;
+}
+.fi-btn.fi-color-primary:not(.fi-btn-outlined):hover,
+.fi-btn.fi-color-warning:not(.fi-btn-outlined):hover { background-color: var(--bc-primary-deep) !important; }
+
+.fi-btn.fi-color-success:not(.fi-btn-outlined) {
+	background-color: var(--bc-lime) !important;
+	color: var(--bc-ink) !important;
+}
+.fi-btn.fi-color-success:not(.fi-btn-outlined):hover { background-color: var(--bc-ok-mid) !important; }
+
+.fi-btn.fi-color-danger:not(.fi-btn-outlined) {
+	background-color: var(--bc-pink) !important;
+	color: #ffffff !important;
+}
+.fi-btn.fi-color-danger:not(.fi-btn-outlined):hover { background-color: var(--bc-pink-deep) !important; }
+
+.fi-btn.fi-color-info:not(.fi-btn-outlined) {
+	background-color: var(--bc-cyan) !important;
+	color: var(--bc-deep) !important;
+}
+
+.fi-btn.fi-color-primary:not(.fi-btn-outlined) .fi-btn-icon,
+.fi-btn.fi-color-warning:not(.fi-btn-outlined) .fi-btn-icon,
+.fi-btn.fi-color-success:not(.fi-btn-outlined) .fi-btn-icon,
+.fi-btn.fi-color-info:not(.fi-btn-outlined) .fi-btn-icon,
+.fi-btn.fi-color-danger:not(.fi-btn-outlined) .fi-btn-icon { color: inherit !important; }
+
+/* Secondary: outline in the text colour, filled on hover. */
+.fi-btn.fi-color-gray:not(.fi-btn-outlined) {
+	background-color: var(--bc-surface) !important;
+	color: var(--bc-text-loud) !important;
+	box-shadow: inset 0 0 0 1.5px var(--bc-text-loud) !important;
+}
+.fi-btn.fi-color-gray:not(.fi-btn-outlined):hover {
+	background-color: var(--bc-text-loud) !important;
+	color: var(--bc-surface) !important;
+}
+.fi-btn.fi-color-gray:not(.fi-btn-outlined) .fi-btn-icon { color: inherit !important; }
+
+.fi-btn:focus-visible { outline: 2px solid var(--bc-focus); outline-offset: 2px; }
+
+.fi-link.fi-color-primary,
+.fi-link.fi-color-gray { color: var(--bc-link) !important; text-underline-offset: 3px; }
+.fi-link.fi-color-primary:hover,
+.fi-link.fi-color-gray:hover { color: var(--bc-link-hover) !important; }
+
+.fi-icon-btn.fi-color-gray { color: var(--bc-text-quiet) !important; }
+.fi-icon-btn.fi-color-gray:hover { color: var(--bc-text-loud) !important; }
+
+/* ===== Pills ========================================================= */
+
+.fi-badge {
+	border-radius: 999px !important;
+	font-weight: 700 !important;
+	box-shadow: none !important;
+	--tw-ring-shadow: 0 0 transparent !important;
+	padding-left: .55rem;
+	padding-right: .55rem;
+}
+
+.fi-badge.fi-color-success { background-color: var(--bc-lime) !important; color: var(--bc-ink) !important; }
+.fi-badge.fi-color-warning { background-color: var(--bc-yellow) !important; color: var(--bc-ink) !important; }
+.fi-badge.fi-color-danger { background-color: var(--bc-pink) !important; color: #ffffff !important; }
+.fi-badge.fi-color-info { background-color: var(--bc-cyan) !important; color: var(--bc-deep) !important; }
+.fi-badge.fi-color-primary { background-color: var(--bc-text-loud) !important; color: var(--bc-surface) !important; }
+.fi-badge.fi-color-gray {
+	background-color: var(--bc-head) !important;
+	color: var(--bc-text-quiet) !important;
+	box-shadow: inset 0 0 0 1px var(--bc-rule) !important;
+}
+.fi-badge .fi-badge-icon { color: inherit !important; }
+
+/* ===== Tabs: magenta underline =========================================== */
+
+.fi-tabs { box-shadow: 0 0 0 1px var(--bc-rule), var(--bc-shadow) !important; background-color: var(--bc-surface) !important; }
+
+.fi-tabs-item {
+	border-radius: 0 !important;
+	background-color: transparent !important;
+	box-shadow: inset 0 -3px 0 transparent;
+}
+.fi-tabs-item .fi-tabs-item-label,
+.fi-tabs-item .fi-tabs-item-icon { color: var(--bc-text-quiet) !important; }
+.fi-tabs-item:hover .fi-tabs-item-label,
+.fi-tabs-item:hover .fi-tabs-item-icon { color: var(--bc-text-loud) !important; }
+.fi-tabs-item-active { box-shadow: inset 0 -3px 0 var(--bc-magenta) !important; }
+.fi-tabs-item-active .fi-tabs-item-label { color: var(--bc-text-loud) !important; font-weight: 700 !important; }
+.fi-tabs-item-active .fi-tabs-item-icon { color: var(--bc-text-loud) !important; }
+
+/* ===== Forms ========================================================= */
+
+.fi-fo-component-ctn { gap: .5rem !important; }
+.fi-fo-field-wrp-label { font-size: .8rem !important; font-weight: 700 !important; margin-bottom: .1rem !important; }
+.fi-fo-field-wrp-label span { color: var(--bc-text-loud); }
+.fi-fo-field-wrp-helper-text,
+.fi-fo-field-wrp-hint { color: var(--bc-text-quiet) !important; }
+.fi-fo-field-wrp-error-message { color: var(--bc-bad-text) !important; font-weight: 700; }
+
+.fi-input-wrp {
+	background-color: var(--bc-control) !important;
+	border-radius: var(--bc-radius-sm) !important;
+	box-shadow: inset 0 0 0 1px var(--bc-field-edge) !important;
+	--tw-ring-shadow: 0 0 transparent !important;
+}
+.fi-input-wrp:focus-within {
+	box-shadow: inset 0 0 0 1px var(--bc-focus), 0 0 0 3px color-mix(in srgb, var(--bc-focus) 22%, transparent) !important;
+}
+.fi-input-wrp.fi-invalid,
+.fi-fo-field-wrp:has(.fi-fo-field-wrp-error-message) .fi-input-wrp {
+	box-shadow: inset 0 0 0 1px var(--bc-pink), 0 0 0 3px color-mix(in srgb, var(--bc-pink) 18%, transparent) !important;
+}
+.fi-input-wrp-prefix,
+.fi-input-wrp-suffix { border-color: var(--bc-rule) !important; }
+.fi-input, .fi-select-input { font-size: .85rem !important; color: var(--bc-text) !important; }
+.fi-input-wrp .fi-input { padding-top: .35rem !important; padding-bottom: .35rem !important; }
+.fi-input::placeholder { color: var(--bc-text-quiet) !important; opacity: .75; }
+
+.fi-checkbox-input,
+.fi-radio-input { box-shadow: inset 0 0 0 1px var(--bc-field-edge) !important; }
+
+/* A field outside Filament's wrapper, e.g. the address list to copy. */
+.tx-field {
+	background-color: var(--bc-control);
+	border-radius: var(--bc-radius-sm);
+	box-shadow: inset 0 0 0 1px var(--bc-field-edge);
+	color: var(--bc-text);
+}
+.tx-field:focus {
+	outline: none;
+	box-shadow: inset 0 0 0 1px var(--bc-focus), 0 0 0 3px color-mix(in srgb, var(--bc-focus) 22%, transparent);
+}
+
+/* Switch: ink track with a lime knob when on (dark: lime track, ink knob). */
+.fi-fo-toggle[aria-checked="true"],
+button[role="switch"][aria-checked="true"].fi-fo-toggle { background-color: var(--bc-track-on) !important; }
+.fi-fo-toggle[aria-checked="true"] > span,
+.fi-fo-toggle[aria-checked="true"] > span > span { background-color: var(--bc-knob-on) !important; }
+.fi-fo-toggle[aria-checked="false"] {
+	background-color: var(--bc-track) !important;
+	box-shadow: inset 0 0 0 1.5px var(--bc-field-edge) !important;
+}
+.fi-fo-toggle[aria-checked="false"] > span { background-color: var(--bc-text-quiet) !important; }
+
+.fi-modal-content { gap: .7rem !important; }
+
+/* ===== Dropdowns, modals, notifications =================================== */
+
+.fi-dropdown-panel {
+	background-color: var(--bc-overlay) !important;
+	border-radius: var(--bc-radius-sm) !important;
+	box-shadow: var(--tx-pop) !important;
+	--tw-ring-shadow: 0 0 transparent !important;
+}
+.fi-dropdown-list-item:hover,
+.fi-dropdown-list-item:focus-visible { background-color: var(--bc-hover) !important; }
+.fi-dropdown-header { border-color: var(--bc-rule) !important; }
+
+.fi-modal-window {
+	background-color: var(--bc-overlay) !important;
+	border-radius: var(--bc-radius) !important;
+	box-shadow: var(--tx-pop) !important;
+	--tw-ring-shadow: 0 0 transparent !important;
+}
+.fi-modal-heading { color: var(--bc-text-loud) !important; font-weight: 700 !important; }
+.fi-modal-description { color: var(--bc-text-quiet) !important; }
+.fi-modal-close-overlay { background-color: rgba(17, 17, 17, .5) !important; }
+
+.fi-no-notification {
+	background-color: var(--bc-overlay) !important;
+	border-radius: var(--bc-radius-sm) !important;
+	box-shadow: var(--tx-pop) !important;
+	--tw-ring-shadow: 0 0 transparent !important;
+	border-left: 4px solid var(--bc-cyan);
+}
+.fi-no-notification:has(.fi-color-success) { border-left-color: var(--bc-lime); }
+.fi-no-notification:has(.fi-color-warning) { border-left-color: var(--bc-yellow); }
+.fi-no-notification:has(.fi-color-danger) { border-left-color: var(--bc-pink); }
+.fi-no-notification-title { color: var(--bc-text-loud) !important; font-weight: 700 !important; }
+.fi-no-notification-body { color: var(--bc-text) !important; }
+
+/* ===== Widgets ======================================================= */
+
+.fi-wi { gap: .5rem !important; }
+.fi-wi-stats-overview-stat { padding: .6rem .9rem !important; }
+.fi-wi-stats-overview-stat-label { color: var(--bc-text-quiet) !important; font-weight: 500 !important; }
+.fi-wi-stats-overview-stat-value {
+	font-family: var(--bc-font-display) !important;
+	font-size: 1.6rem !important;
+	font-weight: 400 !important;
+	letter-spacing: .02em !important;
+	line-height: 1.1 !important;
+	color: var(--bc-text-loud) !important;
+	font-variant-numeric: tabular-nums;
+}
+.fi-wi .fi-section-header { padding: .4rem .8rem !important; }
+.fi-wi-chart canvas { max-height: 230px !important; }
+
+/* Dashboard figures: white tiles with a colour edge, values in Anton. The
+   colour of each tile keeps its task: magenta revenue, cyan counts, yellow
+   fees and open items, lime net and all clear, pink problems. */
+.lte-small-boxes { display: grid; gap: .5rem; grid-template-columns: repeat(1, minmax(0, 1fr)); }
+@media (min-width: 640px) { .lte-small-boxes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1280px) { .lte-small-boxes { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.lte-small-box {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	background: var(--bc-surface);
+	border-radius: var(--bc-radius);
+	box-shadow: var(--tx-card);
+	color: var(--bc-text);
+	--tx-edge: var(--bc-magenta);
+}
+.lte-small-box::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--tx-edge); }
+.lte-small-box .inner { padding: .75rem .9rem .45rem; }
+.lte-small-box .value {
+	font-family: var(--bc-font-display);
+	font-size: 1.55rem;
+	font-weight: 400;
+	letter-spacing: .02em;
+	line-height: 1.1;
+	color: var(--bc-text-loud);
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+.lte-small-box .label { margin-top: .15rem; color: var(--bc-text-quiet); font-size: .78rem; }
+.lte-small-box .icon {
+	position: absolute;
+	top: .65rem;
+	right: .65rem;
+	width: 1.9rem;
+	height: 1.9rem;
+	color: var(--bc-text-quiet);
+	opacity: .45;
+}
+.lte-small-box .more {
+	display: block;
+	margin-top: auto;
+	padding: .3rem .9rem;
+	border-top: 1px solid var(--bc-rule);
+	background: var(--bc-head);
+	color: var(--bc-link);
+	font-size: .74rem;
+	font-weight: 700;
+	text-decoration: none;
+}
+.lte-small-box a.more:hover { color: var(--bc-link-hover); text-decoration: underline; text-underline-offset: 3px; }
+.lte-small-box span.more { opacity: 1 !important; color: transparent; }
+
+.lte-bg-primary { --tx-edge: var(--bc-magenta); }
+.lte-bg-info { --tx-edge: var(--bc-cyan); }
+.lte-bg-warning { --tx-edge: var(--bc-yellow); }
+.lte-bg-success { --tx-edge: var(--bc-lime); }
+.lte-bg-danger { --tx-edge: var(--bc-pink); }
+.lte-bg-secondary { --tx-edge: var(--bc-rule-loud); }
+
+/* ===== Report tables (.rpt) and the audience page =========================== */
+
+.rpt-wrap { overflow-x: auto; margin: 0 -.25rem; padding: 0 .25rem; -webkit-overflow-scrolling: touch; }
+.rpt { width: 100%; border-collapse: collapse; font-size: .82rem; color: var(--bc-text); }
+.rpt th, .rpt td { padding: .4rem .55rem; }
+.rpt thead th {
+	background: var(--bc-head);
+	border-bottom: 1px solid var(--bc-rule);
+	color: var(--bc-text-quiet);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: .1em;
+	text-align: left;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+.rpt tbody tr { border-top: 1px solid var(--bc-rule-soft); }
+.rpt tbody tr:hover { background: var(--bc-hover); }
+.rpt tr.rpt-sum { border-top: 2px solid var(--bc-rule-loud); }
+.rpt td.num, .rpt th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rpt td.lbl { font-weight: 500; white-space: nowrap; }
+.rpt td.strong { font-weight: 700; color: var(--bc-text-loud); }
+.rpt td.muted { color: var(--bc-text-quiet); }
+/* Money: amounts in ink, net after fees in the ok colour, negatives pink
+   (.neg last so it wins). */
+.rpt td.amt { color: var(--bc-text-loud); font-weight: 600; }
+.rpt td.net { color: var(--bc-ok-text); font-weight: 700; }
+.rpt td.neg { color: var(--bc-bad-text); }
+.rpt-empty { padding: .75rem .55rem; color: var(--bc-text-quiet); }
+.rpt-warn { color: var(--bc-warn-text); font-weight: 700; }
+
+.aud-kacheln { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1rem; }
+/* Figure tiles: label, value in Anton, note (audience page and reports). */
+.aud-klein, .tx-kpi-label { font-size: .78rem; color: var(--bc-text-quiet); margin-bottom: .2rem; font-weight: 500; }
+.aud-gross, .tx-kpi-value {
+	font-family: var(--bc-font-display);
+	font-size: 1.6rem;
+	font-weight: 400;
+	letter-spacing: .02em;
+	line-height: 1.15;
+	color: var(--bc-text-loud);
+	font-variant-numeric: tabular-nums;
+}
+.aud-fein, .tx-kpi-note { font-size: .72rem; color: var(--bc-text-quiet); }
+.aud-hinweis { font-size: .82rem; color: var(--bc-text-quiet); margin: 0 0 .7rem; }
+.aud-spalten { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1.25rem; }
+.aud-abstand { margin-top: 1.1rem; }
+.aud-balkenspalte { width: 32%; min-width: 5rem; }
+.aud-balken { display: block; height: .55rem; border-radius: 99px; background: var(--bc-magenta); min-width: 2px; }
+.aud-diagonale { font-weight: 700; }
+/* The chart component reads its colours from these spans. */
+.aud-linie { color: var(--bc-magenta); }
+.aud-flaeche { color: var(--tx-chart-fill); }
+
+/* States in running text and on figure tiles, in the traffic light colours.
+   .amt, .net and .neg also work on spans outside the report tables. */
+.fi-body .amt { color: var(--bc-text-loud); font-weight: 600; }
+.fi-body .net { color: var(--bc-ok-text); font-weight: 700; }
+.fi-body .neg { color: var(--bc-bad-text); }
+.tx-ok { color: var(--bc-ok-text); }
+.tx-warn { color: var(--bc-warn-text); }
+.tx-bad { color: var(--bc-bad-text); }
+
+/* Notes above a form or table: white card with a colour edge on the left,
+   cyan for information, yellow for caution. */
+.tx-alert {
+	padding: .8rem 1rem;
+	background: var(--bc-surface);
+	border: 1px solid var(--bc-rule);
+	border-left: 4px solid var(--bc-cyan);
+	border-radius: var(--bc-radius-sm);
+	color: var(--bc-text);
+	font-size: .875rem;
+	line-height: 1.5;
+}
+.tx-alert strong { color: var(--bc-text-loud); }
+.tx-alert--warn { border-left-color: var(--bc-yellow); }
+
+/* Confirmation on the spot, in the top right corner of the field it belongs
+   to (the parent is positioned), e.g. "copied" on the address list. */
+.tx-flash {
+	position: absolute;
+	top: .75rem;
+	right: .75rem;
+	border-radius: 999px;
+	background: var(--bc-lime);
+	color: var(--bc-ink);
+	font-weight: 700;
+	box-shadow: var(--bc-shadow-pop);
+}
+
+/* ===== Sign-in: onyx half with the greeting, the form on paper ============== */
+
+.fi-simple-layout { background-color: var(--bc-ground) !important; }
+
+.fi-simple-main {
+	border-radius: var(--bc-radius) !important;
+	box-shadow: var(--tx-pop) !important;
+	--tw-ring-shadow: 0 0 transparent !important;
+}
+
+.fi-simple-header-heading {
+	font-family: var(--bc-font-display) !important;
+	font-weight: 400 !important;
+	letter-spacing: .03em !important;
+	text-transform: uppercase;
+	color: var(--bc-text-loud) !important;
+}
+
+.fi-simple-header-subheading { color: var(--bc-text-quiet) !important; }
+
+.wb-login-aside { display: none; }
+
+@media (min-width: 900px) {
+	.fi-simple-layout { padding-left: 50vw; }
+	.fi-simple-main .fi-logo { display: none !important; }
+
+	.wb-login-aside {
+		position: fixed;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		z-index: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
+		width: 50vw;
+		padding: 3rem;
+		background: var(--bc-rail);
+		color: #ffffff;
+		--tx-mark: var(--bc-yellow);
+	}
+
+	.wb-login-aside .tx-brand__mark { width: 2rem; height: 2rem; }
+	.wb-login-aside .tx-brand__name { font-size: 1.6rem; }
+	.wb-login-aside__greeting { margin: auto 0; }
+
+	.wb-login-aside__hello {
+		margin: 0;
+		font-family: var(--bc-font-display);
+		font-size: clamp(3rem, 2rem + 4vw, 5.5rem);
+		font-weight: 400;
+		letter-spacing: .015em;
+		line-height: 1.06;
+		text-transform: uppercase;
+	}
+
+	.wb-login-aside__area {
+		margin: .75rem 0 0;
+		color: #b3aea3;
+		font-size: 11.5px;
+		font-weight: 700;
+		letter-spacing: .16em;
+		text-transform: uppercase;
+	}
+}
+
+/* ===== Loading indicators ================================================ */
+
+#ak-progress {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 99999;
+	height: 4px;
+	overflow: hidden;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity .15s ease;
+}
+#ak-progress.ak-progress-active { opacity: 1; }
+#ak-progress::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	height: 100%;
+	width: 35%;
+	background: var(--bc-ink);
+	animation: ak-progress-slide 1.1s ease-in-out infinite;
+}
+.dark #ak-progress::before { background: var(--bc-yellow); }
+@keyframes ak-progress-slide { 0% { left: -35%; } 100% { left: 100%; } }
+
+#ak-longload {
+	position: fixed;
+	inset: 0;
+	z-index: 100000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(17, 17, 17, .55);
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity .2s ease, visibility .2s;
+}
+#ak-longload.ak-longload-active { opacity: 1; visibility: visible; }
+
+.ak-longload-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: .45rem;
+	max-width: 22rem;
+	padding: 1.7rem 2rem;
+	background: var(--bc-overlay);
+	border-radius: var(--bc-radius);
+	box-shadow: var(--tx-pop);
+	color: var(--bc-text);
+	text-align: center;
+}
+.ak-longload-title { font-family: var(--bc-font-display); font-size: 1.2rem; font-weight: 400; letter-spacing: .04em; text-transform: uppercase; color: var(--bc-text-loud); }
+.ak-longload-text { font-size: .82rem; color: var(--bc-text-quiet); line-height: 1.45; }
+.ak-spinner {
+	width: 2.5rem;
+	height: 2.5rem;
+	margin-bottom: .35rem;
+	border: 3px solid var(--bc-rule);
+	border-top-color: var(--bc-magenta);
+	border-radius: 50%;
+	animation: ak-spin .8s linear infinite;
+}
+@keyframes ak-spin { to { transform: rotate(360deg); } }
+
+/* ===== Drag to scroll, column order ======================================== */
+
+.fi-ta-content.ak-grabbable { cursor: grab; }
+body.ak-drag-scrolling,
+body.ak-drag-scrolling * { cursor: grabbing !important; user-select: none !important; }
+
+th.ak-col-draggable { cursor: grab; }
+th.ak-col-draggable:hover { background-color: var(--bc-hover) !important; }
+th.ak-col-dragging { opacity: .45; }
+th.ak-col-dropbefore { box-shadow: inset 3px 0 0 0 var(--bc-magenta) !important; }
+th.ak-col-dropafter { box-shadow: inset -3px 0 0 0 var(--bc-magenta) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after { transition: none !important; animation: none !important; }
+}

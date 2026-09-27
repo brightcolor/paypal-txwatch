@@ -3,7 +3,7 @@
 @php($rowCount = collect($data['groups'] ?? [])->sum(fn ($g) => count($g['rows'])))
 
 <div class="text-sm">
-    <p class="mb-2 text-gray-500">
+    <p class="mb-2 text-gray-500 dark:text-gray-400">
         Vorschau der ersten {{ $limit }} Zeilen (der vollständige Export kann mehr enthalten).
     </p>
 
@@ -31,7 +31,7 @@
             </tbody>
             @if (! empty($data['grand_total']))
                 <tfoot>
-                    <tr style="border-top:2px solid #dee2e6;">
+                    <tr class="rpt-sum">
                         <td class="strong">Gesamt ({{ $data['grand_total']['count'] }} in Vorschau)</td>
                         <td colspan="{{ max(count($labels) - 1, 1) }}" class="num strong">
                             Umsatz: <span class="amt">{{ number_format($data['grand_total']['gross'], 2, ',', '.') }} €</span>

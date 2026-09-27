@@ -4,7 +4,7 @@ namespace App\Filament\Concerns;
 
 /**
  * Big page sizes (> 200 rows) are opt-in per visit: the pagination guard
- * (resources/views/filament/adminlte-theme) makes the user confirm a warning
+ * (resources/views/filament/werkbank-theme) makes the user confirm a warning
  * before a 500-row load. Without this trait the choice would be persisted in
  * the session and re-applied on every reload/revisit, so each page load would
  * re-run the heavy query and "we'd go in circles". This overrides the restore

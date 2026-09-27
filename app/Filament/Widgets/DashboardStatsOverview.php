@@ -9,8 +9,8 @@ use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\Widget;
 
 /**
- * AdminLTE-style "small boxes" for the dashboard: colored KPI tiles with an
- * icon watermark and a "Mehr Infos" link that jumps straight into the
+ * Dashboard figures: workbench tiles with a colour edge, the value in Anton,
+ * a quiet icon and a "Mehr Infos" link that jumps straight into the
  * matching pre-filtered transactions list. The period comes from the
  * dashboard's Matomo-style range picker (page filters).
  */

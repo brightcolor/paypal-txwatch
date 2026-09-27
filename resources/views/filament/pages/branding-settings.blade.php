@@ -2,7 +2,7 @@
     <form wire:submit="save">
         {{ $this->form }}
 
-        <div class="mt-4">
+        <div class="mt-3">
             <x-filament::button type="submit">
                 Speichern
             </x-filament::button>

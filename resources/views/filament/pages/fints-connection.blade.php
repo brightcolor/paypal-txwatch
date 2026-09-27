@@ -18,7 +18,7 @@
                 <strong>Ihre gespeicherten Zugangsdaten bleiben unangetastet.</strong> Sie stehen unten
                 und gelten wieder, sobald der Weg offen ist – es geht nichts verloren.
             </p>
-            <p class="mt-3 text-xs text-gray-400">
+            <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
                 Öffnen kann das nur der Betreiber, über die Umgebungsvariable
                 <code>FINTS_ENABLED=1</code>. Sinnvoll erst, wenn die Registrierungsnummer bei der
                 Deutschen Kreditwirtschaft freigeschaltet ist – vorher endet jeder Abruf in
@@ -51,7 +51,7 @@
         </div>
         {{-- Der Ablauf hilft nur, solange er begehbar ist. --}}
         @unless ($stillgelegt)
-            <p class="mt-3 text-xs text-gray-400">
+            <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
                 Ablauf: Zugangsdaten speichern → „TAN-Verfahren anzeigen" → Verfahren-ID eintragen & speichern →
                 „Login / Bank verbinden" → einmal per TAN bestätigen → danach täglich automatischer Abruf. Die Umsätze
                 landen unter <strong>Bank → Kontoumsätze</strong> und werden automatisch abgeglichen. Direkt zur Sparkasse,
@@ -60,7 +60,7 @@
         @endunless
 
         @unless ($c->hasCredentials() || $stillgelegt)
-            <p class="mt-2 text-xs" style="color: var(--ak-warning, #ffc107);">
+            <p class="mt-2 text-xs rpt-warn">
                 <strong>Nächster Schritt:</strong> Zugangsdaten unten ausfüllen und <strong>speichern</strong>.
                 Die Schaltflächen <em>„TAN-Verfahren anzeigen"</em> und <em>„Login / Bank verbinden"</em> erscheinen
                 danach oben rechts im Seitenkopf – sie brauchen BLZ, FinTS-URL, Registrierungsnummer, Anmeldename und PIN.
@@ -80,7 +80,7 @@
     <x-filament::section heading="Einrichtung">
         <form wire:submit="save">
             {{ $this->form }}
-            <div class="mt-4">
+            <div class="mt-3">
                 <x-filament::button type="submit">Speichern</x-filament::button>
             </div>
         </form>

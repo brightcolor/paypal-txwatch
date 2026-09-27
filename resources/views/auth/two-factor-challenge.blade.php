@@ -4,16 +4,27 @@
     <meta charset="utf-8">
     <title>Zwei-Faktor-Authentifizierung - {{ config('app.name') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="{{ asset('css/werkbank-fonts.css') }}?v={{ config('version.number') }}">
+    {{-- Workbench look outside the panel: paper, four-colour band, white card,
+         yellow main button. Dark mode follows the system setting. --}}
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        .card { background: #1e293b; border-radius: 12px; padding: 32px; width: 100%; max-width: 380px; box-shadow: 0 10px 30px rgba(0,0,0,.3); }
-        h1 { font-size: 18px; margin: 0 0 6px 0; }
-        p { font-size: 13px; color: #94a3b8; margin: 0 0 20px 0; }
-        input { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 16px; letter-spacing: 2px; text-align: center; }
-        button { width: 100%; margin-top: 16px; padding: 10px; border-radius: 8px; border: none; background: #2563eb; color: #fff; font-weight: 600; cursor: pointer; }
-        .error { color: #f87171; font-size: 13px; margin-top: 10px; }
-        .logout { text-align: center; margin-top: 16px; }
-        .logout a { color: #64748b; font-size: 12px; }
+        :root { color-scheme: light dark; --ground: #f2f0eb; --surface: #ffffff; --text: #1a1a1a; --loud: #111111; --quiet: #5e5b55; --rule: #e3e0d8; --edge: #8e8a80; --focus: #0a86ad; --bad: #b3146a; }
+        @media (prefers-color-scheme: dark) { :root { --ground: #0b0b0c; --surface: #141415; --text: #e6e4de; --loud: #ffffff; --quiet: #a3a097; --rule: #2a2a2d; --edge: #6e6e74; --focus: #1dc3f3; --bad: #ff5ca8; } }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; background: var(--ground); color: var(--text); font-family: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 15px; line-height: 1.5; }
+        body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #ee318a 0 25%, #1dc3f3 25% 50%, #bfd535 50% 75%, #fed329 75% 100%); }
+        .card { width: 100%; max-width: 380px; padding: 28px 32px; background: var(--surface); border-radius: 12px; box-shadow: 0 0 0 1px var(--rule), 0 8px 28px rgba(17, 17, 17, .16); }
+        h1 { margin: 0 0 8px; font: 400 24px/1.1 Anton, Impact, "Arial Narrow", sans-serif; letter-spacing: .03em; text-transform: uppercase; color: var(--loud); }
+        p { margin: 0 0 20px; font-size: 14px; color: var(--quiet); }
+        input { width: 100%; height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--edge); background: var(--surface); color: var(--text); font: inherit; font-size: 18px; letter-spacing: 3px; text-align: center; }
+        input:focus { outline: 0; border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 22%, transparent); }
+        button { width: 100%; min-height: 40px; margin-top: 16px; border: 0; border-radius: 8px; background: #fed329; color: #111111; font: inherit; font-weight: 700; cursor: pointer; }
+        button:hover { background: #e9bc0c; }
+        button:focus-visible, a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+        .error { margin-top: 10px; color: var(--bad); font-size: 13px; font-weight: 700; }
+        .logout { margin-top: 16px; text-align: center; }
+        .logout a { color: var(--quiet); font-size: 13px; text-underline-offset: 3px; }
+        .logout a:hover { color: var(--loud); }
     </style>
 </head>
 <body>
@@ -23,9 +34,9 @@
 
     <form method="POST" action="{{ route('two-factor.verify') }}">
         @csrf
-        <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" autofocus placeholder="123456">
+        <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" autofocus placeholder="123456" aria-label="Code" @error('code') aria-invalid="true" aria-describedby="code-fehler" @enderror>
         @error('code')
-            <div class="error">{{ $message }}</div>
+            <div class="error" id="code-fehler">{{ $message }}</div>
         @enderror
         <button type="submit">Bestätigen</button>
     </form>

@@ -11,7 +11,7 @@
                 <td class="lbl">Bestellung</td>
                 <td>
                     <strong>{{ $order->order_code }}</strong>
-                    <span class="text-xs text-gray-400">· Event {{ $order->event_slug }}</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">· Event {{ $order->event_slug }}</span>
                 </td>
             </tr>
             <tr>
@@ -30,7 +30,7 @@
     </table>
 </div>
 
-<div class="mt-4">
+<div class="mt-3">
     <p class="text-sm"><strong>Verlauf</strong></p>
     <div class="rpt-wrap mt-2">
         <table class="rpt" style="min-width: 34rem;">

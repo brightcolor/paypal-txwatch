@@ -49,7 +49,7 @@
             @click="kopieren()"
             @keydown.enter.prevent="kopieren()"
             title="Klicken kopiert alle Adressen"
-            class="fi-input block w-full cursor-pointer rounded-lg border-none bg-white py-1.5 font-mono text-xs text-gray-950 shadow-sm ring-1 ring-gray-950/10 transition duration-75 focus:ring-2 focus:ring-primary-600 dark:bg-white/5 dark:text-white dark:ring-white/20"
+            class="tx-field block w-full cursor-pointer border-none px-3 py-1.5 font-mono text-xs"
         >{{ $getState() }}</textarea>
 
         {{-- Die Rückmeldung sitzt AUF dem Feld, dort wo der Klick war. Eine Meldung
@@ -58,7 +58,7 @@
             x-show="kopiert"
             x-transition.opacity
             x-cloak
-            class="pointer-events-none absolute right-3 top-3 rounded-md bg-success-600 px-3 py-1 text-sm font-medium text-white shadow-lg"
+            class="tx-flash pointer-events-none px-3 py-1 text-sm"
         >
             ✓ {{ $anzahl }} {{ $anzahl === 1 ? 'Adresse' : 'Adressen' }} kopiert
         </div>
@@ -70,7 +70,7 @@
                 <strong>In das Feld klicken</strong> kopiert alle {{ $anzahl }}
                 {{ $anzahl === 1 ? 'Adresse' : 'Adressen' }} in die Zwischenablage – jede genau einmal.
             </span>
-            <span x-show="kopiert" x-cloak class="text-success-600 dark:text-success-400">
+            <span x-show="kopiert" x-cloak class="tx-ok">
                 In der Zwischenablage. Jetzt im Mailprogramm einfügen.
             </span>
         </p>

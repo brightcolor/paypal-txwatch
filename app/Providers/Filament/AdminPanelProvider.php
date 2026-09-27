@@ -2,14 +2,16 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\AvatarProviders\InitialsAvatarProvider;
 use App\Http\Middleware\EnsureTwoFactorChallengeIsPassed;
+use App\Support\WerkbankPalette;
+use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
-use Filament\Support\Colors\Color;
 use Filament\Support\Enums\MaxWidth;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -31,9 +33,11 @@ class AdminPanelProvider extends PanelProvider
             ->brandName('TxWatch')
             ->brandLogo(fn () => view('filament.brand-logo'))
             ->favicon(asset('favicon.svg'))
-            // AdminLTE-style theme (see filament.adminlte-theme). Dark mode is
-            // supported: the light-only surface colors in the theme are scoped
-            // to html:not(.dark) so Filament's dark palette shows through.
+            // Workbench design of bright color: colour scales in WerkbankPalette,
+            // everything else in public/css/werkbank.css (see
+            // filament.werkbank-theme). Fonts and avatars come from this server.
+            ->font('Atkinson Hyperlegible', url: asset('css/werkbank-fonts.css') . '?v=' . config('version.number'), provider: LocalFontProvider::class)
+            ->defaultAvatarProvider(InitialsAvatarProvider::class)
             // Use the full viewport width for content (the default is a narrow centered
             // column that leaves large unused margins on wide screens, which matters here
             // because the transactions table has many columns).
@@ -48,14 +52,7 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->passwordReset()
             ->profile()
-            ->colors([
-                'primary' => Color::hex('#007bff'),
-                'info' => Color::hex('#17a2b8'),
-                'success' => Color::hex('#28a745'),
-                'warning' => Color::hex('#ffc107'),
-                'danger' => Color::hex('#dc3545'),
-                'gray' => Color::Slate,
-            ])
+            ->colors(WerkbankPalette::colors())
             ->navigationGroups([
                 'PayPal',
                 'pretix',
@@ -98,7 +95,12 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->renderHook(
                 PanelsRenderHook::HEAD_END,
-                fn () => view('filament.adminlte-theme'),
+                fn () => view('filament.werkbank-theme'),
+            )
+            // Onyx half with the greeting beside the sign-in form.
+            ->renderHook(
+                PanelsRenderHook::SIMPLE_PAGE_START,
+                fn () => view('filament.login-aside'),
             )
             ->renderHook(
                 PanelsRenderHook::FOOTER,

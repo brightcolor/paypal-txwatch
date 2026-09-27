@@ -33,7 +33,7 @@
                 <td>
                     <strong>{{ $record->order_code ?: '–' }}</strong>
                     @if (filled($record->event_slug))
-                        <span class="text-xs text-gray-400">· Event {{ $record->event_slug }}</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">· Event {{ $record->event_slug }}</span>
                     @endif
                 </td>
             </tr>
@@ -44,7 +44,7 @@
                     @if ($record->event)
                         {{ $record->event->name }} –
                         <strong>{{ $record->event->auto_mark_paid ? 'automatische Meldung ist an' : 'automatische Meldung ist aus' }}</strong>
-                        <span class="text-xs text-gray-400">(Events → „Zahlungen automatisch melden")</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">(Events → „Zahlungen automatisch melden")</span>
                     @else
                         <span class="muted">kein Event zugeordnet</span>
                     @endif
@@ -54,7 +54,7 @@
     </table>
 </div>
 
-<div class="mt-4">
+<div class="mt-3">
     <p class="text-sm"><strong>Das Geld, auf das hin entschieden wurde</strong></p>
     <div class="rpt-wrap mt-2">
         <table class="rpt" style="min-width: 34rem;">
@@ -83,9 +83,9 @@
                         {{ $record->source === \App\Models\PretixPaymentConfirmation::SOURCE_JOURNAL
                             ? 'Bankabruf (Enable Banking)' : 'Kontoumsatz' }}
                         @if ($record->journal_entry_id)
-                            <span class="text-xs text-gray-400">· Journaleintrag #{{ $record->journal_entry_id }}</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">· Journaleintrag #{{ $record->journal_entry_id }}</span>
                         @elseif ($record->bank_transaction_id)
-                            <span class="text-xs text-gray-400">· Umsatz #{{ $record->bank_transaction_id }}</span>
+                            <span class="text-xs text-gray-500 dark:text-gray-400">· Umsatz #{{ $record->bank_transaction_id }}</span>
                         @endif
                     </td>
                 </tr>
@@ -93,7 +93,7 @@
                     <td class="lbl">Ausgelöst durch</td>
                     <td>
                         {{ $record->triggeredByLabel() }}
-                        <span class="text-xs text-gray-400">· {{ $record->at?->format('d.m.Y H:i:s') }}</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">· {{ $record->at?->format('d.m.Y H:i:s') }}</span>
                     </td>
                 </tr>
                 @if ($record->pretix_payment_local_id)

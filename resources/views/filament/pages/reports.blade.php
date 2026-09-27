@@ -5,20 +5,20 @@
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <x-filament::section>
-            <div class="text-sm text-gray-500">Event-Zuordnungsquote</div>
-            <div class="text-2xl font-bold text-primary-600">{{ $this->assignmentRatio['ratio'] }}%</div>
-            <div class="text-xs text-gray-400">{{ $this->assignmentRatio['assigned'] }} von {{ $this->assignmentRatio['total'] }} zugeordnet</div>
+            <div class="tx-kpi-label">Event-Zuordnungsquote</div>
+            <div class="tx-kpi-value">{{ $this->assignmentRatio['ratio'] }}%</div>
+            <div class="tx-kpi-note">{{ $this->assignmentRatio['assigned'] }} von {{ $this->assignmentRatio['total'] }} zugeordnet</div>
         </x-filament::section>
 
         <x-filament::section>
-            <div class="text-sm text-gray-500">Rückzahlungen/Reversals</div>
-            <div class="text-2xl font-bold text-danger-600">{{ $this->refundsSummary['count'] }}</div>
-            <div class="text-xs text-gray-400">{{ number_format($this->refundsSummary['total'], 2, ',', '.') }} €</div>
+            <div class="tx-kpi-label">Rückzahlungen/Reversals</div>
+            <div class="tx-kpi-value tx-bad">{{ $this->refundsSummary['count'] }}</div>
+            <div class="tx-kpi-note">{{ number_format($this->refundsSummary['total'], 2, ',', '.') }} €</div>
         </x-filament::section>
 
         <x-filament::section>
-            <div class="text-sm text-gray-500">Nicht zugeordnete Transaktionen</div>
-            <div class="text-2xl font-bold text-warning-600">{{ $this->assignmentRatio['unassigned'] }}</div>
+            <div class="tx-kpi-label">Nicht zugeordnete Transaktionen</div>
+            <div class="tx-kpi-value tx-warn">{{ $this->assignmentRatio['unassigned'] }}</div>
         </x-filament::section>
     </div>
 

@@ -15,7 +15,7 @@
                         {{ number_format((float) $entry->amount, 2, ',', '.') }} {{ $entry->currency }}
                     </span>
                     @if ((float) $entry->amount < 0)
-                        <span class="text-xs text-gray-400">· Erstattung</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">· Erstattung</span>
                     @endif
                 </td>
             </tr>
@@ -37,9 +37,9 @@
                     @if ($entry->possible_double_payment)
                         <span class="neg text-xs">· zweiter Geldeingang auf dieselbe Bestellung</span>
                     @elseif ($entry->pretix_order_status === 'n')
-                        <span class="text-xs text-gray-400">· Zahlungsmeldung an pretix fällig</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">· Zahlungsmeldung an pretix fällig</span>
                     @elseif ($entry->isSettled())
-                        <span class="text-xs text-gray-400">· nichts zu tun</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">· nichts zu tun</span>
                     @endif
                 </td>
             </tr>
@@ -55,7 +55,7 @@
 </div>
 
 @if ($entry->hasSuggestion())
-    <div class="mt-4">
+    <div class="mt-3">
         <p class="text-sm">
             <strong>Vorschläge</strong> – nicht zugeordnet. Ein Zeichen weicht ab; die Entscheidung
             liegt bei dir.
@@ -92,7 +92,7 @@
                 </tbody>
             </table>
         </div>
-        <p class="mt-2 text-xs text-gray-400">
+        <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
             Ein passender Betrag ist die stärkste Bestätigung: Bei den gemessenen Tippfehlern engte er
             über tausend Bestellungen auf genau eine ein. Passt er nicht, ist der Vorschlag
             wahrscheinlich falsch.
@@ -100,7 +100,7 @@
     </div>
 @endif
 
-<div class="mt-4">
+<div class="mt-3">
     <p class="text-sm"><strong>Verlauf</strong></p>
     <div class="rpt-wrap mt-2">
         <table class="rpt" style="min-width: 34rem;">

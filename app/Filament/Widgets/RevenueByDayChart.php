@@ -89,8 +89,9 @@ class RevenueByDayChart extends ChartWidget
             'datasets' => [[
                 'label' => 'Umsatz',
                 'data' => $data,
-                'borderColor' => '#2563eb',
-                'backgroundColor' => 'rgba(37, 99, 235, 0.15)',
+                // Workbench chart: logo magenta line, 12 % fill.
+                'borderColor' => '#ee318a',
+                'backgroundColor' => 'rgba(238, 49, 138, 0.12)',
                 'fill' => true,
             ]],
             'labels' => $labels,

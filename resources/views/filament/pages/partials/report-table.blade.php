@@ -1,4 +1,4 @@
-{{-- Shared report table. Styling lives in the adminlte-theme (.rpt) as real CSS
+{{-- Shared report table. Styling lives in public/css/werkbank.css (.rpt) as real CSS
      because this app has no Tailwind build step - so no arbitrary utility
      classes here. min-width (inline) lets the wrapper scroll horizontally on
      mobile instead of squeezing money values onto two lines. --}}

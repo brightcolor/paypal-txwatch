@@ -30,7 +30,7 @@
                 <code>ENABLEBANKING_APPLICATION_ID</code> / <code>ENABLEBANKING_KEY_PATH</code>.
                 <strong>Die gelten vor allem, was hier hochgeladen wird.</strong>
             </p>
-            <p class="mt-2 text-xs text-gray-400">
+            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
                 Zum Tauschen über die Oberfläche die beiden Variablen aus der Umgebung nehmen und die
                 Anwendung neu starten.
             </p>
@@ -60,7 +60,7 @@
                                 @default unbekannt
                             @endswitch
                             @if ($vault['bits'])
-                                <span class="text-xs text-gray-400">· RSA {{ $vault['bits'] }} Bit</span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">· RSA {{ $vault['bits'] }} Bit</span>
                             @endif
                         </td></tr>
                         {{-- Zum Vergleichen gedacht, nicht zum Lesen: gekürzt, aber eindeutig. --}}
@@ -70,7 +70,7 @@
                         <tr><td class="lbl">Hinterlegt</td><td>
                             {{ $vault['uploaded_at'] ? \Illuminate\Support\Carbon::parse($vault['uploaded_at'])->format('d.m.Y H:i') : '–' }}
                             @if ($vault['filename'])
-                                <span class="text-xs text-gray-400">· {{ $vault['filename'] }}</span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">· {{ $vault['filename'] }}</span>
                             @endif
                         </td></tr>
                     @endif
@@ -98,7 +98,7 @@
                                      erfährt, hat schon Lücken in den Umsätzen. --}}
                                 <span class="neg">– nur noch {{ $left }} Tage, bitte rechtzeitig erneuern</span>
                             @else
-                                <span class="text-xs text-gray-400">· noch {{ $left }} Tage</span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">· noch {{ $left }} Tage</span>
                             @endif
                         </td></tr>
                     @endif
@@ -127,7 +127,7 @@
             </table>
         </div>
 
-        <p class="mt-3 text-xs text-gray-400">
+        <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
             Ablauf: Schlüssel hochladen → <em>Selbsttest</em> → Bank wählen & speichern →
             <em>„Zur Bank und freigeben"</em> → bei der Bank anmelden und erlauben → danach täglich
             automatischer Abruf. TxWatch bekommt Ihre Zugangsdaten nie zu sehen, nur einen
@@ -140,7 +140,7 @@
             dort nachträgt, will sie kopieren können, ohne vorher einen Test zu
             fahren.
         --}}
-        <p class="mt-2 text-xs text-gray-400">
+        <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
             Im Control Panel von Enable Banking muss diese Rückkehr-Adresse eingetragen sein:<br>
             <code>{{ $this->callbackUrl }}</code>
         </p>
@@ -149,7 +149,7 @@
     <x-filament::section heading="Einrichtung">
         <form wire:submit="save">
             {{ $this->form }}
-            <div class="mt-4">
+            <div class="mt-3">
                 <x-filament::button type="submit">Speichern</x-filament::button>
             </div>
         </form>

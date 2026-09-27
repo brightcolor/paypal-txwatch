@@ -4,7 +4,7 @@
         exportiert, trifft damit eine Entscheidung über personenbezogene Daten,
         und die gehört vor die Auswahl und nicht hinter den Knopf.
     --}}
-    <div class="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm dark:border-amber-700 dark:bg-amber-950/40">
+    <div class="tx-alert tx-alert--warn">
         <strong>Personenbezogene Daten.</strong>
         Die Liste enthält Namen und E-Mail-Adressen von Gästen. Sie darf nur für den Zweck verwendet
         werden, für den die Daten erhoben wurden – eine Werbemail an alle Ticketkäufer ist davon in

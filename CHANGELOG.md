@@ -4,6 +4,38 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.69.0] - 2026-09-27
+
+### Geändert
+- **Neues Erscheinungsbild.** Links eine dunkle Navigationsleiste mit
+  gelber Kante am geöffneten Punkt, oben eine weiße Kopfzeile mit Vierfarbband, darunter ein warmer
+  Papiergrund mit Karten und leichtem Schatten. Seiten- und Kartentitel stehen in Anton-Versalien, der Text
+  in Atkinson Hyperlegible. Hauptknöpfe sind gelb mit dunkler Schrift. Zustände erscheinen als farbige
+  Pillen: Limette für erledigt, Gelb für offen, Pink für Probleme, Cyan für Hinweise. Hell- und Dunkelmodus
+  haben eigene Farbwerte, und jede Schrift ist in beiden auf Kontrast geprüft. Kompakte Tabellenzeilen, der
+  Seitentitel auf Höhe der Suche, Ladeanzeigen, Ziehen zum Scrollen und die Spaltenreihenfolge bleiben
+  erhalten.
+- **Die Anmeldung** zeigt ab mittlerer Bildschirmbreite links eine dunkle Hälfte mit Begrüßung und rechts
+  das Formular. Die Zwei-Faktor-Abfrage und die Seite, die während eines Updates erscheint, tragen
+  denselben Stil.
+- **Die Kennzahlen im Dashboard** stehen auf weißen Kacheln mit farbiger Oberkante. Die Farbe zeigt, worum
+  es geht: Umsatz, Anzahl, Gebühren, Betrag nach Gebühren oder Probleme. Auf der Berichtsseite stehen die
+  Kennzahlen in derselben Form.
+
+### Datenschutz
+- **Schriften und Profilbilder kommen aus TxWatch selbst.** Die Schriften (Anton, Atkinson Hyperlegible,
+  IBM Plex Mono, alle unter der SIL Open Font License) liegen im Projekt. Das Profilbild ist ein auf dem
+  Server erzeugtes Bild mit den Initialen. Bisher lud das Panel seine Schrift von fonts.bunny.net und schickte
+  den Namen jedes angemeldeten Benutzers an ui-avatars.com.
+
+### Behoben
+- **Klassen ohne Wirkung in eigenen Ansichten.** Einige Ansichten nutzten Farb- und Abstandsklassen, die im
+  ausgelieferten Stylesheet fehlen: Die Bestätigung „Adressen kopiert“ beim Teilnehmer-Export stand als
+  weiße Schrift auf weißem Feld, die CSV-Vorschau war im Dunkelmodus kaum lesbar, der Datenschutzhinweis
+  beim Export erschien ohne Warnfarbe, und auf mehreren Seiten fehlten Abstände. Ein Test prüft jetzt jede
+  Klasse der eigenen Ansichten gegen die ausgelieferten Stylesheets und verlangt zu jeder Textfarbe die
+  passende Farbe für den Dunkelmodus.
+
 ## [0.68.1] - 2026-09-21
 
 ### Behoben

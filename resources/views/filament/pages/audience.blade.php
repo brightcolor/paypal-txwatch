@@ -116,7 +116,7 @@
         </div>
     </x-filament::section>
 
-    <div class="aud">
+    <div>
         {{ $this->table }}
     </div>
 

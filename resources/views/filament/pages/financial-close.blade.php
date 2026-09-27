@@ -22,11 +22,11 @@
                     @if (($r['pretix_direct'] ?? 0) != 0)
                         <tr><td class="lbl muted">Zusätzlich direkt aufs Bankkonto (pretix, nicht über PayPal)</td><td class="num muted">{{ number_format($r['pretix_direct'], 2, ',', '.') }}&nbsp;€</td></tr>
                     @endif
-                    <tr style="border-top:2px solid #dee2e6;"><td class="lbl strong">= rechnerischer PayPal-Saldo (Verbleib)</td><td class="num net">{{ number_format($r['expected_balance'], 2, ',', '.') }}&nbsp;€</td></tr>
+                    <tr class="rpt-sum"><td class="lbl strong">= rechnerischer PayPal-Saldo (Verbleib)</td><td class="num net">{{ number_format($r['expected_balance'], 2, ',', '.') }}&nbsp;€</td></tr>
                 </tbody>
             </table>
         </div>
-        <p class="mt-2 text-xs text-gray-400">Hinweis: Rechnerischer Wert für den gewählten Zeitraum (ohne Anfangsbestand). Reserven/Holds (T21xx) sind keine Bank-Auszahlungen und hier nicht enthalten.</p>
+        <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Hinweis: Rechnerischer Wert für den gewählten Zeitraum (ohne Anfangsbestand). Reserven/Holds (T21xx) sind keine Bank-Auszahlungen und hier nicht enthalten.</p>
     </x-filament::section>
 
     <x-filament::section heading="Auszahlungen im Zeitraum" collapsible collapsed>
