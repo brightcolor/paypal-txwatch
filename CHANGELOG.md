@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.70.1] - 2026-09-28
+
+### Behoben
+- **Ticket-Statistik bei gestörter pretix-Verbindung.** War pretix nicht erreichbar, antwortete nicht
+  rechtzeitig, lehnte das API-Token ab oder meldete einen Fehler, brach die Seite mit einem Serverfehler (500)
+  ab, ebenso „Aktualisieren“. Jetzt zeigt die Seite eine Meldung mit der betroffenen Verbindung, der Ursache
+  und dem nächsten Schritt. Der Fehler steht zusätzlich unter „System → Fehler-Log“.
+- **Zwischenspeicher nur mit vollständigen Zahlen.** Scheiterte die Abfrage der Kontingente einer
+  Veranstaltung, erschien sie mit null verkauften Tickets, und dieser Stand blieb im Zwischenspeicher.
+  Zwischengespeichert werden jetzt nur erfolgreich geladene Zahlen.
+
+### Geändert
+- Die Dauer des Zwischenspeichers der Ticket-Statistik (`PRETIX_TICKET_STATS_CACHE_SECONDS`, Vorgabe
+  600 Sekunden) und das Zeitlimit für Anfragen an pretix (`PRETIX_HTTP_TIMEOUT`, Vorgabe 20 Sekunden) sind
+  einstellbar, siehe README.
+
 ## [0.70.0] - 2026-09-27
 
 ### Hinzugefügt

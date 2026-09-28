@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\PretixConnection;
 use App\Services\Pretix\PretixTicketStats;
+use App\Services\Pretix\PretixUnavailable;
 use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -33,6 +34,14 @@ class TicketStatsPage extends Page implements HasForms
     protected static string $view = 'filament.pages.ticket-stats';
 
     public ?array $data = [];
+
+    /**
+     * Rows or failure of this request, shared by the view and the refresh
+     * action so pretix is asked once and a failure is reported once.
+     *
+     * @var array{rows: Collection<int, array<string, mixed>>, failure: ?PretixUnavailable}|null
+     */
+    private ?array $loaded = null;
 
     public static function canAccess(): bool
     {
@@ -68,14 +77,13 @@ class TicketStatsPage extends Page implements HasForms
     /** @return Collection<int, array<string, mixed>> */
     public function getRowsProperty(): Collection
     {
-        $id = $this->data['connection_id'] ?? null;
-        $connection = $id ? PretixConnection::find($id) : null;
+        return $this->load()['rows'];
+    }
 
-        if (! $connection) {
-            return collect();
-        }
-
-        return app(PretixTicketStats::class)->forConnection($connection);
+    /** Why the figures are missing, or null when they loaded. */
+    public function getFailureProperty(): ?PretixUnavailable
+    {
+        return $this->load()['failure'];
     }
 
     protected function getHeaderActions(): array
@@ -85,12 +93,57 @@ class TicketStatsPage extends Page implements HasForms
                 ->label('Aktualisieren')
                 ->icon('heroicon-o-arrow-path')
                 ->action(function () {
-                    $id = $this->data['connection_id'] ?? null;
-                    if ($id && $connection = PretixConnection::find($id)) {
-                        app(PretixTicketStats::class)->forConnection($connection, fresh: true);
-                        Notification::make()->title('Aktualisiert')->success()->send();
+                    if (! $this->connection()) {
+                        return;
                     }
+
+                    $failure = $this->load(fresh: true)['failure'];
+
+                    if ($failure) {
+                        Notification::make()
+                            ->title('Aktualisieren fehlgeschlagen')
+                            ->body($failure->userMessage())
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
+
+                    Notification::make()->title('Aktualisiert')->success()->send();
                 }),
         ];
+    }
+
+    /** @return array{rows: Collection<int, array<string, mixed>>, failure: ?PretixUnavailable} */
+    private function load(bool $fresh = false): array
+    {
+        if ($this->loaded !== null && ! $fresh) {
+            return $this->loaded;
+        }
+
+        $connection = $this->connection();
+
+        if (! $connection) {
+            return $this->loaded = ['rows' => collect(), 'failure' => null];
+        }
+
+        try {
+            return $this->loaded = [
+                'rows' => app(PretixTicketStats::class)->forConnection($connection, $fresh),
+                'failure' => null,
+            ];
+        } catch (PretixUnavailable $e) {
+            // Into laravel.log and error_log_entries, like any other server-side error.
+            report($e);
+
+            return $this->loaded = ['rows' => collect(), 'failure' => $e];
+        }
+    }
+
+    private function connection(): ?PretixConnection
+    {
+        $id = $this->data['connection_id'] ?? null;
+
+        return $id ? PretixConnection::find($id) : null;
     }
 }

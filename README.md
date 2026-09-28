@@ -372,7 +372,16 @@ DB-Fehler nicht zurück in die DB, damit das Logging nie den Request killt oder 
   Eingang netto, ausgezahlte Beträge, rechnerischer Saldo) und **Monatsabschluss** für den Steuerberater
   (Umsatz/Gebühren/Erstattungen/MwSt pro Monat, CSV-Download).
 - **Ticket-Statistik** (pretix → Ticket-Statistik): Kapazität vs. verkauft/verfügbar je Event, live aus den
-  pretix-Kontingenten (gecacht, aktualisierbar).
+  pretix-Kontingenten (gecacht, aktualisierbar). Ist pretix nicht erreichbar, antwortet zu langsam, lehnt das
+  Token ab oder meldet einen Fehler, zeigt die Seite eine Meldung mit der betroffenen Verbindung, der Ursache
+  und dem nächsten Schritt; der Fehler steht zusätzlich unter **System → Fehler-Log**. Zwischengespeichert
+  werden nur erfolgreich geladene Zahlen. Einstellbar (Werte außerhalb der Grenzen stoppen mit einer Meldung,
+  die die Variable nennt):
+
+  | Variable | Vorgabe | Grenzen | Wirkung |
+  |---|---|---|---|
+  | `PRETIX_TICKET_STATS_CACHE_SECONDS` | 600 | 0–86400 | Sekunden, die die Zahlen einer Verbindung zwischengespeichert bleiben; 0 schaltet den Zwischenspeicher ab |
+  | `PRETIX_HTTP_TIMEOUT` | 20 | 1–300 | Sekunden, die eine Anfrage an pretix dauern darf (gilt für alle pretix-Abrufe) |
 - **Käuferkonflikte** (PayPal → Käuferkonflikte): offene PayPal-Disputes aller Konten mit Antwortfrist;
   der Scheduler (`disputes:check`, alle 6 h) meldet neue Disputes an Admins – Frühwarnung vor Rückbuchungen.
 - **E-Mail-Versand** (Einstellungen → E-Mail-Versand): SMTP im Panel konfigurierbar (Passwort verschlüsselt,

@@ -6,6 +6,12 @@
     <x-filament::section heading="Kapazität &amp; Verkauf je Event">
         <x-slot name="description">Live aus den pretix-Kontingenten (zwischengespeichert, oben rechts aktualisierbar). „Verkauft/blockiert" = Kapazität − verfügbar.</x-slot>
 
+        @if ($this->failure)
+            <div class="tx-alert tx-alert--warn" role="alert">
+                <strong>{{ $this->failure->summary() }}</strong>
+                {{ $this->failure->advice() }}
+            </div>
+        @else
         <div class="rpt-wrap">
             <table class="rpt" style="min-width: 40rem;">
                 <thead>
@@ -33,10 +39,11 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="rpt-empty">Keine Events/Kontingente gefunden (oder Verbindung nicht erreichbar).</td></tr>
+                        <tr><td colspan="5" class="rpt-empty">Keine Events oder Kontingente gefunden.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+        @endif
     </x-filament::section>
 </x-filament-panels::page>

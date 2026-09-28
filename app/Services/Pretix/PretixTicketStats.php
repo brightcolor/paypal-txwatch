@@ -3,6 +3,8 @@
 namespace App\Services\Pretix;
 
 use App\Models\PretixConnection;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
@@ -13,10 +15,10 @@ use Illuminate\Support\Facades\Cache;
  */
 class PretixTicketStats
 {
-    private const TTL_SECONDS = 600;
-
     /**
      * @return Collection<int, array{slug: string, name: string, capacity: ?int, sold: int, available: int, unlimited: bool, ratio: ?float}>
+     *
+     * @throws PretixUnavailable when pretix cannot be asked or answers with an error
      */
     public function forConnection(PretixConnection $connection, bool $fresh = false): Collection
     {
@@ -26,25 +28,33 @@ class PretixTicketStats
             Cache::forget($key);
         }
 
-        return Cache::remember($key, self::TTL_SECONDS, function () use ($connection) {
-            $client = new PretixClient($connection);
+        try {
+            // A failed call throws before anything is stored, so no failure is ever cached.
+            return Cache::remember($key, PretixSettings::ticketStatsCacheSeconds(), fn () => $this->fetch($connection));
+        } catch (ConnectionException|RequestException $e) {
+            throw PretixUnavailable::from($e, $connection);
+        }
+    }
 
-            return collect($client->events())
-                ->map(function (array $event) use ($client) {
-                    $avail = $client->ticketAvailability($event['slug']);
-                    $capacity = $avail['capacity'];
+    private function fetch(PretixConnection $connection): Collection
+    {
+        $client = new PretixClient($connection);
 
-                    return [
-                        'slug' => $event['slug'],
-                        'name' => $event['name'] ?? $event['slug'],
-                        'capacity' => $capacity,
-                        'sold' => $avail['sold'],
-                        'available' => $avail['available'],
-                        'unlimited' => $avail['unlimited'],
-                        'ratio' => ($capacity && $capacity > 0) ? round($avail['sold'] / $capacity * 100, 1) : null,
-                    ];
-                })
-                ->values();
-        });
+        return collect($client->events())
+            ->map(function (array $event) use ($client) {
+                $avail = $client->quotaAvailability($event['slug']);
+                $capacity = $avail['capacity'];
+
+                return [
+                    'slug' => $event['slug'],
+                    'name' => $event['name'] ?? $event['slug'],
+                    'capacity' => $capacity,
+                    'sold' => $avail['sold'],
+                    'available' => $avail['available'],
+                    'unlimited' => $avail['unlimited'],
+                    'ratio' => ($capacity && $capacity > 0) ? round($avail['sold'] / $capacity * 100, 1) : null,
+                ];
+            })
+            ->values();
     }
 }

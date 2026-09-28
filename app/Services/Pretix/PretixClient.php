@@ -21,7 +21,7 @@ class PretixClient
     {
         return Http::withToken($this->connection->api_token, 'Token')
             ->acceptJson()
-            ->timeout(20)
+            ->timeout(PretixSettings::httpTimeout())
             ->baseUrl($this->connection->apiBaseUrl());
     }
 
@@ -400,14 +400,30 @@ class PretixClient
     }
 
     /**
-     * Ticket capacity/availability for an event, aggregated across its quotas.
-     * pretix' quota endpoint with ?with_availability=true returns each quota's
-     * total size and remaining available_number; sold/blocked = size - available.
-     * A quota with size=null is unlimited and marks the event as uncapped.
+     * Like quotaAvailability(); a failed call yields neutral figures (capacity
+     * null). Used by the event cover, which renders without them.
      *
      * @return array{capacity: ?int, available: int, sold: int, unlimited: bool, quotas: int}
      */
     public function ticketAvailability(string $eventSlug): array
+    {
+        try {
+            return $this->quotaAvailability($eventSlug);
+        } catch (Throwable) {
+            return ['capacity' => null, 'available' => 0, 'sold' => 0, 'unlimited' => false, 'quotas' => 0];
+        }
+    }
+
+    /**
+     * Ticket capacity/availability for an event, aggregated across its quotas.
+     * pretix' quota endpoint with ?with_availability=true returns each quota's
+     * total size and remaining available_number; sold/blocked = size - available.
+     * A quota with size=null is unlimited and marks the event as uncapped.
+     * A failed call throws, so a caller that caches the figures never stores zeros.
+     *
+     * @return array{capacity: ?int, available: int, sold: int, unlimited: bool, quotas: int}
+     */
+    public function quotaAvailability(string $eventSlug): array
     {
         $organizer = $this->connection->organizer_slug;
 
@@ -416,30 +432,26 @@ class PretixClient
         $unlimited = false;
         $quotaCount = 0;
 
-        try {
-            $this->paginate(
-                "/organizers/{$organizer}/events/{$eventSlug}/quotas/",
-                function (array $page) use (&$capacity, &$available, &$unlimited, &$quotaCount) {
-                    foreach ($page as $quota) {
-                        $quotaCount++;
-                        $size = $quota['size'] ?? null; // null = unlimited
-                        $avail = $quota['available_number'] ?? null;
+        $this->paginate(
+            "/organizers/{$organizer}/events/{$eventSlug}/quotas/",
+            function (array $page) use (&$capacity, &$available, &$unlimited, &$quotaCount) {
+                foreach ($page as $quota) {
+                    $quotaCount++;
+                    $size = $quota['size'] ?? null; // null = unlimited
+                    $avail = $quota['available_number'] ?? null;
 
-                        if ($size === null) {
-                            $unlimited = true;
+                    if ($size === null) {
+                        $unlimited = true;
 
-                            continue;
-                        }
-
-                        $capacity += (int) $size;
-                        $available += (int) ($avail ?? 0);
+                        continue;
                     }
-                },
-                ['with_availability' => 'true'],
-            );
-        } catch (Throwable) {
-            return ['capacity' => null, 'available' => 0, 'sold' => 0, 'unlimited' => false, 'quotas' => 0];
-        }
+
+                    $capacity += (int) $size;
+                    $available += (int) ($avail ?? 0);
+                }
+            },
+            ['with_availability' => 'true'],
+        );
 
         return [
             'capacity' => $unlimited && $capacity === 0 ? null : $capacity,
