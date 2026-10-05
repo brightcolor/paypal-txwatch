@@ -4,6 +4,25 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.70.3] - 2026-10-05
+
+### Sicherheit
+- **Drei Composer-Pakete auf behobene Versionen gehoben.** Jedes steht auf der kleinsten Version, die die
+  zugehörige Sicherheitsmeldung schließt:
+  - `livewire/livewire` 3.8.2 → 3.8.3 (GHSA-g3hc-697w-wm82)
+  - `laravel/framework` 13.19.0 → 13.30.0 (GHSA-jh5r-qr3c-85q8)
+  - `league/flysystem` 3.35.2 → 3.35.3 (GHSA-cxf4-7mrp-vvpr)
+- **Feste Rechte und feste Versionen im CI-Workflow.** Der Token jedes Jobs darf das Repository lesen, der
+  Docker-Job zusätzlich das Image veröffentlichen. Jede Action ist auf den Commit ihres Releases festgelegt, die
+  Version steht als Kommentar dahinter. `tests/Unit/WorkflowPinsTest.php` prüft beides für alle Workflows.
+- **npm installiert nur Paketversionen, die seit mindestens sieben Tagen veröffentlicht sind**
+  (`min-release-age=7` in `.npmrc`, ab npm 11.10).
+
+### Geändert
+- Das Docker-Image wechselt für die Installation von Puppeteer mit `WORKDIR` in den Modulordner. Ordner und
+  Hauptversion sind Build-Argumente (`PUPPETEER_DIR`, Vorgabe `/opt/node`; `PUPPETEER_MAJOR`, Vorgabe `22`), und
+  `NODE_MODULE_PATH` folgt dem Ordner. Ein Eintrag in der `.env` hat weiter Vorrang.
+
 ## [0.70.2] - 2026-10-05
 
 ### Sicherheit

@@ -1,0 +1,13 @@
+# Hält die auf Commits festgelegten GitHub Actions aktuell. Neue Fassungen
+# schlägt Dependabot erst nach sieben Tagen vor, gesammelt in einem PR je Woche.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]
