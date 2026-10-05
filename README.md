@@ -137,6 +137,14 @@ Für lokale Entwicklung ohne Docker reicht `php artisan serve` (siehe oben) – 
 Postgres/Redis/Chromium sind primär fürs Server-Deployment gedacht. Wer trotzdem lokal mit Docker bauen will,
 kann `image:` in `docker-compose.yml` durch `build: {context: ., dockerfile: docker/Dockerfile}` ersetzen.
 
+Build-Argumente des Images (`docker build --build-arg NAME=Wert`):
+
+| Argument | Vorgabe | Wirkung |
+|---|---|---|
+| `NODE_MAJOR` | 20 | Hauptversion von Node.js aus NodeSource |
+| `PUPPETEER_DIR` | `/opt/node` | Ordner des Puppeteer-Moduls für den PDF-Export; `NODE_MODULE_PATH` zeigt auf `<Ordner>/node_modules`, ein Eintrag in der `.env` hat Vorrang |
+| `PUPPETEER_MAJOR` | 22 | Hauptversion von Puppeteer |
+
 ## PayPal-App einrichten
 
 1. Im [PayPal Developer Dashboard](https://developer.paypal.com/dashboard/) eine REST-API-App anlegen
@@ -558,3 +566,10 @@ idempotenten Upsert/Änderungsverlauf, Event-Zuordnungsregeln, Sync-Fehlerbehand
   | `TWO_FACTOR_TRUSTED_DEVICE_COOKIE` | `txwatch_2fa_device` | 1–64 Zeichen `A-Za-z0-9_-` | Name des Cookies für bestätigte Geräte |
 - **2FA-Erinnerung für Admins**: Admins ohne 2FA sehen einmal pro Sitzung einen Hinweis mit Link zur
   Einrichtung, arbeiten aber ganz normal weiter (`TWO_FACTOR_NAG_ADMINS=true`, mit `false` abschaltbar).
+- **CI-Workflow**: Der Token jedes Jobs darf das Repository lesen, der Docker-Job zusätzlich das Image in die
+  GitHub Container Registry schreiben. Jede Action ist auf den Commit ihres Releases festgelegt, die Version
+  steht als Kommentar dahinter (`uses: actions/checkout@<SHA> # v5.1.0`). Eine neue Version wird mit der
+  Commit-SHA ihres Releases eingetragen; `tests/Unit/WorkflowPinsTest.php` prüft Rechte und Festlegung.
+- **npm**: `.npmrc` lässt npm nur Paketversionen installieren, die seit mindestens sieben Tagen veröffentlicht
+  sind (`min-release-age=7`, ab npm 11.10), und Installationsskripte von Paketen bleiben aus
+  (`ignore-scripts=true`).
