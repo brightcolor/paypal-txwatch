@@ -4,7 +4,7 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
-## [Unreleased]
+## [0.70.3] - 2026-10-05
 
 ### Sicherheit
 - **Drei Composer-Pakete auf behobene Versionen gehoben.** Jedes steht auf der kleinsten Version, die die
