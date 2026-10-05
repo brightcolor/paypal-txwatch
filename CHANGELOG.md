@@ -4,7 +4,7 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
-## [Unreleased]
+## [0.70.2] - 2026-10-05
 
 ### Sicherheit
 - **Abhängigkeiten mit bekannten Sicherheitslücken aktualisiert.** Dependabot und Trivy meldeten 28 Funde der
