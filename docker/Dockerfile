@@ -24,10 +24,17 @@ COPY docker/php-fpm-pool.conf /usr/local/etc/php-fpm.d/zz-app.conf
 # that. PUPPETEER_SKIP_DOWNLOAD avoids pulling puppeteer's bundled ~200MB
 # Chromium since we already installed the distro's chromium package above
 # (see config/pdf.php chrome_path).
-ENV PUPPETEER_SKIP_DOWNLOAD=true
-RUN mkdir -p /opt/node && cd /opt/node \
-    && npm init -y >/dev/null \
-    && npm install puppeteer@22
+#
+# PUPPETEER_DIR is the folder of the module and PUPPETEER_MAJOR its major
+# version. NODE_MODULE_PATH follows the folder, so config/pdf.php finds the
+# module there; an entry in .env still takes precedence.
+ARG PUPPETEER_DIR=/opt/node
+ARG PUPPETEER_MAJOR=22
+ENV PUPPETEER_SKIP_DOWNLOAD=true \
+    NODE_MODULE_PATH=${PUPPETEER_DIR}/node_modules
+WORKDIR ${PUPPETEER_DIR}
+RUN npm init -y >/dev/null \
+    && npm install "puppeteer@${PUPPETEER_MAJOR}"
 
 WORKDIR /var/www/html
 
