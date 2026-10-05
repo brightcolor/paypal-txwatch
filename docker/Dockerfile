@@ -1,6 +1,8 @@
 FROM php:8.3-fpm-bookworm
 
-ARG NODE_MAJOR=20
+# Major version of Node.js from NodeSource. Node.js runs Puppeteer for the PDF
+# export; Puppeteer 25 (PUPPETEER_MAJOR below) needs Node.js 22.12 or later.
+ARG NODE_MAJOR=24
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git unzip zip curl \
@@ -28,13 +30,18 @@ COPY docker/php-fpm-pool.conf /usr/local/etc/php-fpm.d/zz-app.conf
 # PUPPETEER_DIR is the folder of the module and PUPPETEER_MAJOR its major
 # version. NODE_MODULE_PATH follows the folder, so config/pdf.php finds the
 # module there; an entry in .env still takes precedence.
+#
+# Each Puppeteer release is built for one Chrome version (25.12: Chrome 154),
+# and the chromium package comes with Debian's security updates. CI renders
+# sample PDFs in the built image (`php artisan pdf:check`) before pushing it.
+# --engine-strict stops the build when NODE_MAJOR is too old for Puppeteer.
 ARG PUPPETEER_DIR=/opt/node
-ARG PUPPETEER_MAJOR=22
+ARG PUPPETEER_MAJOR=25
 ENV PUPPETEER_SKIP_DOWNLOAD=true \
     NODE_MODULE_PATH=${PUPPETEER_DIR}/node_modules
 WORKDIR ${PUPPETEER_DIR}
 RUN npm init -y >/dev/null \
-    && npm install "puppeteer@${PUPPETEER_MAJOR}"
+    && npm install --engine-strict "puppeteer@${PUPPETEER_MAJOR}"
 
 WORKDIR /var/www/html
 

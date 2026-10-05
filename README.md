@@ -31,7 +31,7 @@ app/Jobs/, app/Console/    Hintergrundjobs, Artisan-Commands, Scheduler
 
 ## Installation (lokal, ohne Docker)
 
-Voraussetzungen: PHP 8.3+, Composer, PostgreSQL, Redis, Node.js 18+ (nur für PDF-Export nötig).
+Voraussetzungen: PHP 8.3+, Composer, PostgreSQL, Redis, Node.js 22.12+ (nur für PDF-Export nötig).
 
 ```bash
 composer install
@@ -46,9 +46,10 @@ php artisan serve
 Der Seeder legt Rollen (`admin`, `manager`, `customer`, `auditor`) sowie einen Admin-Benutzer
 `admin@example.com` / `password` an. **Passwort nach dem ersten Login sofort ändern.**
 
-Für den PDF-Export lokal ohne Docker wird ein Node.js mit `puppeteer` sowie ein Chromium/Chrome-Binary
-benötigt; siehe `config/pdf.php` (`CHROMIUM_PATH`, `NODE_MODULE_PATH` in `.env`). Ohne Docker ist das optional –
-CSV-/XLSX-Export funktionieren unabhängig davon immer.
+Für den PDF-Export lokal ohne Docker wird ein Node.js mit `puppeteer` (Hauptversion 25, wie im Image) sowie ein
+Chromium/Chrome-Binary benötigt; siehe `config/pdf.php` (`CHROMIUM_PATH`, `NODE_MODULE_PATH` in `.env`). Ohne Docker ist
+das optional – CSV-/XLSX-Export funktionieren unabhängig davon immer. Ob die PDF-Erzeugung läuft, zeigt
+`php artisan pdf:check` (siehe [PDF-Erzeugung prüfen](#pdf-erzeugung-prüfen)).
 
 ## Deployment mit Docker Compose (Produktion)
 
@@ -141,9 +142,27 @@ Build-Argumente des Images (`docker build --build-arg NAME=Wert`):
 
 | Argument | Vorgabe | Wirkung |
 |---|---|---|
-| `NODE_MAJOR` | 20 | Hauptversion von Node.js aus NodeSource |
+| `NODE_MAJOR` | 24 | Hauptversion von Node.js aus NodeSource |
 | `PUPPETEER_DIR` | `/opt/node` | Ordner des Puppeteer-Moduls für den PDF-Export; `NODE_MODULE_PATH` zeigt auf `<Ordner>/node_modules`, ein Eintrag in der `.env` hat Vorrang |
-| `PUPPETEER_MAJOR` | 22 | Hauptversion von Puppeteer |
+| `PUPPETEER_MAJOR` | 25 | Hauptversion von Puppeteer; Puppeteer 25 braucht Node.js 22.12 oder neuer |
+
+Passen `NODE_MAJOR` und `PUPPETEER_MAJOR` nicht zusammen, bricht der Build bei `npm install` mit der Meldung von npm
+ab, welche Node.js-Version Puppeteer verlangt (`--engine-strict`). Chromium kommt als Paket `chromium` aus Debian
+(Sicherheitsupdates von bookworm); jede Puppeteer-Version ist für eine bestimmte Chrome-Version gebaut (25.12: Chrome 154).
+
+### PDF-Erzeugung prüfen
+
+```bash
+docker compose exec app php artisan pdf:check
+```
+
+Der Befehl erzeugt drei Beispiel-PDFs über denselben Weg wie die Exporte (Blade-Ansicht, Browsershot, Puppeteer,
+Chromium): einen Transaktionsexport mit Deckblatt, eine Abrechnung und eine Sammelabrechnung. Die Beispiele entstehen
+im Speicher aus erfundenen Daten; aus der Datenbank kommt nur das Branding (Logo und Claim), wie bei jedem PDF-Export.
+Der Befehl nennt Versionen und Pfade von Node.js, Puppeteer und Chromium, prüft jedes Ergebnis auf PDF-Kopf und
+Seitenzahl und endet bei einem Fehler mit Code 1 und der Ursache. Mit `--output=<Ordner>` legt er die PDFs dort ab.
+Die CI führt ihn im frisch gebauten Image aus, bevor sie es veröffentlicht, und hängt die PDFs als Artefakt
+`pdf-check` an den Lauf.
 
 ## PayPal-App einrichten
 
@@ -506,7 +525,7 @@ DB-Fehler nicht zurück in die DB, damit das Logging nie den Request killt oder 
 | Verbindungstest schlägt mit "Authentifizierung fehlgeschlagen" fehl | Client ID/Secret falsch oder Sandbox/Live vertauscht |
 | Verbindungstest meldet fehlende Berechtigung | "Transaction Search" Feature im PayPal-Dashboard für die App aktivieren |
 | Sync-Lauf mit Fehler `RESULTSET_TOO_LARGE` in den Sync-Logs | Wird automatisch behandelt (Zeitraum wird intern weiter verkleinert); erscheint nur, wenn selbst die kleinste konfigurierte Stufe (1h) noch zu groß ist – in dem Fall Zeitraum manuell weiter eingrenzen |
-| PDF-Export schlägt fehl ("Node.js/Chromium…") | Läuft zuverlässig mit Docker Compose (Chromium/Puppeteer im Image enthalten); lokal ohne Docker `CHROMIUM_PATH`/`NODE_MODULE_PATH` in `.env` auf eine funktionierende Node/Chromium-Installation zeigen lassen. CSV/XLSX funktionieren immer, auch ohne Chromium |
+| PDF-Export schlägt fehl ("Node.js/Chromium…") | `php artisan pdf:check` ausführen (im Container: `docker compose exec app php artisan pdf:check`); der Befehl nennt Node.js, Puppeteer und Chromium und die Ursache. Läuft zuverlässig mit Docker Compose (Chromium/Puppeteer im Image enthalten); lokal ohne Docker `CHROMIUM_PATH`/`NODE_MODULE_PATH` in `.env` auf eine funktionierende Node/Chromium-Installation zeigen lassen. CSV/XLSX funktionieren immer, auch ohne Chromium |
 | Transaktionen tauchen doppelt mit leicht unterschiedlichen Daten auf | Kein Bug: PayPal kann dieselbe `transaction_id` mit späteren Aktualisierungen (Status, Updated Date) erneut liefern. PayPal TxWatch legt dafür bewusst eine neue Revision an (Änderungsverlauf), statt sie zu überschreiben – sichtbar über die geteilte `transaction_id` |
 | Automatischer Sync läuft nicht | Prüfen, ob `queue:work` und `schedule:work` (bzw. die Docker-Services `queue`/`scheduler`) laufen und das Konto `sync_enabled=true` hat |
 | Seite 500t / weißer Schirm | **System → Fehler-Log** ansehen (oder `php artisan errors:recent`) – der genaue Fehler samt Trace, Route und Request steht dort |
@@ -569,7 +588,8 @@ idempotenten Upsert/Änderungsverlauf, Event-Zuordnungsregeln, Sync-Fehlerbehand
 - **CI-Workflow**: Der Token jedes Jobs darf das Repository lesen, der Docker-Job zusätzlich das Image in die
   GitHub Container Registry schreiben. Jede Action ist auf den Commit ihres Releases festgelegt, die Version
   steht als Kommentar dahinter (`uses: actions/checkout@<SHA> # v5.1.0`). Eine neue Version wird mit der
-  Commit-SHA ihres Releases eingetragen; `tests/Unit/WorkflowPinsTest.php` prüft Rechte und Festlegung.
+  Commit-SHA ihres Releases eingetragen; `tests/Unit/WorkflowPinsTest.php` prüft Rechte und Festlegung. Der
+  Docker-Job veröffentlicht das Image erst, nachdem `php artisan pdf:check` darin Beispiel-PDFs erzeugt hat.
 - **npm**: `.npmrc` lässt npm nur Paketversionen installieren, die seit mindestens sieben Tagen veröffentlicht
   sind (`min-release-age=7`, ab npm 11.10), und Installationsskripte von Paketen bleiben aus
   (`ignore-scripts=true`).

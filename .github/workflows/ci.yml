@@ -80,6 +80,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      # Local tag of the image under test in the runner; the registry tags come
+      # from the metadata step.
+      CHECK_IMAGE: paypal-txwatch:check
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
@@ -105,13 +109,48 @@ jobs:
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push image
+      # The image goes into the runner's Docker first, so the PDF check below
+      # runs in exactly this image. A push to main reaches production right away
+      # (Watchtower), so the push further down follows only a passed check.
+      - name: Build image
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: docker/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
+          load: true
+          tags: ${{ env.CHECK_IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Renders a transaction export, an event settlement and a customer
+      # settlement through the app's PDF path (Blade view, Browsershot,
+      # Puppeteer, Chromium) with fictitious data, see
+      # app/Console/Commands/PdfCheckCommand.php. It needs no database.
+      - name: Check PDF generation in the image
+        run: |
+          mkdir -m 777 pdf-check
+          docker run --rm \
+            --env LOG_CHANNEL=stderr \
+            --volume "$PWD/pdf-check:/pdf-check" \
+            "$CHECK_IMAGE" php artisan pdf:check --output=/pdf-check
+
+      - name: Keep the sample PDFs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pdf-check
+          path: pdf-check/
+          if-no-files-found: ignore
+
+      # Same Dockerfile and context as "Build image": every layer comes from
+      # that build, and the registry gets the tags and labels.
+      - name: Push image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
