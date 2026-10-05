@@ -23,6 +23,11 @@ Versionierung nach [SemVer](https://semver.org/lang/de/).
 - **PDF-Prüfung vor dem Veröffentlichen des Images.** Der Docker-Job der CI baut das Image zuerst in den Runner,
   führt darin `php artisan pdf:check` aus und schiebt es erst danach in die Registry. Die Beispiel-PDFs hängen als
   Artefakt `pdf-check` am Lauf.
+- **`.semgrepignore`** nimmt die von Filament veröffentlichten JavaScript-Bündel unter `public/js/filament/` vom
+  Semgrep-Scan aus. Semgreps eingebaute Liste gilt nur, solange es keine eigene `.semgrepignore` gibt; die Datei
+  übernimmt sie deshalb unverändert, und der Scan erfasst außer den Bündeln dieselben Dateien wie bisher.
+  `tests/Unit/SemgrepIgnoreTest.php` prüft, dass in `public/js/filament/` ausschließlich unveränderte Dateien aus
+  `vendor/filament/*/dist` liegen.
 
 ### Behoben
 - **PDF der Sammelabrechnung.** Eine Abrechnung über alle Events eines Kunden ließ sich weder als PDF herunterladen

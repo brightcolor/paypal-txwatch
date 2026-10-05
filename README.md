@@ -590,6 +590,10 @@ idempotenten Upsert/Änderungsverlauf, Event-Zuordnungsregeln, Sync-Fehlerbehand
   steht als Kommentar dahinter (`uses: actions/checkout@<SHA> # v5.1.0`). Eine neue Version wird mit der
   Commit-SHA ihres Releases eingetragen; `tests/Unit/WorkflowPinsTest.php` prüft Rechte und Festlegung. Der
   Docker-Job veröffentlicht das Image erst, nachdem `php artisan pdf:check` darin Beispiel-PDFs erzeugt hat.
+- **Semgrep**: `.semgrepignore` nimmt die von Filament veröffentlichten JavaScript-Bündel unter `public/js/filament/`
+  vom Scan aus. Semgreps eingebaute Liste (u. a. `vendor/`, `node_modules/`, `tests/`) gilt nur, solange es keine
+  eigene `.semgrepignore` gibt; die Datei übernimmt sie deshalb unverändert. `tests/Unit/SemgrepIgnoreTest.php`
+  prüft, dass in dem Ordner ausschließlich unveränderte Dateien aus `vendor/filament/*/dist` liegen.
 - **npm**: `.npmrc` lässt npm nur Paketversionen installieren, die seit mindestens sieben Tagen veröffentlicht
   sind (`min-release-age=7`, ab npm 11.10), und Installationsskripte von Paketen bleiben aus
   (`ignore-scripts=true`).
