@@ -93,6 +93,13 @@ class SettlementTest extends TestCase
         $this->assertNull($settlement->event_id);
         $this->assertSame($customer->id, $settlement->customer_id);
         $this->assertCount(2, $settlement->events);
+
+        // The PDF view has no event here and shows the per-event breakdown.
+        $view = view('exports.settlement', $settlement->fresh()->pdfData())->render();
+        $this->assertStringContainsString('<title>Sammelabrechnung: SV Wismar</title>', $view);
+        $this->assertStringContainsString('Fest A', $view);
+        $this->assertStringContainsString('Fest B', $view);
+        $this->assertStringContainsString('Auszahlungsbetrag', $view);
     }
 
     public function test_mark_paid_transition(): void
