@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [0.70.2] - 2026-10-05
+
+### Sicherheit
+- **Abhängigkeiten mit bekannten Sicherheitslücken aktualisiert.** Dependabot und Trivy meldeten 28 Funde der
+  Stufe „hoch“ in vier Composer-Paketen. Jedes Paket steht jetzt auf der kleinsten Version, die die gemeldeten
+  Lücken schließt:
+  - `league/commonmark` 2.8.2 → 2.10.2: schließt mehrere Denial-of-Service-Lücken beim Umwandeln präparierter
+    Markdown-Texte, darunter eine in der Tabellen-Erweiterung, die Laravel für Markdown-Mails lädt, sowie eine
+    XSS-Lücke in der Attributes-Erweiterung.
+  - `guzzlehttp/guzzle` 7.14.0 → 7.15.2, dazu `guzzlehttp/psr7` 2.12.4 → 2.13.0: Guzzle weist Hostnamen in
+    nicht kanonischer Schreibweise ab, mit denen sich hostbasierte Prüfungen umgehen ließen. Über Guzzle laufen
+    die Anfragen an PayPal, pretix und Enable Banking.
+  - `maatwebsite/excel` 3.1.69 → 3.1.70: `Excel::store()` schreibt Exporte ausschließlich über den
+    konfigurierten Speicher (Disk). TxWatch übergibt dort selbst erzeugte Pfade unter `exports/`.
+  - `phpoffice/phpspreadsheet` 1.30.5 → 1.30.6: schließt eine SSRF-Lücke in der Formelfunktion `WEBSERVICE()`
+    und zwei Lücken, über die präparierte Gnumeric- und XLS-Dateien den Arbeitsspeicher erschöpfen.
+
 ## [0.70.1] - 2026-09-28
 
 ### Behoben
