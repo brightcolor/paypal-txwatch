@@ -4,6 +4,38 @@ Alle nennenswerten Änderungen an PayPal TxWatch werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [Unreleased]
+
+## [0.71.0] - 2026-10-09
+
+### Sicherheit
+- **Puppeteer 25 und Node.js 24 im Docker-Image.** Das Image installiert Puppeteer in der aktuellen Hauptversion 25
+  (Build-Argument `PUPPETEER_MAJOR`, Vorgabe `25`). Puppeteer 25 braucht Node.js 22.12 oder neuer; das Image
+  installiert Node.js 24 aus NodeSource, eine LTS-Linie (Build-Argument `NODE_MAJOR`, Vorgabe `24`). Puppeteer 25.12
+  ist für Chrome 154 gebaut, dieselbe Hauptversion wie das Paket `chromium` aus den Sicherheitsupdates von Debian
+  bookworm. Passen die beiden Build-Argumente nicht zusammen, bricht `npm install` den Build ab und nennt die
+  verlangte Node.js-Version (`--engine-strict`).
+
+### Hinzugefügt
+- **`php artisan pdf:check` prüft die PDF-Erzeugung.** Der Befehl erzeugt einen Transaktionsexport mit Deckblatt,
+  eine Abrechnung und eine Sammelabrechnung aus erfundenen Daten, über denselben Weg wie die Exporte (Blade-Ansicht,
+  Browsershot, Puppeteer, Chromium). Er nennt Versionen und Pfade von Node.js, Puppeteer und Chromium, prüft jedes
+  Ergebnis auf PDF-Kopf und Seitenzahl und endet bei einem Fehler mit Code 1, der Ursache und den Einstellungen, die
+  zu prüfen sind. Mit `--output=<Ordner>` legt er die PDFs dort ab. Aus der Datenbank kommt nur das Branding.
+- **PDF-Prüfung vor dem Veröffentlichen des Images.** Der Docker-Job der CI baut das Image zuerst in den Runner,
+  führt darin `php artisan pdf:check` aus und schiebt es erst danach in die Registry. Die Beispiel-PDFs hängen als
+  Artefakt `pdf-check` am Lauf.
+- **`.semgrepignore`** nimmt die von Filament veröffentlichten JavaScript-Bündel unter `public/js/filament/` vom
+  Semgrep-Scan aus. Semgreps eingebaute Liste gilt nur, solange es keine eigene `.semgrepignore` gibt; die Datei
+  übernimmt sie deshalb unverändert, und der Scan erfasst außer den Bündeln dieselben Dateien wie bisher.
+  `tests/Unit/SemgrepIgnoreTest.php` prüft, dass in `public/js/filament/` ausschließlich unveränderte Dateien aus
+  `vendor/filament/*/dist` liegen.
+
+### Behoben
+- **PDF der Sammelabrechnung.** Eine Abrechnung über alle Events eines Kunden ließ sich weder als PDF herunterladen
+  noch per E-Mail senden, weil die Ansicht ein Event voraussetzte. Die Ansicht arbeitet jetzt auch ohne Event; in den
+  PDF-Eigenschaften steht der Titel der Abrechnung.
+
 ## [0.70.3] - 2026-10-05
 
 ### Sicherheit

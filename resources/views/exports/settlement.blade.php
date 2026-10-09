@@ -2,7 +2,8 @@
 <html lang="de">
 <head>
     <meta charset="utf-8">
-    <title>Abrechnung {{ $event->displayName() }}</title>
+    {{-- $event is null for a customer settlement ("Sammelabrechnung"). --}}
+    <title>{{ $title }}</title>
     <style>
         /* Page frame comes from Chromium's print margins (Browsershot
            ->margins()) so every page - including continuation pages - gets the
@@ -110,14 +111,14 @@
         </table>
     </div>
 
-    @if ($event->legal_notice)
+    @if ($event?->legal_notice)
         <div class="footer-note">{{ $event->legal_notice }}</div>
     @endif
     <div class="footer-note">
         Basis: alle dem Event zugeordneten Zahlungen und Erstattungen (PayPal-Sync und pretix-Import) zum
         Erstellzeitpunkt; interne PayPal-Kontobewegungen (Reserven, Auszahlungen) sind nicht enthalten.
     </div>
-    @if ($event->pdf_footer)
+    @if ($event?->pdf_footer)
         <div class="footer-note">{{ $event->pdf_footer }}</div>
     @endif
 </div>
