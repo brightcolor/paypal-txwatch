@@ -6,6 +6,8 @@ Versionierung nach [SemVer](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.71.0] - 2026-10-09
+
 ### Sicherheit
 - **Puppeteer 25 und Node.js 24 im Docker-Image.** Das Image installiert Puppeteer in der aktuellen Hauptversion 25
   (Build-Argument `PUPPETEER_MAJOR`, Vorgabe `25`). Puppeteer 25 braucht Node.js 22.12 oder neuer; das Image
